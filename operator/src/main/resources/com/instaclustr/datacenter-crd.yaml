@@ -1,0 +1,38 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  # name must match the spec fields below, and be in the form: <plural>.<group>
+  name: datacentres.stable.instaclustr.com
+spec:
+  # group name to use for REST API: /apis/<group>/<version>
+  group: stable.instaclustr.com
+  # version name to use for REST API: /apis/<group>/<version>
+  version: v1
+  # either Namespaced or Cluster
+  scope: Namespaced
+  names:
+    # plural name to be used in the URL: /apis/<group>/<version>/<plural>
+    plural: datacentres
+    # singular name to be used as an alias on the CLI and for display
+    singular: datacenter
+    # kind is normally the CamelCased singular type. Your resource manifests use this.
+    kind: CassandraDataCentre
+    # shortNames allow shorter string to match your resource on the CLI
+    shortNames:
+    - dc
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            name:
+              type: string
+              description: Name of the data centre.
+            clusterName:
+              type: string
+              description: Name of the cluster. If null, will default to a generated name.
+            size:
+              type: integer
+              minimum: 1
+              description: Number of nodes in the data center.
+            
