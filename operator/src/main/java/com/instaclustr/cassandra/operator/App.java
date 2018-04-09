@@ -42,7 +42,9 @@ public class App {
     }
 
     public static void main(String[] args) throws TimeoutException {
-        final Injector injector = Guice.createInjector(new K8sModule(), new PreflightModule(), new OperatorModule());
+        final Injector injector = Guice.createInjector(new K8sModule(),
+                new PreflightModule(),
+                new OperatorModule());
 
         injector.getInstance(Preflight.class).run();
 
