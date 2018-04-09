@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# at the point a makefile is probably the sensible choice
+
+cd `dirname "$BASH_SOURCE"`/..
+
+./buildenv/build base-openjre
+./buildenv/build cassandra
+./buildenv/build cassandra-operator

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+cd `dirname "$BASH_SOURCE"`/..
+
+function defer {
+	docker logout gcr.io
+	export DONT_LOGIN="false"
+}
+
+trap defer EXIT
+
+gcloud docker -a
+
+export DONT_LOGIN="true"
+
+./buildenv/release base-openjre
+./buildenv/release cassandra
+./buildenv/release cassandra-operator

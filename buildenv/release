@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+function defer {
+	docker logout gcr.io
+}
+
+if [[ "${DONT_LOGIN}" != "true" ]]; then
+    trap defer EXIT
+
+    gcloud docker -a
+
+fi
+
+cd `dirname "$BASH_SOURCE"`/..
+
+source ./buildenv/repo
+
+docker push "${REPO}:${TAG}" 1>/dev/null
