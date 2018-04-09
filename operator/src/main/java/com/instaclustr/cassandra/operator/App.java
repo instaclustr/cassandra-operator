@@ -42,7 +42,12 @@ public class App {
     }
 
     public static void main(String[] args) throws Exception {
-        final Injector injector = Guice.createInjector(new K8sModule(), new PreflightModule(), new OperatorModule());
+        final Injector injector = Guice.createInjector(
+                new K8sModule(),
+                new PreflightModule(),
+                new OperatorModule()
+        );
+
 
         // run Preflight operations
         injector.getInstance(Preflight.class).run();
