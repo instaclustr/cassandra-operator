@@ -41,59 +41,62 @@ public class App {
         Thread.setDefaultUncaughtExceptionHandler(new ThreadBackstop());
     }
 
-    public static void main(String[] args) throws TimeoutException {
+    public static void main(String[] args) throws Exception {
         final Injector injector = Guice.createInjector(new K8sModule(), new PreflightModule(), new OperatorModule());
 
+        // run Preflight operations
         injector.getInstance(Preflight.class).run();
 
-        final Set<Service> services = injector.getInstance(Key.get(new TypeLiteral<Set<Service>>() {}));
-        final ServiceManager serviceManager = new ServiceManager(services);
+        // TODO: refactor into separate method, maybe...
+        {
+            final Set<Service> services = injector.getInstance(Key.get(new TypeLiteral<Set<Service>>() {}));
+            final ServiceManager serviceManager = new ServiceManager(services);
 
-        logger.info("Services to start: {}", services);
+            logger.info("Services to start: {}", services);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            logger.info("Shutting down {}.", serviceManager.servicesByState().get(Service.State.RUNNING));
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                logger.info("Shutting down {}.", serviceManager.servicesByState().get(Service.State.RUNNING));
 
-            serviceManager.stopAsync();
+                serviceManager.stopAsync();
 
-            while (true) {
-                try {
-                    serviceManager.awaitStopped(1, TimeUnit.MINUTES);
-                    break;
+                while (true) {
+                    try {
+                        serviceManager.awaitStopped(1, TimeUnit.MINUTES);
+                        break;
 
-                } catch (final TimeoutException e) {
-                    logger.warn("Timeout waiting for {} to stop. Retrying.", serviceManager.servicesByState().get(Service.State.STOPPING), e);
+                    } catch (final TimeoutException e) {
+                        logger.warn("Timeout waiting for {} to stop. Retrying.", serviceManager.servicesByState().get(Service.State.STOPPING), e);
+                    }
                 }
+
+                logger.info("Successfully shut down all services.");
+            }, "ServiceManager Shutdown Hook"));
+
+            // add a listener to catch any service failures
+            serviceManager.addListener(new ServiceManager.Listener() {
+                @Override
+                public void failure(final Service service) {
+                    logger.error("Service {} failed. Shutting down.", service, service.failureCause());
+                    System.exit(1);
+                }
+            });
+
+            try {
+                logger.info("Starting services.");
+                serviceManager.startAsync().awaitHealthy(1, TimeUnit.MINUTES);
+                logger.info("Successfully started all services.");
+
+            } catch (final TimeoutException e) {
+                logger.error("Timeout waiting for {} to start.", serviceManager.servicesByState().get(Service.State.STARTING));
+                throw e;
+
+            } catch (final IllegalStateException e) {
+                logger.error("Services {} failed to start.", serviceManager.servicesByState().get(Service.State.FAILED));
+                throw e;
             }
 
-            logger.info("Successfully shut down all services.");
-        }, "ServiceManager Shutdown Hook"));
-
-        // add a listener to catch any service failures
-        serviceManager.addListener(new ServiceManager.Listener() {
-            @Override
-            public void failure(final Service service) {
-                logger.error("Service {} failed. Shutting down.", service, service.failureCause());
-                System.exit(1);
-            }
-        });
-
-        try {
-            logger.info("Starting services.");
-            serviceManager.startAsync().awaitHealthy(1, TimeUnit.MINUTES);
-            logger.info("Successfully started all services.");
-
-        } catch (final TimeoutException e) {
-            logger.error("Timeout waiting for {} to start.", serviceManager.servicesByState().get(Service.State.STARTING));
-            throw e;
-
-        } catch (final IllegalStateException e) {
-            logger.error("Services {} failed to start.", serviceManager.servicesByState().get(Service.State.FAILED));
-            throw e;
+            // never return
+            serviceManager.awaitStopped();
         }
-
-        // never return
-        serviceManager.awaitStopped();
-        System.exit(0);
     }
 }

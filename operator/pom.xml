@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.instaclustr.cassandra-operator</groupId>
         <artifactId>operator-parent</artifactId>
-        <version>0.1.0</version>
+        <version>1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>operator</artifactId>
@@ -26,7 +26,6 @@
             <groupId>com.instaclustr.cassandra-operator</groupId>
             <artifactId>build-helpers</artifactId>
             <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
         </dependency>
 
         <dependency>
@@ -79,7 +78,7 @@
         <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>1.2.1</version>
+            <version>1.6.0</version>
             <executions>
                 <execution>
                     <phase>generate-resources</phase>
@@ -90,6 +89,9 @@
             </executions>
             <configuration>
                 <mainClass>com.instaclustr.cassandra.operator.build.helper.Yaml2JsonHelper</mainClass>
+                <arguments>
+                    <argument>${project.build.directory}/java-gen</argument>
+                </arguments>
             </configuration>
         </plugin>
         </plugins>
