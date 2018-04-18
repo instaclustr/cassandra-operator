@@ -1,0 +1,6 @@
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraDataCentre
+metadata:
+  name: test-dc
+spec:
+  replicas: 3

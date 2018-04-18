@@ -2,34 +2,29 @@ package com.instaclustr.k8s;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.instaclustr.cassandra.operator.Operator;
+import com.instaclustr.picocli.typeconverter.ExistingFilePathTypeConverter;
 import io.kubernetes.client.ApiClient;
-import io.kubernetes.client.apis.ApiextensionsV1beta1Api;
-import io.kubernetes.client.apis.CoreV1Api;
-import io.kubernetes.client.apis.CustomObjectsApi;
-import io.kubernetes.client.auth.ApiKeyAuth;
+import io.kubernetes.client.apis.*;
+import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.Config;
+import io.kubernetes.client.util.KubeConfig;
+import picocli.CommandLine;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class K8sModule extends AbstractModule {
-    static final String externalK8sConfig = System.getProperty("com.instaclustr.k8s.operator.externalk8s");
 
     @Provides
-    public ApiClient provideApiClient() {
-        ApiClient apiClient;
+    public ApiClient provideApiClient(final KubeConfig config) {
         try {
-            if (externalK8sConfig != null) {
-                //TODO: make this externally configurable
-                apiClient = Config.fromConfig(externalK8sConfig);
-            } else {
-                apiClient = Config.defaultClient();
-            }
-        } catch (IOException e) {
-            //Just throw this and die
+            return ClientBuilder.kubeconfig(config).build();
+
+        } catch (final IOException e) {
             throw new RuntimeException(e);
         }
-
-        return apiClient;
     }
 
     @Provides
@@ -47,4 +42,13 @@ public class K8sModule extends AbstractModule {
         return new CustomObjectsApi(apiClient);
     }
 
+    @Provides
+    public VersionApi provideVersionApi(final ApiClient apiClient) {
+        return new VersionApi(apiClient);
+    }
+
+    @Provides
+    public AppsV1beta2Api provideAppsV1beta2Api(final ApiClient apiClient) {
+        return new AppsV1beta2Api(apiClient);
+    }
 }

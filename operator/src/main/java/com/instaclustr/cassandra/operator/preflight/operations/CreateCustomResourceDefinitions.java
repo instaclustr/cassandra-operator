@@ -1,29 +1,22 @@
 package com.instaclustr.cassandra.operator.preflight.operations;
 
-import com.google.gson.Gson;
-import com.google.gson.stream.JsonReader;
-import com.instaclustr.cassandra.operator.App;
 import com.instaclustr.cassandra.operator.preflight.Operation;
+import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.ApiextensionsV1beta1Api;
+import io.kubernetes.client.models.V1beta1CustomResourceDefinition;
+import io.kubernetes.client.util.Yaml;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 
 public class CreateCustomResourceDefinitions implements Operation {
+    static final Logger logger = LoggerFactory.getLogger(CreateCustomResourceDefinitions.class);
 
     private final ApiextensionsV1beta1Api apiExtensionsApi;
-
-    public static <T> T jsonResourceAsObject(final String name, final Class<T> clazz) throws IOException {
-        final Gson gson = new Gson();
-
-        try (final InputStream resource = App.class.getResourceAsStream(name);
-             final JsonReader reader = new JsonReader(new InputStreamReader(resource, StandardCharsets.UTF_8))) {
-            return gson.fromJson(reader, clazz);
-        }
-    }
 
     @Inject
     public CreateCustomResourceDefinitions(final ApiextensionsV1beta1Api apiExtensionsApi) {
@@ -32,6 +25,33 @@ public class CreateCustomResourceDefinitions implements Operation {
 
     @Override
     public void run() throws Exception {
-        apiExtensionsApi.createCustomResourceDefinition(null, null);
+        createCrdFromResource("/com/instaclustr/datacenter-crd.yaml");
+        createCrdFromResource("/com/instaclustr/cluster-crd.yaml");
+    }
+
+    private void createCrdFromResource(final String resourceName) throws ApiException, IOException {
+        try (final InputStream resourceStream = CreateCustomResourceDefinitions.class.getResourceAsStream(resourceName);
+             final InputStreamReader resourceReader = new InputStreamReader(resourceStream);) {
+
+            final V1beta1CustomResourceDefinition crdDefinition = Yaml.loadAs(resourceReader, V1beta1CustomResourceDefinition.class);
+
+            final String crdName = crdDefinition.getMetadata().getName();
+
+            logger.info("Creating Custom Resource Definition {}", crdName);
+
+            try {
+                apiExtensionsApi.createCustomResourceDefinition(crdDefinition, null);
+
+            } catch (final ApiException e) {
+                if (e.getCode() == 409) { // HTTP 409 CONFLICT
+
+                    logger.info("Custom Resource Definition {} already exists.", crdName);
+
+                    return;
+                }
+
+                throw e;
+            }
+        }
     }
 }
