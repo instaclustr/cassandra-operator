@@ -8,7 +8,6 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>build-helpers</module>
         <module>model</module>
         <module>operator</module>
         <module>k8s-addons</module>
