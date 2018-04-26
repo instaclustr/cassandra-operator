@@ -1,4 +1,4 @@
-package com.instaclustr.cassandra.operator;
+package com.instaclustr.guava;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;

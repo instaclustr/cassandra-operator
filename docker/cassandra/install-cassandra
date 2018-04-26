@@ -1,0 +1,37 @@
+#!/bin/bash -xue
+
+cassandra_version=$1
+
+adduser --disabled-password --gid 0 --gecos "Cassandra" cassandra
+
+pkg_dir=$(mktemp -d) && chmod 755 "${pkg_dir}"
+arch="all"
+arch_pkg_dir="${pkg_dir}/${arch}" && mkdir "${arch_pkg_dir}"
+
+# download the C* packages
+(cd "${arch_pkg_dir}" &&
+    curl -SLO "https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra/cassandra_${cassandra_version}_all.deb" &&
+    curl -SLO "https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra/cassandra-tools_${cassandra_version}_all.deb")
+
+dagi dpkg-dev
+
+# build a local repository
+(cd "${pkg_dir}" && dpkg-scanpackages ${arch} | gzip -9c > "${arch_pkg_dir}/Packages.gz")
+
+# install C*
+echo "deb file:${pkg_dir} ${arch}/" > /etc/apt/sources.list.d/cassandra.sources.list
+APT_GET_OPTS="--allow-unauthenticated" dagi cassandra cassandra-tools
+
+# package "cleanup"
+mkdir /usr/share/cassandra/agents
+mv /usr/share/cassandra/lib/jamm-0.3.0.jar /usr/share/cassandra/agents/jamm-0.3.0.jar
+cp /etc/cassandra/hotspot_compiler /usr/share/cassandra/
+
+# nuke /etc/cassandra and /var/lib/cassandra since they're injected by volume mounts
+rm -rf /etc/cassandra /var/lib/cassandra
+
+# clean-up
+rm -rf "${pkg_dir}"
+apt-get -y remove dpkg-dev && apt-get -y autoremove
+
+rm "${BASH_SOURCE}"

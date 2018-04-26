@@ -1,13 +1,16 @@
 package com.instaclustr.cassandra.operator;
 
+import ch.qos.logback.classic.Level;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.inject.*;
 import com.instaclustr.cassandra.operator.preflight.Preflight;
 import com.instaclustr.cassandra.operator.preflight.PreflightModule;
+import com.instaclustr.guava.ServiceManagerModule;
 import com.instaclustr.k8s.K8sModule;
 import com.instaclustr.picocli.typeconverter.ExistingFilePathTypeConverter;
+import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.KubeConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +20,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
-import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -85,18 +88,26 @@ public class Operator implements Callable<Void> {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
+        final ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("com.instaclustr.cassandra.operator");
+        rootLogger.setLevel(Level.DEBUG);
 
-        final KubeConfig kubeConfig;
-        try (BufferedReader bufferedReader = Files.newBufferedReader(k8sClientOptions.kubeConfig)) {
-            kubeConfig = KubeConfig.loadKubeConfig(bufferedReader);
-        }
+
+//        final KubeConfig kubeConfig;
+//        try (var bufferedReader = Files.newBufferedReader(k8sClientOptions.kubeConfig)) {
+//            kubeConfig = KubeConfig.loadKubeConfig(bufferedReader);
+//        }
 
 
         final Injector injector = Guice.createInjector(
                 new AbstractModule() {
                     @Override
                     protected void configure() {
-                        bind(KubeConfig.class).toInstance(kubeConfig);
+//                        bind(KubeConfig.class).toInstance(kubeConfig);
+                        try {
+                            bind(ClientBuilder.class).toInstance(ClientBuilder.standard());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 },
                 new ServiceManagerModule(),
@@ -172,9 +183,6 @@ public class Operator implements Callable<Void> {
             throw e;
         }
 
-        System.exit(0);
-
-        // never return
         serviceManager.awaitStopped();
     }
 }

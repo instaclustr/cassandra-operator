@@ -3,7 +3,6 @@ package com.instaclustr.cassandra.operator.preflight;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import com.instaclustr.cassandra.operator.preflight.operations.CreateCustomResourceDefinitions;
-import com.instaclustr.cassandra.operator.K8sVersionValidator;
 
 public class PreflightModule extends AbstractModule {
     @Override

@@ -3,4 +3,4 @@ kind: CassandraDataCentre
 metadata:
   name: test-dc
 spec:
-  replicas: 3
+  replicas: 6

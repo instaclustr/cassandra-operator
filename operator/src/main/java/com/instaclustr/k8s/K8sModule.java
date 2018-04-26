@@ -1,30 +1,26 @@
 package com.instaclustr.k8s;
 
+import com.google.common.util.concurrent.Service;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.instaclustr.cassandra.operator.Operator;
-import com.instaclustr.picocli.typeconverter.ExistingFilePathTypeConverter;
+import com.google.inject.multibindings.Multibinder;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.apis.*;
 import io.kubernetes.client.util.ClientBuilder;
-import io.kubernetes.client.util.Config;
-import io.kubernetes.client.util.KubeConfig;
-import picocli.CommandLine;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class K8sModule extends AbstractModule {
+    @Override
+    protected void configure() {
+//        final Multibinder<Service> serviceMultibinder = Multibinder.newSetBinder(binder(), Service.class);
+//
+//        serviceMultibinder.addBinding().to(WatchService.class);
+//
+//        Multibinder.newSetBinder(binder(), WatchConfig.class);
+    }
 
     @Provides
-    public ApiClient provideApiClient(final KubeConfig config) {
-        try {
-            return ClientBuilder.kubeconfig(config).build();
-
-        } catch (final IOException e) {
-            throw new RuntimeException(e);
-        }
+    public ApiClient provideApiClient(final ClientBuilder clientBuilder) {
+        return clientBuilder.build();
     }
 
     @Provides

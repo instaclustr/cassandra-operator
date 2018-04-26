@@ -14,13 +14,6 @@
 
     <name>cassandra-operator</name>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.instaclustr.cassandra-operator</groupId>
@@ -34,12 +27,14 @@
             <version>1.0-SNAPSHOT</version>
         </dependency>
 
+
         <dependency>
             <groupId>io.kubernetes</groupId>
             <artifactId>client-java</artifactId>
             <version>1.0.0-beta3</version>
             <scope>compile</scope>
         </dependency>
+
 
         <dependency>
             <groupId>com.google.inject</groupId>
@@ -52,6 +47,7 @@
             <artifactId>guice-assistedinject</artifactId>
             <version>4.2.0</version>
         </dependency>
+
 
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -67,7 +63,6 @@
         </dependency>
 
 
-        <!-- Logback -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
@@ -78,14 +73,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
             <version>1.7.16</version>
-        </dependency>
-
-
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>3.8.1</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

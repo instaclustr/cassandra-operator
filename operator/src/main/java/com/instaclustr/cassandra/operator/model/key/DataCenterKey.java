@@ -1,5 +1,6 @@
 package com.instaclustr.cassandra.operator.model.key;
 
+import com.google.common.base.MoreObjects;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import io.kubernetes.client.models.V1ObjectMeta;
 
@@ -25,6 +26,14 @@ public class DataCenterKey {
     @Override
     public int hashCode() {
         return Objects.hash(namespace, name);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("namespace", namespace)
+                .add("name", name)
+                .toString();
     }
 
     public static DataCenterKey forDataCenter(final DataCenter dataCenter) {
