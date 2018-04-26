@@ -14,7 +14,7 @@ done
 
 JVM_OPTS=${JVM_OPTS:=}
 
-#JVM_OPTS="${JVM_OPTS} -Dcassandra.config.loader=com.zegelin.cassandra.k8s.CascadingYamlConfigurationLoader"
+#JVM_OPTS="${JVM_OPTS} -Dcassandra.config.loader=com.instaclustr.cassandra.k8s.CascadingYamlConfigurationLoader"
 JVM_OPTS="${JVM_OPTS} -Dcassandra.config=file:///${CASSANDRA_CONF}/cassandra.yaml"
 JVM_OPTS="${JVM_OPTS} -Dcassandra.storagedir=/var/lib/cassandra" # set via YAML
 
@@ -30,14 +30,16 @@ JVM_OPTS="${JVM_OPTS} -Djava.library.path=${CASSANDRA_HOME}/lib/sigar-bin"
 # heap dumps to tmp
 JVM_OPTS="${JVM_OPTS} -XX:HeapDumpPath=/var/tmp/cassandra-`date +%s`-pid$$.hprof"
 
+
 # Read additional JVM options from jvm.options file
-JVM_OPTS="${JVM_OPTS} "$((sed -ne "/^-/p" | tr '\n' ' ') < /etc/cassandra/jvm.options)
+JVM_OPTS="${JVM_OPTS} "$((sed -ne "/^-/p" | tr '\n' ' ') < ${CASSANDRA_CONF}/jvm.options)
+
 
 . ${CASSANDRA_CONF}/cassandra-env.sh
 
 
 exec -a cassandra /usr/bin/java \
-    -cp "${CASSANDRA_CONF}:${CASSANDRA_HOME}/*:${CASSANDRA_HOME}/lib/*" \
+    -cp "${CASSANDRA_CLASSPATH}" \
     ${JVM_OPTS} \
     -Dcassandra-foreground=yes \
     org.apache.cassandra.service.CassandraDaemon

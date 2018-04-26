@@ -145,7 +145,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                         .metadata(new V1ObjectMeta().name(String.format("%s-config", dataCenterKey.name)))
                         .putDataItem("cassandra.yaml", resourceAsString("/com/instaclustr/cassandra/config/cassandra.yaml") +
                             "\n\nseed_provider:\n" +
-                                    "    - class_name: com.zegelin.cassandra.k8s.SeedProvider\n" +
+                                    "    - class_name: com.instaclustr.cassandra.k8s.SeedProvider\n" +
                                     "      parameters:\n" +
                                     String.format("          - service: %s-seeds", dataCenterKey.name)
                         )

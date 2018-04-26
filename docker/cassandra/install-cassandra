@@ -35,3 +35,4 @@ rm -rf "${pkg_dir}"
 apt-get -y remove dpkg-dev && apt-get -y autoremove
 
 rm "${BASH_SOURCE}"
+rm /etc/apt/sources.list.d/cassandra.sources.list
