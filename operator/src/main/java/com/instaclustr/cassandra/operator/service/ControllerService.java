@@ -180,6 +180,10 @@ public class ControllerService extends AbstractExecutionThreadService {
                                                                 new V1ContainerPort().name("cql").containerPort(9042),
                                                                 new V1ContainerPort().name("jmx").containerPort(7199)
                                                         ))
+                                                        .resources(new V1ResourceRequirements()
+                                                                .putLimitsItem("memory", Quantity.fromString("512Mi"))
+                                                                .putRequestsItem("memory", Quantity.fromString("512Mi"))
+                                                        )
                                                         .readinessProbe(new V1Probe()
                                                                 .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
                                                                 .initialDelaySeconds(60)

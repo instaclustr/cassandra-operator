@@ -1,6 +1,5 @@
--Xms500M
--Xmx500M
--Xmn1024M
+-Xms128M
+-Xmx128M
 
 -Dcassandra.jmx.local.port=7199
 -Dcom.sun.management.jmxremote.authenticate=false
