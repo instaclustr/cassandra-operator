@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -xue
+
+# dagi -- docker apt-get install
+# a simple script to install packages without traces
+
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get -qy --no-install-recommends ${APT_GET_OPTS:-} install $@
+rm -rf /var/lib/apt/lists/*
