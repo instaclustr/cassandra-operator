@@ -5,6 +5,9 @@ import com.google.cloud.ReadChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
+import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.common.GCPRemoteObjectReference;
+import com.instaclustr.backup.common.RemoteObjectReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,37 +25,18 @@ public class GCPDownloader extends Downloader {
     private static final Logger logger = LoggerFactory.getLogger(GCPDownloader.class);
 
     private final Storage storage;
-    private final String restoreFromCdcId;
-    private final String restoreFromNodeId;
 
-    public GCPDownloader(
-                         final Storage storage,
-                         final String restoreFromCdcId,
-                         final String restoreBackupId) {
+    public GCPDownloader(final Storage storage,
+                         final RestoreArguments arguments) {
+        super(arguments);
         this.storage = storage;
-        this.restoreFromCdcId = restoreFromCdcId;
-        this.restoreFromNodeId = restoreBackupId;
-    }
 
-    static class GCPRemoteObjectReference extends RemoteObjectReference {
-        private final BlobId blobId;
-
-        GCPRemoteObjectReference(final Path objectKey, final BlobId blobId) {
-            super(objectKey);
-            this.blobId = blobId;
-        }
-
-        public Path getObjectKey() {
-            return objectKey;
-        }
     }
 
     @Override
     public RemoteObjectReference objectKeyToRemoteReference(final Path objectKey) {
         // objectKey is kept simple (e.g. "manifests/autosnap-123") so that it directly reflects the local path
-        final String remotePath = restoreFromNodeId + "/" + objectKey.toString();
-        final BlobId blobId = BlobId.of(restoreFromCdcId, remotePath);
-        return new GCPRemoteObjectReference(objectKey, blobId);
+        return new GCPRemoteObjectReference(objectKey, resolveRemotePath(objectKey), restoreFromBackupBucket);
     }
 
     @Override

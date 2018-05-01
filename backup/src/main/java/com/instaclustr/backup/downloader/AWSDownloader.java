@@ -9,6 +9,8 @@ import com.amazonaws.services.s3.transfer.Download;
 import com.amazonaws.services.s3.transfer.PersistableTransfer;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.internal.S3ProgressListener;
+import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.common.RemoteObjectReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,29 +27,18 @@ public class AWSDownloader extends Downloader {
     private final AmazonS3 amazonS3;
     private final TransferManager transferManager;
 
-    private final String restoreFromClusterId;
-    private final String restoreFromNodeId;
-    private final String restoreFromBackupBucket;
-
-    public AWSDownloader(final TransferManager transferManager,
-                         final String restoreFromClusterId,
-                         final String restoreBackupId,
-                         final String restoreFromBackupBucket) {
+    public AWSDownloader(final TransferManager transferManager, final RestoreArguments arguments) {
+        super(arguments);
         this.amazonS3 = transferManager.getAmazonS3Client();
         this.transferManager = transferManager;
-        this.restoreFromClusterId = restoreFromClusterId;
-        this.restoreFromNodeId = restoreBackupId;
-        this.restoreFromBackupBucket = restoreFromBackupBucket;
     }
 
     static class AWSRemoteObjectReference extends RemoteObjectReference {
-        private final String canonicalPath;
-
-        AWSRemoteObjectReference(final Path objectKey, final String canonicalPath) {
-            super(objectKey);
-            this.canonicalPath = canonicalPath;
+        public AWSRemoteObjectReference(Path objectKey, String canonicalPath) {
+            super(objectKey, canonicalPath);
         }
 
+        @Override
         public Path getObjectKey() {
             return objectKey;
         }
@@ -55,8 +46,7 @@ public class AWSDownloader extends Downloader {
 
     @Override
     public RemoteObjectReference objectKeyToRemoteReference(final Path objectKey) {
-        final String canonicalPath = Paths.get(restoreFromClusterId).resolve(restoreFromNodeId).resolve(objectKey).toString();
-        return new AWSRemoteObjectReference(objectKey, canonicalPath);
+        return new AWSRemoteObjectReference(objectKey, resolveRemotePath(objectKey));
     }
 
     @Override

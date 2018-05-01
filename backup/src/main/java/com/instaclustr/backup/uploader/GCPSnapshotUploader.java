@@ -4,6 +4,9 @@ import com.google.cloud.WriteChannel;
 import com.google.cloud.storage.*;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
+import com.instaclustr.backup.BackupArguments;
+import com.instaclustr.backup.common.GCPRemoteObjectReference;
+import com.instaclustr.backup.common.RemoteObjectReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,32 +20,19 @@ import java.nio.file.Paths;
 public class GCPSnapshotUploader extends SnapshotUploader{
     private static final Logger logger = LoggerFactory.getLogger(GCPSnapshotUploader.class);
 
-    private final String backupID;
     private final Storage storage;
-    private final String bucket;
 
     @Inject
-    public GCPSnapshotUploader(final String backupID,
-                               final String clusterId,
-                               final String bucket) {
-        this.backupID = clusterId + "/" + backupID;
-        this.storage = StorageOptions.getDefaultInstance().getService();
-        this.bucket = bucket;
-    }
+    public GCPSnapshotUploader(final Storage storage,
+                               final BackupArguments arguments) {
+        super(arguments.clusterId, arguments.backupId, arguments.backupBucket);
+        this.storage = storage;
 
-    static class GCPRemoteObjectReference implements RemoteObjectReference {
-        final BlobId blobId;
-
-        GCPRemoteObjectReference(final BlobId blobId) {
-            this.blobId = blobId;
-        }
     }
 
     @Override
     public RemoteObjectReference objectKeyToRemoteReference(final Path objectKey) throws Exception {
-        final BlobId blobId = BlobId.of(bucket, Paths.get(backupID).resolve(objectKey).toString());
-
-        return new GCPRemoteObjectReference(blobId);
+        return new GCPRemoteObjectReference(objectKey, resolveRemotePath(objectKey), restoreFromBackupBucket);
     }
 
     @Override

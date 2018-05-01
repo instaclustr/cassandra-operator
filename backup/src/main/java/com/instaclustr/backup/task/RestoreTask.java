@@ -3,23 +3,23 @@ package com.instaclustr.backup.task;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
-import com.google.common.net.MediaType;
-import com.google.inject.Provider;
 import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.common.RemoteObjectReference;
 import com.instaclustr.backup.downloader.Downloader;
-import com.instaclustr.backup.downloader.RemoteObjectReference;
+import com.instaclustr.backup.common.CloudDownloadUploadFactory;
 import com.instaclustr.backup.util.Directories;
 import com.instaclustr.backup.util.FileUtils;
 import com.instaclustr.backup.util.GlobalLock;
-import org.freedesktop.dbus.exceptions.DBusException;
-import org.freedesktop.dbus.exceptions.DBusExecutionException;
+import com.microsoft.azure.storage.StorageException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.naming.ConfigurationException;
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +36,7 @@ import java.util.stream.Stream;
 public class RestoreTask implements Callable<Void> {
     private static final Logger logger = LoggerFactory.getLogger(RestoreTask.class);
 
-    private final Provider<Downloader> downloaderProvider;
+    private final Downloader downloaderProvider;
     private final GlobalLock globalLock;
     private final RestoreArguments arguments;
     private final Path cassandraDataDirectory;
@@ -46,22 +46,23 @@ public class RestoreTask implements Callable<Void> {
     private final Path fullCommitLogRestoreDirectory;
     private final Multimap<String, String> keyspaceTableSubset;
 
-    public RestoreTask(final Provider<Downloader> downloaderProvider,
-                       final String cassandraDataDirectory,
-                       final String cassandraConfigDirectory,
-                       final String sharedContainerRoot,
-                       final Optional<String> commitLogRestoreDirectory,
-                       final GlobalLock globalLock,
-                       final RestoreArguments arguments, Multimap<String, String> keyspaceTableSubset) {
-        this.downloaderProvider = downloaderProvider;
+    public RestoreTask(final GlobalLock globalLock,
+                       final RestoreArguments arguments
+    ) throws StorageException, ConfigurationException, URISyntaxException {
+
+
+
+
+
+        this.downloaderProvider = CloudDownloadUploadFactory.getDownloader(arguments);
         this.globalLock = globalLock;
         this.arguments = arguments;
-        this.cassandraDataDirectory = Paths.get(cassandraDataDirectory);
-        this.cassandraConfigDirectory = Paths.get(cassandraConfigDirectory);
-        this.sharedContainerRoot = Paths.get(sharedContainerRoot);
-        this.commitLogRestoreDirectory = Paths.get("/var/lib/cassandra/commitlog_restore");
+        this.cassandraDataDirectory = arguments.cassandraDirectory; //TODO change to cassandra root directory
+        this.cassandraConfigDirectory = arguments.cassandraConfigDirectory;
+        this.sharedContainerRoot = arguments.sharedContainerPath;
+        this.commitLogRestoreDirectory = arguments.cassandraDirectory.resolve("commitlog_restore"); //TODO: hardcoded path, make this an argument when we get to supporting CL
         this.fullCommitLogRestoreDirectory = this.sharedContainerRoot.resolve(this.commitLogRestoreDirectory.subpath(0, this.commitLogRestoreDirectory.getNameCount()));
-        this.keyspaceTableSubset = keyspaceTableSubset;
+        this.keyspaceTableSubset = arguments.keyspaceTables;
     }
 
     private Map<String, String> restoreParameters(final RestoreArguments restoreArguments) {
@@ -69,8 +70,11 @@ public class RestoreTask implements Callable<Void> {
             put("snapshot-tag", restoreArguments.snapshotTag);
             put("timestamp-start", String.valueOf(restoreArguments.timestampStart));
             put("timestamp-end", String.valueOf(restoreArguments.timestampEnd));
-            put("keyspace-tables", Optional.ofNullable(restoreArguments.keyspaceTables).orElse(""));
-            put("sourceBackupID", restoreArguments.sourceBackupID);
+            put("keyspace-tables", restoreArguments.keyspaceTables.entries()
+                    .stream()
+                    .map(x -> x.getKey() + "." + x.getValue())
+                    .reduce((x,y) -> x + "," + y ).orElse(""));
+            put("sourceNodeID", restoreArguments.clusterId);
             put("cluster", restoreArguments.clusterId);
             put("com.instaclustr.backup-bucket", restoreArguments.backupBucket);
             put("restore-system-keyspace", String.valueOf(restoreArguments.restoreSystemKeyspace));
@@ -79,32 +83,17 @@ public class RestoreTask implements Callable<Void> {
 
     @Override
     public Void call() throws Exception {
-//        if (globalLock.getLock(arguments.waitForLock)) {
-//            final ProgressEvent overallProgressEvent = eventsService.progressEvent(eventSource, "restore", 0, eventsService.eventData(restoreParameters(arguments)), MediaType.JSON_UTF_8.toString());
-//
-//            try {
-//                call0();
-//                overallProgressEvent.completed(eventsService.eventData(restoreParameters(arguments)), MediaType.JSON_UTF_8.toString());
-//            } catch (Exception e) {
-//                overallProgressEvent.failed(eventsService.eventData(DataKey.message("Restore task failed."), DataKey.exception(e)), MediaType.JSON_UTF_8.toString());
-//
-//                try {
-//                    systemdController.startTransientUnit("pd-alert.service", JobMode.REPLACE, ImmutableList.of(
-//                            Properties.execStart().addCommandLine("/opt/bin/pd-alert", Properties.ExecPropertyBuilder.ExitMode.UNCLEAN_IS_FAILURE, "Error running restore task").build(),
-//                            Properties.type(ServiceType.ONESHOT),
-//                            Properties.user("root"))
-//                    );
-//                } catch (DBusException dBusException) {
-//                    logger.error("Error starting pd-alert unit.", dBusException);
-//                    throw new NodeAgentException().setMessage(dBusException.getMessage());
-//                }
-//
-//                throw e;
-//            } finally {
-//                overallProgressEvent.close();
-//            }
-//        }
-//
+        if (globalLock.getLock(arguments.waitForLock)) {
+           logger.info("Restoring backup {}", restoreParameters(arguments));
+            try {
+                call0();
+                logger.info("Completed restoring backup {}", restoreParameters(arguments));
+
+            } catch (Exception e) {
+                logger.info("Failed restoring backup {} with {}", restoreParameters(arguments), e);
+                throw e;
+            }
+        }
         return null;
     }
 
@@ -119,7 +108,7 @@ public class RestoreTask implements Callable<Void> {
         final Path sourceManifest = Paths.get("manifests/" + arguments.snapshotTag);
         final Path localManifest = sharedContainerRoot.resolve(sourceManifest);
 
-        final Downloader downloader = downloaderProvider.get();
+        final Downloader downloader = downloaderProvider;
         final RemoteObjectReference manifestRemoteObjectReference = downloader.objectKeyToRemoteReference(sourceManifest);
         downloader.downloadFile(localManifest, manifestRemoteObjectReference);
 
@@ -182,7 +171,7 @@ public class RestoreTask implements Callable<Void> {
                 final String[] lineArray = m.trim().split(" ");
 
                 final Path manifestPath = Paths.get(lineArray[1]);
-                final Path localPath = cassandraDataDirectory.resolve(manifestPath.subpath(0, 3).resolve(manifestPath.getFileName())); //ditch the hash
+                final Path localPath = cassandraDataDirectory.resolve(manifestPath.subpath(0, 3).resolve(manifestPath.getFileName())); //strip check hash from path
 
                 if (localPath.toFile().exists() && BackupTask.sstableHash(localPath).equals(manifestPath.getName(3).toString())) {
                     logger.info("Keeping existing sstable " + localPath);

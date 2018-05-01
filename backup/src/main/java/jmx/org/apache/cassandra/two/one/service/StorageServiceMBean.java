@@ -141,7 +141,7 @@ public interface StorageServiceMBean extends NotificationEmitter
 
     /**
      * Retrieve a map of pending ranges to endpoints that describe the ring topology
-     * @param keyspace the keyspace to get the pending range map for.
+     * @param keyspace the keyspace to getUploader the pending range map for.
      * @return a map of pending ranges to endpoints
      */
     public Map<List<String>, List<String>> getPendingRangeToEndpointMap(String keyspace);
@@ -369,16 +369,16 @@ public interface StorageServiceMBean extends NotificationEmitter
      */
     public void setLoggingLevel(String classQualifier, String level) throws Exception;
 
-    /** get the runtime logging levels */
+    /** getUploader the runtime logging levels */
     public Map<String,String> getLoggingLevels();
 
-    /** get the operational mode (leaving, joining, normal, decommissioned, client) **/
+    /** getUploader the operational mode (leaving, joining, normal, decommissioned, client) **/
     public String getOperationMode();
 
     /** Returns whether the storage service is starting or not */
     public boolean isStarting();
 
-    /** get the progress of a drain operation */
+    /** getUploader the progress of a drain operation */
     public String getDrainProgress();
 
     /** makes node unavailable for writes, flushes memtables and replays commitlog. */
@@ -498,7 +498,7 @@ public interface StorageServiceMBean extends NotificationEmitter
     /**
      * Return a List of Tokens representing a sample of keys across all ColumnFamilyStores.
      *
-     * Note: this should be left as an operation, not an attribute (methods starting with "get")
+     * Note: this should be left as an operation, not an attribute (methods starting with "getUploader")
      * to avoid sending potentially multiple MB of data when accessing this mbean by default.  See CASSANDRA-4452.
      *
      * @return set of Tokens as Strings

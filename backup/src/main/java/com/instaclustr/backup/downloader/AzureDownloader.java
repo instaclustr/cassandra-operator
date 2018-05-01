@@ -1,5 +1,8 @@
 package com.instaclustr.backup.downloader;
 
+import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.common.AzureRemoteObjectReference;
+import com.instaclustr.backup.common.RemoteObjectReference;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.*;
 import org.slf4j.Logger;
@@ -18,37 +21,18 @@ import java.util.regex.Pattern;
 public class AzureDownloader extends Downloader {
     private static final Logger logger = LoggerFactory.getLogger(AzureDownloader.class);
 
-    private final String restoreFromClusterId;
-    private final String restoreFromNodeId;
     private final CloudBlobContainer blobContainer;
 
     public AzureDownloader(final CloudBlobClient cloudBlobClient,
-                           String restoreFromClusterId,
-                           final String restoreBackupId) throws StorageException, URISyntaxException {
-        this.restoreFromClusterId = restoreFromClusterId;
-        this.restoreFromNodeId = restoreBackupId;
+                           final RestoreArguments arguments) throws StorageException, URISyntaxException {
+        super(arguments);
         this.blobContainer = cloudBlobClient.getContainerReference(restoreFromClusterId);
-    }
-
-    static class AzureRemoteObjectReference extends RemoteObjectReference {
-        private final CloudBlockBlob blob;
-
-        AzureRemoteObjectReference(final Path objectKey, final CloudBlockBlob blob) {
-            super(objectKey);
-            this.blob = blob;
-        }
-
-        public Path getObjectKey() {
-            return objectKey;
-        }
     }
 
     @Override
     public RemoteObjectReference objectKeyToRemoteReference(final Path objectKey) throws StorageException, URISyntaxException {
-        final String canonicalPath = Paths.get(restoreFromClusterId).resolve(restoreFromNodeId).resolve(objectKey).toString();
-        final CloudBlockBlob blob = this.blobContainer.getBlockBlobReference(canonicalPath);
-
-        return new AzureRemoteObjectReference(objectKey, blob);
+        final String path = resolveRemotePath(objectKey);
+        return new AzureRemoteObjectReference(objectKey, path, blobContainer.getBlockBlobReference(path));
     }
 
     @Override

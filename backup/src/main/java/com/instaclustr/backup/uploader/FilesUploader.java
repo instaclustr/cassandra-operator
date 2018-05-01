@@ -1,25 +1,28 @@
 package com.instaclustr.backup.uploader;
 
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.MetricRegistry;
-import com.google.common.net.MediaType;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.RateLimiter;
-import com.google.inject.Provider;
+import com.instaclustr.backup.BackupArguments;
 import com.instaclustr.backup.CommonBackupArguments;
+import com.instaclustr.backup.common.RemoteObjectReference;
 import com.instaclustr.backup.task.ManifestEntry;
+import com.instaclustr.backup.common.CloudDownloadUploadFactory;
 import com.instaclustr.backup.util.DataRate;
 import com.instaclustr.backup.util.DataSize;
 import com.instaclustr.backup.util.SeekableByteChannelInputStream;
+import com.microsoft.azure.storage.StorageException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.naming.ConfigurationException;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.channels.FileChannel;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Collection;
 import java.util.concurrent.*;
@@ -67,17 +70,17 @@ public class FilesUploader {
         }
     }
 
-    public FilesUploader(final SnapshotUploader fileUploadProvider,
-//                         final MetricRegistry metricRegistry,
-                         final CommonBackupArguments arguments) {
-
-        this.snapshotUploaderProvider = fileUploadProvider;
-//        this.uploadThroughputMeter = metricRegistry.meter("upload-throughput");
+    public FilesUploader(final BackupArguments arguments) throws StorageException, ConfigurationException, URISyntaxException {
+        this.snapshotUploaderProvider = CloudDownloadUploadFactory.getUploader(arguments);
         this.arguments = arguments;
     }
 
     public void uploadOrFreshenFiles(final Collection<ManifestEntry> manifest) throws Exception {
         uploadOrFreshenFiles(manifest, true);
+    }
+
+    public String resolveRemotePath(Path objectKey) {
+        return snapshotUploaderProvider.resolveRemotePath(objectKey);
     }
 
     public void uploadOrFreshenFiles(final Collection<ManifestEntry> manifest, final boolean deleteOnClose) throws Exception {

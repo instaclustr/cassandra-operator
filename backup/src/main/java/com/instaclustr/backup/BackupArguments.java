@@ -15,7 +15,7 @@ public class BackupArguments extends CommonBackupArguments {
     }
 
     @Override
-    void parseArguments(String[] args) {
+    public void parseArguments(String[] args) {
         super.parseArguments(args);
 
         if (columnFamily != null && keyspaces.size() != 1) {

@@ -1,9 +1,16 @@
 package com.instaclustr.backup.uploader;
 
+import com.instaclustr.backup.common.RemoteObjectReference;
+import com.instaclustr.backup.common.StorageInteractor;
+
 import java.io.InputStream;
 import java.nio.file.Path;
 
-public abstract class SnapshotUploader implements AutoCloseable {
+public abstract class SnapshotUploader extends StorageInteractor implements AutoCloseable {
+    public SnapshotUploader(String restoreFromClusterId, String restoreFromNodeId, String restoreFromBackupBucket) {
+        super(restoreFromClusterId, restoreFromNodeId, restoreFromBackupBucket);
+    }
+
     public abstract RemoteObjectReference objectKeyToRemoteReference(final Path objectKey) throws Exception;
 
     public enum FreshenResult {

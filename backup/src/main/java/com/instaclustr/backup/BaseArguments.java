@@ -4,8 +4,11 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.ParserProperties;
+import org.kohsuke.args4j.spi.PathOptionHandler;
 
+import javax.annotation.Nullable;
 import java.io.PrintStream;
+import java.nio.file.Path;
 
 public abstract class BaseArguments {
     final String appName;
@@ -19,7 +22,7 @@ public abstract class BaseArguments {
         this.stream = stream;
     }
 
-    void parseArguments(String[] args) {
+    public void parseArguments(String[] args) {
         try {
             this.parser = new CmdLineParser(this, ParserProperties.defaults().withUsageWidth(120).withOptionSorter(null));
             this.parser.parseArgument(args);
@@ -63,4 +66,33 @@ public abstract class BaseArguments {
 
     @Option(name="--help", usage = "Show this message.", help = true)
     public boolean showHelp;
+
+
+    @Option(name = "--bs", aliases = {"--blob-storage"}, usage = "Blob storage provider (AWS, AZURE, GCP, FILE)", metaVar = "FILE")
+    public StorageProvider storageProvider;
+
+    @Option(name = "-c", aliases = {"--cluster"}, metaVar = "cluster ID", usage = "Parent cluster of node to restore from.", required = true)
+    public String clusterId;
+
+    //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
+    @Option(name = "--dd", aliases = {"--data-directory"}, usage = "Base directory that contains the Cassandra data, cache and commitlog directories", metaVar = "/cassandra", handler = PathOptionHandler.class)
+    @Nullable
+    public Path cassandraDirectory;
+
+
+    //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
+    @Option(name = "--fl", aliases = {"--filebackup-location"}, usage = "Base directory destination for filesystem based backups", metaVar = "/backups", handler = PathOptionHandler.class)
+    @Nullable
+    public Path fileBackupDirectory;
+
+    //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
+    @Option(name = "--cd", aliases = {"--config-directory"}, usage = "Base directory that contains the Cassandra data, cache and commitlog directories", metaVar = "/cassandra", handler = PathOptionHandler.class)
+    @Nullable
+    public Path cassandraConfigDirectory;
+
+
+    @Option(name = "-p", aliases = {"--shared-path"}, usage = "Shared Container path for pod", metaVar = "/", handler = PathOptionHandler.class)
+    @Nullable
+    public Path sharedContainerPath;
+
 }

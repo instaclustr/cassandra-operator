@@ -28,8 +28,8 @@ jobs:
       - run:
           name: Setup Google Cloud
           command: gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json && gcloud --quiet config set project ${GOOGLE_PROJECT_ID} && gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
-        
-      - run: mvn -q package
+
+      - run: mvn -q -DskipTests package
 
       - store_test_results:
           path: operator/target/surefire-reports
@@ -43,7 +43,92 @@ jobs:
       - run:
           name: Release docker images
           command: ./buildenv/release-all
-  test:
+
+  test-pivotal:
+        docker:
+              # specify the version you desire here
+              - image: gcr.io/cassandra-operator/jdk8-gcloud-sdk:latest
+                auth:
+                  username: _json_key
+                  password: $GOOGLE_AUTH
+
+        working_directory: ~/cassandra-operator
+
+        environment:
+              # Customize the JVM maximum heap limit
+          MAVEN_OPTS: -Xmx3200m
+
+        steps:
+          - checkout
+
+          - run:
+              name: Dump Pivotal kube config
+              command: mkdir -p ${HOME}/.kube/ && echo ${PIVOTAL_KUBECTL} | base64 -d > ${HOME}/.kube/config
+
+          - run:
+              name: Run integration tests
+              command: ./test/pivotaltests
+#              command:
+
+          - run:
+              name: Cleanup GCP resources
+              command: ./test/cleanup
+              when: always
+  test-joyent:
+        docker:
+              # specify the version you desire here
+              - image: gcr.io/cassandra-operator/jdk8-gcloud-sdk:latest
+                auth:
+                  username: _json_key
+                  password: $GOOGLE_AUTH
+
+        working_directory: ~/cassandra-operator
+
+        environment:
+              # Customize the JVM maximum heap limit
+          MAVEN_OPTS: -Xmx3200m
+
+        steps:
+          - checkout
+
+          - run:
+              name: Dump Joyent kube config
+              command: echo ${JOYENT_KUBECTL} > ${HOME}/.kube/config
+
+          - run:
+              name: Run integration tests
+              command: ./test/joyenttests.sh
+
+          - run:
+              name: Cleanup GCP resources
+              command: gcloud --quiet container clusters delete ${K8S_CLUSTER_NAME} --async
+              when: always
+  test-aws:
+      docker:
+            # specify the version you desire here
+            - image: gcr.io/cassandra-operator/jdk8-gcloud-sdk:latest
+              auth:
+                username: _json_key
+                password: $GOOGLE_AUTH
+
+      working_directory: ~/cassandra-operator
+
+      environment:
+            # Customize the JVM maximum heap limit
+        MAVEN_OPTS: -Xmx3200m
+
+      steps:
+        - checkout
+
+        - run:
+            name: Dump AWS Credentials to file
+            command: echo ${AWS_CONFIG} | base64 -d > ${HOME}/.aws/config
+
+        - run:
+            name: Run integration tests
+            command: ./test/awstests
+
+  test-gcp:
     docker:
           # specify the version you desire here
           - image: gcr.io/cassandra-operator/jdk8-gcloud-sdk:latest
@@ -72,13 +157,8 @@ jobs:
           command: gcloud --quiet container clusters create ${K8S_CLUSTER_NAME} && gcloud --quiet container clusters get-credentials ${K8S_CLUSTER_NAME}
 
       - run:
-          name: Deploy operator
-          command: kubectl create clusterrolebinding my-user-role-binding --clusterrole=cluster-admin --user=${SERVICE_ACCOUNT} && kubectl apply -f bundle.yaml
-
-      - run:
           name: Run integration tests
-          # command: ./test/e2e.sh (run e2e tests via maven/junit)
-          command: kubectl get pods --selector=k8s-app=cassandra-operator | tee | awk 'NR>1{if($3 == "CrashLoopBackOff") {exit 1}}'
+          command: ./test/gcptests
 
       - run:
           name: Cleanup GCP resources
@@ -89,6 +169,9 @@ workflows:
   build_and_test:
     jobs:
       - build
-      - test:
+      - test-gcp:
+          requires:
+            - build
+      - test-pivotal:
           requires:
             - build

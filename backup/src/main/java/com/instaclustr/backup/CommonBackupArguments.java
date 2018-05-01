@@ -4,13 +4,11 @@ import com.instaclustr.backup.util.DataRate;
 import com.instaclustr.backup.util.JMXUrlOptionHandler;
 import com.instaclustr.backup.util.MeasureOptionHandler;
 import com.instaclustr.backup.util.Time;
-import org.kohsuke.args4j.*;
-import org.kohsuke.args4j.spi.PathOptionHandler;
+import org.kohsuke.args4j.Option;
 
 import javax.annotation.Nullable;
 import javax.management.remote.JMXServiceURL;
 import java.io.PrintStream;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
@@ -42,11 +40,15 @@ public abstract class CommonBackupArguments extends BaseArguments {
     }
 
     @Override
-    void parseArguments(String[] args) {
+    public void parseArguments(String[] args) {
         super.parseArguments(args);
 
         if (this.bandwidth == null && this.speed == null) {
             this.speed = CommonBackupArguments.Speed.FAST;
+        }
+
+        if (this.offlineSnapshot == null) {
+            this.offlineSnapshot = false;
         }
 
         // use the specified speed
@@ -96,30 +98,18 @@ public abstract class CommonBackupArguments extends BaseArguments {
     @Nullable
     public DataRate bandwidth;
 
-    @Option(name = "-j", aliases = {"--jmx"}, usage = "JMX service url for Cassandra", metaVar = "jmx-url", handler = JMXUrlOptionHandler.class, required = true)
+    @Option(name = "-j", aliases = {"--jmx"}, usage = "JMX service url for Cassandra", metaVar = "jmx-url", handler = JMXUrlOptionHandler.class, forbids = "--offline")
     public JMXServiceURL jmxServiceURL;
-
-
-    @Option(name = "-p", aliases = {"--shared-path"}, usage = "Shared Container path for pod", metaVar = "/", handler = PathOptionHandler.class)
-    @Nullable
-    public Path sharedContainerPath;
-
-
-    //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
-    @Option(name = "--cd", aliases = {"--cassandra-directory"}, usage = "Base directory that contains the Cassandra data, cache and commitlog directories", metaVar = "/cassandra", handler = PathOptionHandler.class)
-    @Nullable
-    public Path cassandraDirectory;
-
-    @Option(name = "--bs", aliases = {"--blob-storage"}, usage = "Blob storage provider (AWS, AZURE, GCP, FILE)", metaVar = "FILE")
-    public StorageProvider storageProvider;
-
-    //arguments.backupID, arguments.clusterID, arguments.backupBucket,
-
-    @Option(name = "--cid", aliases = {"--cluster-id"}, usage = "Cluster ID - normally the cluster name", metaVar = "cluster_name")
-    public String clusterID;
 
     @Option(name = "--bucket", aliases = {"--backup-bucket"}, usage = "Container or bucket to store backups in", metaVar = "bucket_name")
     public String backupBucket;
+
+    @Option(name = "--id", aliases = {"--backup-id"}, usage = "Cassandra backup id", metaVar = "cassandra-2")
+    public String backupId;
+
+    @Option(name = "--offline", usage = "Cassandra is not running (won't use JMX to snapshot, no token lists uploaded)", metaVar = "false", forbids = "-j")
+    public Boolean offlineSnapshot;
+
 
 
 }

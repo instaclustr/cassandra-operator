@@ -1,5 +1,7 @@
 package com.instaclustr.backup;
 
+import com.google.common.collect.Multimap;
+import com.instaclustr.backup.util.MultimapOptionHandler;
 import org.kohsuke.args4j.Option;
 
 import javax.annotation.Nullable;
@@ -17,13 +19,7 @@ public class RestoreArguments extends BaseArguments {
     }
 
     @Option(name = "-bi", aliases = {"--com.instaclustr.backup-id"}, metaVar = "com.instaclustr.backup ID", usage = "Backup ID to restore from. Normally just the source nodeID, but if the node has replaced another node might be previous nodeID.", required = true)
-    public String sourceBackupID;
-
-    @Option(name = "-cdc", aliases = {"--cluster-data-centre"}, metaVar = "cluster data centre ID", usage = "Parent cluster data centre of node to restore from.", required = true)
-    public String clusterDataCentreId;
-
-    @Option(name = "-c", aliases = {"--cluster"}, metaVar = "cluster ID", usage = "Parent cluster of node to restore from.", required = true)
-    public String clusterId;
+    public String sourceNodeID;
 
     @Option(name = "-bb", aliases = {"--com.instaclustr.backup-bucket"}, metaVar = "bucket name", usage = "Bucket hosting the snapshot files to restore.", required = true)
     public String backupBucket;
@@ -31,14 +27,14 @@ public class RestoreArguments extends BaseArguments {
     @Option(name = "-s", aliases = {"--snapshot-tag"}, metaVar = "tag name", usage = "Snapshot to download and restore.", required = true)
     public String snapshotTag;
 
-    @Option(name="-kt", aliases = "--keyspace-tables", metaVar = "name", usage = "Comma separated list of tables to restore. Must include keyspace name in the format <keyspace.table>")
+    @Option(name="-kt", aliases = "--keyspace-tables", metaVar = "name", usage = "Comma separated list of tables to restore. Must include keyspace name in the format <keyspace.table>", handler = MultimapOptionHandler.class)
     @Nullable
-    public String keyspaceTables;
+    public Multimap<String, String> keyspaceTables;
 
-    @Option(name = "-ts", aliases = {"--timestamp-start"}, metaVar = "Milliseconds since epoch", usage = "When the base snapshot was taken. Only relevant if archived commitlogs are available.", required = true)
+    @Option(name = "-ts", aliases = {"--timestamp-start"}, metaVar = "Milliseconds since epoch", usage = "When the base snapshot was taken. Only relevant if archived commitlogs are available.", required = false)
     public long timestampStart;
 
-    @Option(name = "-te", aliases = {"--timestamp-end"}, metaVar = "Milliseconds since epoch", usage = "Point-in-time to restore up to. Only relevant if archived commitlogs are available.", required = true)
+    @Option(name = "-te", aliases = {"--timestamp-end"}, metaVar = "Milliseconds since epoch", usage = "Point-in-time to restore up to. Only relevant if archived commitlogs are available.", required = false)
     public long timestampEnd;
 
     @Option(name = "-rs", aliases = {"--restore-system-keyspace"}, usage = "Restore system keyspace. Use this to prevent bootstrapping, when restoring on only a single node.")

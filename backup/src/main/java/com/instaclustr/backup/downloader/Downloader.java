@@ -4,6 +4,9 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.RateLimiter;
+import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.common.RemoteObjectReference;
+import com.instaclustr.backup.common.StorageInteractor;
 import com.instaclustr.backup.task.ManifestEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,10 +18,12 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public abstract class Downloader implements AutoCloseable {
+public abstract class Downloader extends StorageInteractor implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(Downloader.class);
 
-    public abstract RemoteObjectReference objectKeyToRemoteReference(final Path objectKey) throws Exception;
+    public Downloader(final RestoreArguments arguments) {
+        super(arguments.clusterId, arguments.sourceNodeID, arguments.backupBucket);
+    }
 
     public enum CompareFilesResult {
         MATCHING,
@@ -31,6 +36,7 @@ public abstract class Downloader implements AutoCloseable {
 
         return CompareFilesResult.MATCHING;
     }
+
 
     public abstract void downloadFile(final Path localPath, final RemoteObjectReference object) throws Exception;
 
@@ -60,7 +66,7 @@ public abstract class Downloader implements AutoCloseable {
                             try {
                                 objectRateLimiter.acquire();
                             } catch (final Exception e) {
-                                logger.warn("Failed to get rate limiter lock for file \"{}\".", remoteObjectReference.getObjectKey(), e);
+                                logger.warn("Failed to getUploader rate limiter lock for file \"{}\".", remoteObjectReference.getObjectKey(), e);
                             }
 
                             this.downloadFile(entry.localFile, remoteObjectReference);
