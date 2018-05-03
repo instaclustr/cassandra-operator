@@ -99,6 +99,10 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <finalName>${project.artifactId}-${project.version}-final</finalName>
+                            <outputDirectory>../docker/cassandra-operator</outputDirectory>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+#try to resolve buildenv dir then set working directory to git repo root
+cd `dirname "$BASH_SOURCE"`/..
+
+source ./buildenv/repo
+
+echo "Building ${REPO}:${TAG}"
+
+docker build --tag "${REPO}:${TAG}" --tag "$1" docker/${1} 1>/dev/null
