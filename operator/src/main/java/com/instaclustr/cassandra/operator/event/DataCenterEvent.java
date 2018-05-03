@@ -5,10 +5,17 @@ import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 
 public abstract class DataCenterEvent {
-    public final DataCenter dataCenter;
+    public DataCenter dataCenter;
+    public final DataCenterEventType type;
+    
+    public enum DataCenterEventType {
+        ADDED, MODIFIED, DELETED,
+        POISON
+    }
 
-    protected DataCenterEvent(final DataCenter dataCenter) {
+    protected DataCenterEvent(final DataCenter dataCenter, final DataCenterEventType type) {
         this.dataCenter = dataCenter;
+        this.type = type;
     }
 
     public interface Factory extends WatchEvent.Factory<DataCenter> {
@@ -20,7 +27,7 @@ public abstract class DataCenterEvent {
     public static class Added extends DataCenterEvent implements WatchEvent.Added {
         @Inject
         public Added(@Assisted final DataCenter dataCenter) {
-            super(dataCenter);
+            super(dataCenter, DataCenterEventType.ADDED);
         }
     }
 
@@ -28,14 +35,20 @@ public abstract class DataCenterEvent {
     public static class Modified extends DataCenterEvent implements WatchEvent.Modified {
         @Inject
         public Modified(@Assisted("old") final DataCenter oldDataCenter, @Assisted("new") final DataCenter newDataCenter) {
-            super(newDataCenter);
+            super(newDataCenter, DataCenterEventType.MODIFIED);
         }
     }
 
     public static class Deleted extends DataCenterEvent implements WatchEvent.Deleted {
         @Inject
         public Deleted(@Assisted final DataCenter dataCenter) {
-            super(dataCenter);
+            super(dataCenter, DataCenterEventType.DELETED);
+        }
+    }
+    
+    public static class Poison extends DataCenterEvent {
+        public Poison() {
+            super(new DataCenter(), DataCenterEventType.POISON);
         }
     }
 

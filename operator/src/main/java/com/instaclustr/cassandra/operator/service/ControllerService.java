@@ -10,10 +10,13 @@ import com.google.common.io.Resources;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.common.util.concurrent.AbstractIdleService;
+import com.google.gson.JsonSyntaxException;
 import com.instaclustr.cassandra.operator.event.ClusterEvent;
 import com.instaclustr.cassandra.operator.event.DataCenterEvent;
 import com.instaclustr.cassandra.operator.event.SecretEvent;
 import com.instaclustr.cassandra.operator.event.StatefulSetEvent;
+import com.instaclustr.cassandra.operator.event.DataCenterEvent.DataCenterEventType;
+import com.instaclustr.cassandra.operator.event.DataCenterEvent.Poison;
 import com.instaclustr.cassandra.operator.model.Cluster;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
@@ -42,9 +45,6 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
 
-
-    static final DataCenterKey POISON = new DataCenterKey("", "");
-
     private final String namespace = "default"; // TODO: get from injector (which is from config/cli/env)
 
     private final CustomObjectsApi customObjectsApi;
@@ -52,7 +52,8 @@ public class ControllerService extends AbstractExecutionThreadService {
     private final AppsV1beta2Api appsApi;
     private final Cache<DataCenterKey, DataCenter> dataCenterCache;
 
-    private final BlockingQueue<DataCenterKey> dataCenterQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<DataCenterEvent> dataCenterEventQueue = new LinkedBlockingQueue<>();
+    static Poison POISON = new Poison();
 
     @Inject
     ControllerService(final CustomObjectsApi customObjectsApi,
@@ -72,7 +73,7 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     @Subscribe
     void dataCenterEvent(final DataCenterEvent event) {
-        dataCenterQueue.add(DataCenterKey.forDataCenter(event.dataCenter));
+    	dataCenterEventQueue.add(event);
     }
 
     @Subscribe
@@ -89,11 +90,10 @@ public class ControllerService extends AbstractExecutionThreadService {
     @Override
     protected void run() throws Exception {
         while (isRunning()) {
-            final DataCenterKey dataCenterKey = dataCenterQueue.take();
-
-            if (dataCenterKey == POISON)
-                return;
-
+            final DataCenterEvent event = dataCenterEventQueue.take();
+            if (event.type == DataCenterEventType.POISON) return;
+            
+            final DataCenterKey dataCenterKey = DataCenterKey.forDataCenter(event.dataCenter);
             final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
 
             if (dataCenter == null) {
@@ -103,126 +103,176 @@ public class ControllerService extends AbstractExecutionThreadService {
             }
 
             logger.debug("Coalescing state for Cassandra Data Center {}", dataCenterKey);
-
-            // create the public service (what clients use to discover the data center)
-            {
-                final V1Service service = new V1Service()
-                        .metadata(new V1ObjectMeta()
-                                        .name(dataCenterKey.name)
-//                            .labels(ImmutableMap.of("app", "cassandra"))
-                        )
-                        .spec(new V1ServiceSpec()
-                                .clusterIP("None")
-                                .ports(ImmutableList.of(new V1ServicePort().name("cql").port(9042)))
-                                .selector(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
-                        );
-
-                createOrReplaceNamespaceService(service);
-            }
-
-            // create the seed-node service (what C* nodes use to discover the DC seeds)
-            {
-                final V1Service service = new V1Service()
-                        .metadata(new V1ObjectMeta()
-                                .name(String.format("%s-seeds", dataCenterKey.name))
-                                .putAnnotationsItem("service.alpha.kubernetes.io/tolerate-unready-endpoints", "true")
-                        )
-                        .spec(new V1ServiceSpec()
-                                .publishNotReadyAddresses(true)
-                                .clusterIP("None")
-                                // a port needs to be defined for the service to be resolvable (#there-was-a-bug-ID-and-now-I-cant-find-it)
-                                .ports(ImmutableList.of(new V1ServicePort().name("internode").port(7000)))
-                                .selector(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
-                        );
-
-                createOrReplaceNamespaceService(service);
-            }
-
-            // create config map
-            final V1ConfigMap configMap;
-            {
-                configMap = new V1ConfigMap()
-                        .metadata(new V1ObjectMeta().name(String.format("%s-config", dataCenterKey.name)))
-                        .putDataItem("cassandra.yaml", resourceAsString("/com/instaclustr/cassandra/config/cassandra.yaml") +
-                            "\n\nseed_provider:\n" +
-                                    "    - class_name: com.instaclustr.cassandra.k8s.SeedProvider\n" +
-                                    "      parameters:\n" +
-                                    String.format("          - service: %s-seeds", dataCenterKey.name)
-                        )
-                        .putDataItem("logback.xml", resourceAsString("/com/instaclustr/cassandra/config/logback.xml"))
-                        .putDataItem("cassandra-env.sh", resourceAsString("/com/instaclustr/cassandra/config/cassandra-env.sh"))
-                        .putDataItem("jvm.options", resourceAsString("/com/instaclustr/cassandra/config/jvm.options"))
-                ;
-
-                createOrReplaceNamespaceConfigMap(configMap);
-            }
-
-            // create the stateful set for the DC nodes
-            {
-                final V1beta2StatefulSet statefulSet = new V1beta2StatefulSet()
-                        .metadata(new V1ObjectMeta()
-                                        .name(dataCenterKey.name)
-                                //.labels(ImmutableMap.of("app", "cassandra"))
-                        )
-                        .spec(new V1beta2StatefulSetSpec()
-                                .serviceName("cassandra")
-                                .replicas(dataCenter.getSpec().getReplicas().intValue())
-                                .selector(new V1LabelSelector().putMatchLabelsItem("cassandra-datacenter", dataCenterKey.name))
-                                .template(new V1PodTemplateSpec()
-                                        .metadata(new V1ObjectMeta().putLabelsItem("cassandra-datacenter", dataCenterKey.name))
-                                        .spec(new V1PodSpec()
-                                                .addContainersItem(new V1Container()
-                                                        .name(dataCenterKey.name)
-                                                        .image("instaclustr/k8s-cassandra") // TODO: parameterize version (not sure if we should expose the whole image as configurable)
-                                                        .imagePullPolicy("Never")
-                                                        .ports(ImmutableList.of(
-                                                                new V1ContainerPort().name("internode").containerPort(7000),
-                                                                new V1ContainerPort().name("cql").containerPort(9042),
-                                                                new V1ContainerPort().name("jmx").containerPort(7199)
-                                                        ))
-                                                        .resources(new V1ResourceRequirements()
-                                                                .putLimitsItem("memory", Quantity.fromString("512Mi"))
-                                                                .putRequestsItem("memory", Quantity.fromString("512Mi"))
-                                                        )
-                                                        .readinessProbe(new V1Probe()
-                                                                .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
-                                                                .initialDelaySeconds(60)
-                                                                .timeoutSeconds(5)
-                                                        )
-                                                        .addVolumeMountsItem(new V1VolumeMount()
-                                                                .name("config-volume")
-                                                                .mountPath("/etc/cassandra")
-                                                        )
-                                                        .addVolumeMountsItem(new V1VolumeMount()
-                                                                .name("data-volume")
-                                                                .mountPath("/var/lib/cassandra")
-                                                        )
-                                                )
-                                                .addVolumesItem(new V1Volume()
-                                                        .name("config-volume")
-                                                        .configMap(new V1ConfigMapVolumeSource().name(configMap.getMetadata().getName()))
-                                                )
-                                        )
-                                )
-                                .addVolumeClaimTemplatesItem(new V1PersistentVolumeClaim()
-                                        .metadata(new V1ObjectMeta().name("data-volume"))
-                                        .spec(new V1PersistentVolumeClaimSpec()
-                                                .addAccessModesItem("ReadWriteOnce")
-                                                .resources(new V1ResourceRequirements().putRequestsItem("storage", Quantity.fromString("100Mi"))) // TODO: parameterize
-                                        )
-                                )
-                        );
-
-                createOrReplaceNamespaceStatefulSet(statefulSet);
+            
+            switch (event.type) {
+            	case ADDED:
+            		logger.info("DC " + event.type + " Event Received.");
+            		createDataCenter(dataCenterKey);
+            		break;
+            	case MODIFIED:
+            		logger.info("DC " + event.type + " Event Received.");
+            		break;
+            	case DELETED:
+            		deleteDataCenter(dataCenterKey);
+            		logger.info("DC " + event.type + " Event Received.");
+            		break;
+            	default:
+            		break;          		
             }
         }
     }
+    
+    private void createDataCenter(DataCenterKey dataCenterKey) throws Exception {
+    	
+    	// create the public service (what clients use to discover the data center)
+    	V1Service publicService = generatePublicService(dataCenterKey);
+    	createOrReplaceNamespaceService(publicService);
+
+        // create the seed-node service (what C* nodes use to discover the DC seeds)
+    	V1Service seednodeService = generateSeednodeService(dataCenterKey);
+    	createOrReplaceNamespaceService(seednodeService);
+
+        // create config map
+    	V1ConfigMap configMap = generateConfigMap(dataCenterKey);
+    	createOrReplaceNamespaceConfigMap(configMap);
+
+        // create the stateful set for the DC nodes
+    	V1beta2StatefulSet statefulSet = generateStatefulSet(dataCenterKey, configMap);
+        createOrReplaceNamespaceStatefulSet(statefulSet);
+    }
+    
+	private void deleteDataCenter(DataCenterKey dataCenterKey) throws Exception {
+		
+		V1ConfigMap configMap = generateConfigMap(dataCenterKey);
+		V1beta2StatefulSet statefulSet = generateStatefulSet(dataCenterKey, configMap);
+		V1Service publicService = generatePublicService(dataCenterKey);
+		V1Service seednodeService = generateSeednodeService(dataCenterKey);
+
+		// delete StatefulSet
+		deleteNamespaceStatefulSet(statefulSet);
+		
+		// delete ConfigMap
+		deleteConfigMap(configMap);
+		
+		// delete Services
+		deleteService(publicService);
+		deleteService(seednodeService);
+	}
 
 
 
     @FunctionalInterface
     private interface ApiCallable {
         void call() throws ApiException;
+    }
+    
+    private V1Service generatePublicService(DataCenterKey dataCenterKey) {
+    	final V1Service publicService = new V1Service()
+                .metadata(new V1ObjectMeta()
+                                .name(dataCenterKey.name)
+//                    .labels(ImmutableMap.of("app", "cassandra"))
+                )
+                .spec(new V1ServiceSpec()
+                        .clusterIP("None")
+                        .ports(ImmutableList.of(new V1ServicePort().name("cql").port(9042)))
+                        .selector(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
+                );
+    	
+    	return publicService;
+    }
+    
+    private V1Service generateSeednodeService(DataCenterKey dataCenterKey) {
+    	final V1Service seednodeService = new V1Service()
+                .metadata(new V1ObjectMeta()
+                        .name(String.format("%s-seeds", dataCenterKey.name))
+                        .putAnnotationsItem("service.alpha.kubernetes.io/tolerate-unready-endpoints", "true")
+                )
+                .spec(new V1ServiceSpec()
+                        .publishNotReadyAddresses(true)
+                        .clusterIP("None")
+                        // a port needs to be defined for the service to be resolvable (#there-was-a-bug-ID-and-now-I-cant-find-it)
+                        .ports(ImmutableList.of(new V1ServicePort().name("internode").port(7000)))
+                        .selector(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
+                );
+    	
+    	return seednodeService;
+    }
+    
+    private V1ConfigMap generateConfigMap(DataCenterKey dataCenterKey) throws IOException {
+    	final V1ConfigMap configMap = new V1ConfigMap()
+                .metadata(new V1ObjectMeta().name(String.format("%s-config", dataCenterKey.name)))
+                .putDataItem("cassandra.yaml", resourceAsString("/com/instaclustr/cassandra/config/cassandra.yaml") +
+                    "\n\nseed_provider:\n" +
+                            "    - class_name: com.instaclustr.cassandra.k8s.SeedProvider\n" +
+                            "      parameters:\n" +
+                            String.format("          - service: %s-seeds", dataCenterKey.name)
+                )
+                .putDataItem("logback.xml", resourceAsString("/com/instaclustr/cassandra/config/logback.xml"))
+                .putDataItem("cassandra-env.sh", resourceAsString("/com/instaclustr/cassandra/config/cassandra-env.sh"))
+                .putDataItem("jvm.options", resourceAsString("/com/instaclustr/cassandra/config/jvm.options"))
+        ;
+    	
+    	return configMap;
+    }
+    
+    private V1beta2StatefulSet generateStatefulSet(DataCenterKey dataCenterKey, V1ConfigMap configMap) {
+    	final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
+    	
+    	final V1beta2StatefulSet statefulSet = new V1beta2StatefulSet()
+                .metadata(new V1ObjectMeta()
+                                .name(dataCenterKey.name)
+                        //.labels(ImmutableMap.of("app", "cassandra"))
+                )
+                .spec(new V1beta2StatefulSetSpec()
+                        .serviceName("cassandra")
+                        .replicas(dataCenter.getSpec().getReplicas().intValue())
+                        .selector(new V1LabelSelector().putMatchLabelsItem("cassandra-datacenter", dataCenterKey.name))
+                        .template(new V1PodTemplateSpec()
+                                .metadata(new V1ObjectMeta().putLabelsItem("cassandra-datacenter", dataCenterKey.name))
+                                .spec(new V1PodSpec()
+                                        .addContainersItem(new V1Container()
+                                                .name(dataCenterKey.name)
+                                                .image("instaclustr/k8s-cassandra") // TODO: parameterize version (not sure if we should expose the whole image as configurable)
+                                                .imagePullPolicy("Never")
+                                                .ports(ImmutableList.of(
+                                                        new V1ContainerPort().name("internode").containerPort(7000),
+                                                        new V1ContainerPort().name("cql").containerPort(9042),
+                                                        new V1ContainerPort().name("jmx").containerPort(7199)
+                                                ))
+                                                .resources(new V1ResourceRequirements()
+                                                        .putLimitsItem("memory", Quantity.fromString("512Mi"))
+                                                        .putRequestsItem("memory", Quantity.fromString("512Mi"))
+                                                )
+                                                .readinessProbe(new V1Probe()
+                                                        .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
+                                                        .initialDelaySeconds(60)
+                                                        .timeoutSeconds(5)
+                                                )
+                                                .addVolumeMountsItem(new V1VolumeMount()
+                                                        .name("config-volume")
+                                                        .mountPath("/etc/cassandra")
+                                                )
+                                                .addVolumeMountsItem(new V1VolumeMount()
+                                                        .name("data-volume")
+                                                        .mountPath("/var/lib/cassandra")
+                                                )
+                                        )
+                                        .addVolumesItem(new V1Volume()
+                                                .name("config-volume")
+                                                .configMap(new V1ConfigMapVolumeSource().name(configMap.getMetadata().getName()))
+                                        )
+                                )
+                        )
+                        .addVolumeClaimTemplatesItem(new V1PersistentVolumeClaim()
+                                .metadata(new V1ObjectMeta().name("data-volume"))
+                                .spec(new V1PersistentVolumeClaimSpec()
+                                        .addAccessModesItem("ReadWriteOnce")
+                                        .resources(new V1ResourceRequirements().putRequestsItem("storage", Quantity.fromString("100Mi"))) // TODO: parameterize
+                                )
+                        )
+                );
+    	
+    	return statefulSet;
     }
 
     private static void createOrReplaceResource(final ApiCallable createCallable, final ApiCallable replaceCallable) throws ApiException {
@@ -263,9 +313,59 @@ public class ControllerService extends AbstractExecutionThreadService {
     public static String resourceAsString(final String resourceName) throws IOException {
         return Resources.toString(Resources.getResource(ControllerService.class, resourceName), StandardCharsets.UTF_8);
     }
+    
+    private static void deleteResource(final ApiCallable deleteCallable) throws ApiException {
+        try {
+        	deleteCallable.call();
+
+        } catch (final ApiException e) {
+        	if (e.getCode() != 409)
+                throw e;
+        }
+    }
+    
+    private void deleteNamespaceStatefulSet(final V1beta2StatefulSet statefulSet) throws Exception {
+    	V1DeleteOptions deleteOptions = new V1DeleteOptions();
+    	deleteOptions.setPropagationPolicy("Foreground");
+    	
+    	//Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
+    	statefulSet.getSpec().setReplicas(0);
+    	createOrReplaceNamespaceStatefulSet(statefulSet);
+    	
+    	//Catch JsonSyntaxException to avoid crash (https://github.com/kubernetes-client/java/issues/86)
+    	try {
+    		deleteResource(
+                    () -> appsApi.deleteNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, deleteOptions, null, null, null, "Foreground")
+            );
+        }
+        catch (JsonSyntaxException e) {
+            if (e.getCause() instanceof IllegalStateException) {
+                IllegalStateException ise = (IllegalStateException) e.getCause();
+                if (ise.getMessage() != null && ise.getMessage().contains("Expected a string but was BEGIN_OBJECT"))
+                    logger.debug("Catching exception because of issue https://github.com/kubernetes-client/java/issues/86");
+                else throw e;
+            }
+            else throw e;
+        }
+    	
+    }
+    
+    private void deleteConfigMap(final V1ConfigMap configMap) throws Exception {
+    	V1DeleteOptions deleteOptions = new V1DeleteOptions();
+    	
+    	deleteResource(
+                () -> coreApi.deleteNamespacedConfigMap(configMap.getMetadata().getName(), namespace, deleteOptions, null, null, null, null)
+        );
+    }
+    
+    private void deleteService(final V1Service service) throws ApiException {    	
+    	deleteResource(
+                () -> coreApi.deleteNamespacedService(service.getMetadata().getName(), namespace, null)
+        );
+    }
 
     @Override
     protected void triggerShutdown() {
-        dataCenterQueue.add(POISON);
+    	dataCenterEventQueue.add(POISON);
     }
 }
