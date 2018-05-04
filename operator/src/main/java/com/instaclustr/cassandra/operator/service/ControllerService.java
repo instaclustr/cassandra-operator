@@ -15,8 +15,6 @@ import com.instaclustr.cassandra.operator.event.ClusterEvent;
 import com.instaclustr.cassandra.operator.event.DataCenterEvent;
 import com.instaclustr.cassandra.operator.event.SecretEvent;
 import com.instaclustr.cassandra.operator.event.StatefulSetEvent;
-import com.instaclustr.cassandra.operator.event.DataCenterEvent.DataCenterEventType;
-import com.instaclustr.cassandra.operator.event.DataCenterEvent.Poison;
 import com.instaclustr.cassandra.operator.model.Cluster;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
@@ -44,6 +42,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class ControllerService extends AbstractExecutionThreadService {
 
     static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
+    
+    static final DataCenterKey POISON = new DataCenterKey("", "");
 
     private final String namespace = "default"; // TODO: get from injector (which is from config/cli/env)
 
@@ -52,8 +52,7 @@ public class ControllerService extends AbstractExecutionThreadService {
     private final AppsV1beta2Api appsApi;
     private final Cache<DataCenterKey, DataCenter> dataCenterCache;
 
-    private final BlockingQueue<DataCenterEvent> dataCenterEventQueue = new LinkedBlockingQueue<>();
-    static Poison POISON = new Poison();
+    private final BlockingQueue<DataCenterKey> dataCenterQueue = new LinkedBlockingQueue<>();
 
     @Inject
     ControllerService(final CustomObjectsApi customObjectsApi,
@@ -72,8 +71,26 @@ public class ControllerService extends AbstractExecutionThreadService {
     }
 
     @Subscribe
-    void dataCenterEvent(final DataCenterEvent event) {
-    	dataCenterEventQueue.add(event);
+    void dataCenterEvent(final DataCenterEvent event) throws Exception {
+    	final DataCenterKey dataCenterKey = DataCenterKey.forDataCenter(event.dataCenter);
+    	
+    	String eventName = event.getClass().getSimpleName();
+        switch (eventName) {
+        	case "Added":
+        		logger.info("DC " + eventName + " Event Received.");
+        		createDataCenter(dataCenterKey);
+        		break;
+        	case "Modified":
+        		logger.info("DC " + eventName + " Event Received.");
+        		break;
+        	case "Deleted":
+        		logger.info("DC " + eventName + " Event Received.");
+        		deleteDataCenter(dataCenterKey);
+        		break;
+        	default:
+        		logger.info("DC " + eventName + " Event Received. Doing nothing...");
+        		break;          		
+        }
     }
 
     @Subscribe
@@ -90,10 +107,11 @@ public class ControllerService extends AbstractExecutionThreadService {
     @Override
     protected void run() throws Exception {
         while (isRunning()) {
-            final DataCenterEvent event = dataCenterEventQueue.take();
-            if (event.type == DataCenterEventType.POISON) return;
+            final DataCenterKey dataCenterKey = dataCenterQueue.take();
             
-            final DataCenterKey dataCenterKey = DataCenterKey.forDataCenter(event.dataCenter);
+            if (dataCenterKey == POISON)
+                return;
+            
             final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
 
             if (dataCenter == null) {
@@ -103,22 +121,6 @@ public class ControllerService extends AbstractExecutionThreadService {
             }
 
             logger.debug("Coalescing state for Cassandra Data Center {}", dataCenterKey);
-            
-            switch (event.type) {
-            	case ADDED:
-            		logger.info("DC " + event.type + " Event Received.");
-            		createDataCenter(dataCenterKey);
-            		break;
-            	case MODIFIED:
-            		logger.info("DC " + event.type + " Event Received.");
-            		break;
-            	case DELETED:
-            		deleteDataCenter(dataCenterKey);
-            		logger.info("DC " + event.type + " Event Received.");
-            		break;
-            	default:
-            		break;          		
-            }
         }
     }
     
@@ -366,6 +368,6 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     @Override
     protected void triggerShutdown() {
-    	dataCenterEventQueue.add(POISON);
+    	dataCenterQueue.add(POISON);
     }
 }
