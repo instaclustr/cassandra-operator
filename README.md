@@ -1,6 +1,5 @@
 ## Cassandra operator
-Build [![CircleCI](https://circleci.com/gh/benbromhead/cassandra-operator/tree/master.svg?style=svg)](https://circleci.com/gh/benbromhead/cassandra-operator/tree/master)
-Test 
+Build [![CircleCI](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master.svg?style=svg)](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master)
 
 ### Project status: alpha
 
