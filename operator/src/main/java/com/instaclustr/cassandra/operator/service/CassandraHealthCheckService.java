@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class CassandraHealthCheckService extends AbstractScheduledService {
-    static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
+    static final Logger logger = LoggerFactory.getLogger(CassandraHealthCheckService.class);
 
     static final ObjectName STORAGE_SERVICE;
 

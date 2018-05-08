@@ -79,7 +79,8 @@ public class ControllerService extends AbstractExecutionThreadService {
     	String eventName = event.getClass().getSimpleName();
         switch (eventName) {
         	case "Added":
-        		logger.info("DC " + eventName + " Event Received.");        		
+        		logger.info("DC " + eventName + " Event Received.");   
+        		logger.info("new DC is: {}");
         		createOrReplaceDataCenter(dataCenterKey);        		
         		break;
         	case "Modified":
@@ -241,6 +242,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                 )
                 .spec(new V1beta2StatefulSetSpec()
                         .serviceName("cassandra")
+                        .podManagementPolicy("Parallel")
                         .replicas(dataCenter.getSpec().getReplicas().intValue())
                         .selector(new V1LabelSelector().putMatchLabelsItem("cassandra-datacenter", dataCenterKey.name))
                         .template(new V1PodTemplateSpec()
