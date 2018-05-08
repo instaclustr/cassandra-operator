@@ -81,12 +81,10 @@ public class DataCenterWatchService extends AbstractExecutionThreadService {
                     switch (ResponseType.valueOf(objectResponse.type)) {
                         case ADDED:
                             dataCenterCache.put(DataCenterKey.forDataCenter(object), object);
-
                             eventBus.post(dataCenterEventFactory.createAddedEvent(object));
                             break;
 
                         case MODIFIED:
-                            dataCenterCache.put(DataCenterKey.forDataCenter(object), object);
                             eventBus.post(dataCenterEventFactory.createModifiedEvent(object, object));
                             break;
 

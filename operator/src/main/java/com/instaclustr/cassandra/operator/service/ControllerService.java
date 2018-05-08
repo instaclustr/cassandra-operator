@@ -72,16 +72,30 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     @Subscribe
     void dataCenterEvent(final DataCenterEvent event) throws Exception {
-    	final DataCenterKey dataCenterKey = DataCenterKey.forDataCenter(event.dataCenter);
+    	DataCenter dataCenter = event.dataCenter;
+    	final DataCenterKey dataCenterKey = DataCenterKey.forDataCenter(dataCenter);
+    	
     	
     	String eventName = event.getClass().getSimpleName();
         switch (eventName) {
         	case "Added":
-        		logger.info("DC " + eventName + " Event Received.");
-        		createDataCenter(dataCenterKey);
+        		logger.info("DC " + eventName + " Event Received.");        		
+        		createOrReplaceDataCenter(dataCenterKey);        		
         		break;
         	case "Modified":
         		logger.info("DC " + eventName + " Event Received.");
+        		
+        		DataCenter oldDataCenter = dataCenterCache.getIfPresent(dataCenterKey);
+        		dataCenterCache.put(dataCenterKey, dataCenter);
+        		
+        		// SCALE
+        		if (oldDataCenter.getSpec().getReplicas() < dataCenter.getSpec().getReplicas()) {
+        			createOrReplaceDataCenter(dataCenterKey);
+        		} else if (oldDataCenter.getSpec().getReplicas() > dataCenter.getSpec().getReplicas()) {
+        			logger.info("Scaling Down is doing nothing...");
+        		}
+                
+                
         		break;
         	case "Deleted":
         		logger.info("DC " + eventName + " Event Received.");
@@ -124,7 +138,7 @@ public class ControllerService extends AbstractExecutionThreadService {
         }
     }
     
-    private void createDataCenter(DataCenterKey dataCenterKey) throws Exception {
+    private void createOrReplaceDataCenter(DataCenterKey dataCenterKey) throws Exception {
     	
     	// create the public service (what clients use to discover the data center)
     	V1Service publicService = generatePublicService(dataCenterKey);
