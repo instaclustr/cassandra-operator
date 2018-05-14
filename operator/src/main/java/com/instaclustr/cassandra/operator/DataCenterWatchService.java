@@ -85,10 +85,12 @@ public class DataCenterWatchService extends AbstractExecutionThreadService {
                             break;
 
                         case MODIFIED:
+                        	dataCenterCache.put(DataCenterKey.forDataCenter(object), object);
                             eventBus.post(dataCenterEventFactory.createModifiedEvent(object, object));
                             break;
 
                         case DELETED:
+                        	dataCenterCache.invalidate(DataCenterKey.forDataCenter(object));
                             eventBus.post(dataCenterEventFactory.createDeletedEvent(object));
                             break;
 

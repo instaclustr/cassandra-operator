@@ -71,40 +71,8 @@ public class ControllerService extends AbstractExecutionThreadService {
     }
 
     @Subscribe
-    void dataCenterEvent(final DataCenterEvent event) throws Exception {
-    	DataCenter dataCenter = event.dataCenter;
-    	final DataCenterKey dataCenterKey = DataCenterKey.forDataCenter(dataCenter);
-    	
-    	
-    	String eventName = event.getClass().getSimpleName();
-        switch (eventName) {
-        	case "Added":
-        		logger.info("DC " + eventName + " Event Received.");   
-        		createOrReplaceDataCenter(dataCenterKey);        		
-        		break;
-        	case "Modified":
-        		logger.info("DC " + eventName + " Event Received.");
-        		
-        		DataCenter oldDataCenter = dataCenterCache.getIfPresent(dataCenterKey);
-        		dataCenterCache.put(dataCenterKey, dataCenter);
-        		
-        		// SCALE
-        		if (oldDataCenter.getSpec().getReplicas() < dataCenter.getSpec().getReplicas()) {
-        			createOrReplaceDataCenter(dataCenterKey);
-        		} else if (oldDataCenter.getSpec().getReplicas() > dataCenter.getSpec().getReplicas()) {
-        			logger.info("Scaling Down is doing nothing...");
-        		}
-                
-                
-        		break;
-        	case "Deleted":
-        		logger.info("DC " + eventName + " Event Received.");
-        		deleteDataCenter(dataCenterKey);
-        		break;
-        	default:
-        		logger.info("DC " + eventName + " Event Received. Doing nothing...");
-        		break;          		
-        }
+    void dataCenterEvent(final DataCenterEvent event) {
+    	dataCenterQueue.add(DataCenterKey.forDataCenter(event.dataCenter));
     }
 
     @Subscribe
@@ -121,25 +89,36 @@ public class ControllerService extends AbstractExecutionThreadService {
     @Override
     protected void run() throws Exception {
         while (isRunning()) {
-            final DataCenterKey dataCenterKey = dataCenterQueue.take();
-            
-            if (dataCenterKey == POISON)
-                return;
-            
-            final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
-
-            if (dataCenter == null) {
-                appsApi.deleteNamespacedStatefulSet(dataCenterKey.name, namespace, null, null, null, null, null);
-
-                continue;
-            }
-
-            logger.debug("Coalescing state for Cassandra Data Center {}", dataCenterKey);
+        	processNextDataCenterEvent();
+        	//processNextClusterEvent();
+        	//processNextSecretEvent();
+        	//processNextStatefulSetEvent();
         }
     }
     
-    private void createOrReplaceDataCenter(DataCenterKey dataCenterKey) throws Exception {
-    	
+    private void processNextDataCenterEvent() throws Exception {
+    	final DataCenterKey dataCenterKey = dataCenterQueue.take();
+        
+        if (dataCenterKey == POISON) return;
+          
+        reconcileDataCenter(dataCenterKey);
+    }
+    
+    // reconcile DataCenter current status with desired status stored in DataCenterCache
+    private void reconcileDataCenter(DataCenterKey dataCenterKey) throws Exception {
+    	final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
+
+        // DELETED 
+        if (dataCenter == null) {
+        	deleteDataCenter(dataCenterKey);
+            return;
+        }
+        
+        // ADDED & MODIFIED (Currently only support SCALE-UP)
+        createOrReplaceDataCenter(dataCenterKey);
+    }
+    
+    private void createOrReplaceDataCenter(DataCenterKey dataCenterKey) throws Exception {   	
     	// create the public service (what clients use to discover the data center)
     	V1Service publicService = generatePublicService(dataCenterKey);
     	createOrReplaceNamespaceService(publicService);
@@ -148,31 +127,35 @@ public class ControllerService extends AbstractExecutionThreadService {
     	V1Service seednodeService = generateSeednodeService(dataCenterKey);
     	createOrReplaceNamespaceService(seednodeService);
 
-        // create config map
+        // create configmap
     	V1ConfigMap configMap = generateConfigMap(dataCenterKey);
     	createOrReplaceNamespaceConfigMap(configMap);
 
-        // create the stateful set for the DC nodes
+        // create the statefulset for the DC nodes
     	V1beta2StatefulSet statefulSet = generateStatefulSet(dataCenterKey, configMap);
         createOrReplaceNamespaceStatefulSet(statefulSet);
     }
     
 	private void deleteDataCenter(DataCenterKey dataCenterKey) throws Exception {
+		String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);
 		
-		V1ConfigMap configMap = generateConfigMap(dataCenterKey);
-		V1beta2StatefulSet statefulSet = generateStatefulSet(dataCenterKey, configMap);
-		V1Service publicService = generatePublicService(dataCenterKey);
-		V1Service seednodeService = generateSeednodeService(dataCenterKey);
-
-		// delete StatefulSet
-		deleteNamespaceStatefulSet(statefulSet);
-		
-		// delete ConfigMap
-		deleteConfigMap(configMap);
-		
-		// delete Services
-		deleteService(publicService);
-		deleteService(seednodeService);
+		// delete statefulset
+		V1beta2StatefulSetList statefulSets = appsApi.listNamespacedStatefulSet(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
+    	for (V1beta2StatefulSet statefulSet : statefulSets.getItems()) {
+    		deleteStatefulSet(statefulSet);
+    	}
+    			
+		// delete configmap
+		V1ConfigMapList configMaps = coreApi.listNamespacedConfigMap(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
+		for (V1ConfigMap configMap : configMaps.getItems()) {
+			deleteConfigMap(configMap);
+		}
+    	
+		// delete services
+    	V1ServiceList services = coreApi.listNamespacedService(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
+    	for (V1Service service : services.getItems()) {
+    		deleteService(service);
+    	}
 	}
 
 
@@ -185,8 +168,8 @@ public class ControllerService extends AbstractExecutionThreadService {
     private V1Service generatePublicService(DataCenterKey dataCenterKey) {
     	final V1Service publicService = new V1Service()
                 .metadata(new V1ObjectMeta()
-                                .name(dataCenterKey.name)
-//                    .labels(ImmutableMap.of("app", "cassandra"))
+                		.name(dataCenterKey.name)
+                		.labels(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
                 )
                 .spec(new V1ServiceSpec()
                         .clusterIP("None")
@@ -201,6 +184,7 @@ public class ControllerService extends AbstractExecutionThreadService {
     	final V1Service seednodeService = new V1Service()
                 .metadata(new V1ObjectMeta()
                         .name(String.format("%s-seeds", dataCenterKey.name))
+                        .labels(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
                         .putAnnotationsItem("service.alpha.kubernetes.io/tolerate-unready-endpoints", "true")
                 )
                 .spec(new V1ServiceSpec()
@@ -216,7 +200,9 @@ public class ControllerService extends AbstractExecutionThreadService {
     
     private V1ConfigMap generateConfigMap(DataCenterKey dataCenterKey) throws IOException {
     	final V1ConfigMap configMap = new V1ConfigMap()
-                .metadata(new V1ObjectMeta().name(String.format("%s-config", dataCenterKey.name)))
+                .metadata(new V1ObjectMeta()
+                		.name(String.format("%s-config", dataCenterKey.name))
+                		.labels(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name)))
                 .putDataItem("cassandra.yaml", resourceAsString("/com/instaclustr/cassandra/config/cassandra.yaml") +
                     "\n\nseed_provider:\n" +
                             "    - class_name: com.instaclustr.cassandra.k8s.SeedProvider\n" +
@@ -236,12 +222,11 @@ public class ControllerService extends AbstractExecutionThreadService {
     	
     	final V1beta2StatefulSet statefulSet = new V1beta2StatefulSet()
                 .metadata(new V1ObjectMeta()
-                                .name(dataCenterKey.name)
-                        //.labels(ImmutableMap.of("app", "cassandra"))
+                		.name(dataCenterKey.name)
+                        .labels(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
                 )
                 .spec(new V1beta2StatefulSetSpec()
                         .serviceName("cassandra")
-                        //.podManagementPolicy("Parallel")
                         .replicas(dataCenter.getSpec().getReplicas().intValue())
                         .selector(new V1LabelSelector().putMatchLabelsItem("cassandra-datacenter", dataCenterKey.name))
                         .template(new V1PodTemplateSpec()
@@ -341,13 +326,18 @@ public class ControllerService extends AbstractExecutionThreadService {
         }
     }
     
-    private void deleteNamespaceStatefulSet(final V1beta2StatefulSet statefulSet) throws Exception {
+    private void deleteStatefulSet(final V1beta2StatefulSet statefulSet) throws Exception {
     	V1DeleteOptions deleteOptions = new V1DeleteOptions();
     	deleteOptions.setPropagationPolicy("Foreground");
     	
     	//Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
     	statefulSet.getSpec().setReplicas(0);
-    	createOrReplaceNamespaceStatefulSet(statefulSet);
+    	try {
+    		appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null);
+    	} catch (ApiException e) {
+    	    System.err.println("Exception when calling AppsV1beta2Api#replaceNamespacedStatefulSet");
+    	    e.printStackTrace();
+    	}   	
     	
     	//Catch JsonSyntaxException to avoid crash (https://github.com/kubernetes-client/java/issues/86)
     	try {
