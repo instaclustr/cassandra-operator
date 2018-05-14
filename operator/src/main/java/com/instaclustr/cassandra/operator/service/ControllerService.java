@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.io.Resources;
+import com.google.common.net.InetAddresses;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.common.util.concurrent.AbstractIdleService;
@@ -34,7 +35,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -86,23 +89,20 @@ public class ControllerService extends AbstractExecutionThreadService {
     }
 
 
-    @Override
-    protected void run() throws Exception {
-        while (isRunning()) {
-        	processNextDataCenterEvent();
-        	//processNextClusterEvent();
-        	//processNextSecretEvent();
-        	//processNextStatefulSetEvent();
-        }
-    }
-    
-    private void processNextDataCenterEvent() throws Exception {
-    	final DataCenterKey dataCenterKey = dataCenterQueue.take();
-        
-        if (dataCenterKey == POISON) return;
-          
-        reconcileDataCenter(dataCenterKey);
-    }
+	@Override
+	protected void run() throws Exception {
+		while (isRunning()) {
+			// processNextDataCenterEvent();
+			final DataCenterKey dataCenterKey = dataCenterQueue.take();
+			if (dataCenterKey == POISON)
+				return;
+			reconcileDataCenter(dataCenterKey);
+
+			// processNextClusterEvent();
+			// processNextSecretEvent();
+			// processNextStatefulSetEvent();
+		}
+	}
     
     // reconcile DataCenter current status with desired status stored in DataCenterCache
     public void reconcileDataCenter(DataCenterKey dataCenterKey) throws Exception {
@@ -220,6 +220,14 @@ public class ControllerService extends AbstractExecutionThreadService {
     private V1beta2StatefulSet generateStatefulSet(DataCenterKey dataCenterKey, V1ConfigMap configMap) {
     	final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
     	
+    	int replicas = 0;
+    	try {
+    		replicas = dataCenter.getSpec().getReplicas().intValue();
+    	} catch (Exception e) {
+    		System.err.println("Invalid Replica Number.");
+    	    e.printStackTrace();
+    	}
+    	
     	final V1beta2StatefulSet statefulSet = new V1beta2StatefulSet()
                 .metadata(new V1ObjectMeta()
                 		.name(dataCenterKey.name)
@@ -227,7 +235,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                 )
                 .spec(new V1beta2StatefulSetSpec()
                         .serviceName("cassandra")
-                        .replicas(dataCenter.getSpec().getReplicas().intValue())
+                        .replicas(replicas)
                         .selector(new V1LabelSelector().putMatchLabelsItem("cassandra-datacenter", dataCenterKey.name))
                         .template(new V1PodTemplateSpec()
                                 .metadata(new V1ObjectMeta().putLabelsItem("cassandra-datacenter", dataCenterKey.name))
@@ -292,8 +300,44 @@ public class ControllerService extends AbstractExecutionThreadService {
     private void createOrReplaceNamespaceStatefulSet(final V1beta2StatefulSet statefulSet) throws ApiException {
         createOrReplaceResource(
                 () -> appsApi.createNamespacedStatefulSet(namespace, statefulSet, null),
-                () -> appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null)
+                () -> replaceStatefulSet(statefulSet)
         );
+    }
+    
+    private void replaceStatefulSet(final V1beta2StatefulSet statefulSet) throws ApiException {
+    	Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, null, null, null).getSpec().getReplicas();
+    	Integer desiredReplicas = statefulSet.getSpec().getReplicas();
+    	
+    	//logger.debug("current replicas: {}", currentReplicas);
+    	//logger.debug("desired replicas: {}", desiredReplicas);
+    	
+    	// SCALE-DOWN
+    	if (desiredReplicas < currentReplicas) {
+    		logger.debug("SCALE-DOWN is under implementing.");
+        	final V1PodList podList = coreApi.listNamespacedPod(namespace, null, null, null, null, "cassandra-datacenter=test-dc", null, null, null, null);
+        	
+        	// sort pods in a reverse order
+        	podList.getItems().sort(new Comparator<V1Pod>() {
+        		public int compare(V1Pod pod1, V1Pod pod2) {
+        			String pod1Name = pod1.getMetadata().getName();
+        			int index1 = Integer.parseInt(pod1Name.split("-")[pod1Name.split("-").length-1]);
+        			String pod2Name = pod2.getMetadata().getName();
+        	    	int index2 = Integer.parseInt(pod2Name.split("-")[pod2Name.split("-").length-1]);
+        			
+        			return index2 - index1;
+        		}
+    		});
+        	
+        	
+        	for (int i = 0; i < currentReplicas - desiredReplicas; i++) {
+        		V1Pod pod = podList.getItems().get(i);
+        		final InetAddress podIp = InetAddresses.forString(pod.getStatus().getPodIP());
+        		logger.debug("pod {} has IP {}", pod.getMetadata().getName(), podIp);
+        		// TODO: decommission current cassandra node inside this pod through JMX call
+        	}
+    	}
+    	
+    	appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null);	
     }
 
 
@@ -335,8 +379,7 @@ public class ControllerService extends AbstractExecutionThreadService {
     	try {
     		appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null);
     	} catch (ApiException e) {
-    	    System.err.println("Exception when calling AppsV1beta2Api#replaceNamespacedStatefulSet");
-    	    e.printStackTrace();
+    	    throw e;
     	}
     	while (true) {    		
     		Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, null, null, null).getStatus().getReplicas();

@@ -43,7 +43,6 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
 
     private final CoreV1Api coreApi;
     private final Cache<DataCenterKey, DataCenter> dataCenterCache;
-    private final ControllerService controllerService;
 
     public interface StorageServiceMBean {
         List<String> getLiveNodes();
@@ -57,10 +56,9 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
 
 
     @Inject
-    public CassandraHealthCheckService(final CoreV1Api coreApi,  final Cache<DataCenterKey, DataCenter> dataCenterCache, final ControllerService controllerService) {
+    public CassandraHealthCheckService(final CoreV1Api coreApi,  final Cache<DataCenterKey, DataCenter> dataCenterCache) {
         this.coreApi = coreApi;
         this.dataCenterCache = dataCenterCache;
-        this.controllerService = controllerService;
     }
 
 
@@ -71,12 +69,9 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
         logger.debug("Checking health of cassandra instances...");
 
         for (final Map.Entry<DataCenterKey, DataCenter> cacheEntry : dataCenterCache.asMap().entrySet()) {
-        	
-        	logger.debug("Reconciling DataCenters...");
-        	
-        	controllerService.reconcileDataCenter(cacheEntry.getKey());
-        	
             final String labelSelector = String.format("cassandra-datacenter=%s", cacheEntry.getKey().name);
+
+            logger.debug("Checking health of cassandra instances...");
             
             final V1PodList podList = coreApi.listNamespacedPod(namespace, null, null, null, null, labelSelector, null, null, null, null);
 
