@@ -105,7 +105,7 @@ public class ControllerService extends AbstractExecutionThreadService {
     }
     
     // reconcile DataCenter current status with desired status stored in DataCenterCache
-    private void reconcileDataCenter(DataCenterKey dataCenterKey) throws Exception {
+    public void reconcileDataCenter(DataCenterKey dataCenterKey) throws Exception {
     	final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
 
         // DELETED 
