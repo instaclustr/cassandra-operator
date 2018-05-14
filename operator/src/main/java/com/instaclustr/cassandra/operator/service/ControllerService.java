@@ -224,8 +224,8 @@ public class ControllerService extends AbstractExecutionThreadService {
     	try {
     		replicas = dataCenter.getSpec().getReplicas().intValue();
     	} catch (Exception e) {
-    		System.err.println("Invalid Replica Number.");
-    	    e.printStackTrace();
+    		logger.debug("Invalid Replica Number: {}", dataCenter.getSpec().getReplicas());
+    	    throw e;
     	}
     	
     	final V1beta2StatefulSet statefulSet = new V1beta2StatefulSet()
