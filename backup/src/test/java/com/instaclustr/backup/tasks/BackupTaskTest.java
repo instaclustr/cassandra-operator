@@ -14,6 +14,7 @@ import com.instaclustr.backup.util.GlobalLock;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
 import java.io.File;
@@ -138,21 +139,21 @@ public class BackupTaskTest {
         basicProviderBackupRestore(StorageProvider.FILE, backupBucket);
     }
 
-    @Test(description = "Full backup and restore to an existing cluster", groups = {"gcp"})
-    public void basicGCPRestore() throws Exception {
-        //TODO: make it easier to test multiple different buckets (from diff providers in one test run)
-        basicProviderBackupRestore(StorageProvider.GCP_BLOB, backupBucket);
-    }
-
-    @Test(description = "Full backup and restore to an existing cluster", groups = {"aws"})
-    public void basicAWSRestore() throws Exception {
-        basicProviderBackupRestore(StorageProvider.AWS_S3, backupBucket);
-    }
-
-    @Test(description = "Full backup and restore to an existing cluster", groups = {"azure"})
-    public void basicAzureRestore() throws Exception {
-        basicProviderBackupRestore(StorageProvider.AZURE_BLOB, backupBucket);
-    }
+//    @Test(description = "Full backup and restore to an existing cluster", groups = {"gcp"})
+//    public void basicGCPRestore() throws Exception {
+//        //TODO: make it easier to test multiple different buckets (from diff providers in one test run)
+//        basicProviderBackupRestore(StorageProvider.GCP_BLOB, backupBucket);
+//    }
+//
+//    @Test(description = "Full backup and restore to an existing cluster", groups = {"aws"})
+//    public void basicAWSRestore() throws Exception {
+//        basicProviderBackupRestore(StorageProvider.AWS_S3, backupBucket);
+//    }
+//
+//    @Test(description = "Full backup and restore to an existing cluster", groups = {"azure"})
+//    public void basicAzureRestore() throws Exception {
+//        basicProviderBackupRestore(StorageProvider.AZURE_BLOB, backupBucket);
+//    }
 
 
     public void basicProviderBackupRestore(final StorageProvider provider, final String backupBucket) throws Exception {
@@ -217,9 +218,16 @@ public class BackupTaskTest {
         }
     }
 
+    @BeforeTest
+    private void hardResetTestDirs() throws IOException, URISyntaxException {
+        cleanUp();
+        setup();
+    }
+
 
     @Test(description = "Test that the manifest is correctly constructed, includes expected files and generates checksum if necessary")
     public void testSSTableLister() throws Exception {
+        hardResetTestDirs(); //TODO not sure why this doesn't recreate things fully given its called before each test
         for (TestFileConfig testFileConfig : versionsToTest) {
             Path backupRoot = Paths.get("/backupRoot/keyspace1");
 

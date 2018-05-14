@@ -24,6 +24,8 @@ import javax.management.remote.JMXServiceURL;
 import javax.naming.ConfigurationException;
 import java.io.*;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -36,6 +38,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.Adler32;
+
+import static java.lang.Math.toIntExact;
 
 public class BackupTask implements Callable<Void> {
     private static final Logger logger = LoggerFactory.getLogger(BackupTask.class);
@@ -229,31 +233,30 @@ public class BackupTask implements Callable<Void> {
 
     @VisibleForTesting
     public static String calculateChecksum(final Path filePath) throws IOException {
-        try(final FileInputStream fileInputStream = new FileInputStream(filePath.toFile())) {
+        try(final FileChannel fileChannel = FileChannel.open(filePath)) {
 
-            final FileChannel fileChannel = fileInputStream.getChannel();
-
-            long bytesStart;
+            int bytesStart;
             int bytesPerChecksum = 10 * 1024 * 1024;
 
             // Get last 10 megabytes of file to use for checksum
             if (fileChannel.size() >= bytesPerChecksum) {
-                bytesStart = fileChannel.size() - bytesPerChecksum;
+                bytesStart = toIntExact(fileChannel.size()) - bytesPerChecksum;
             } else {
                 bytesStart = 0;
                 bytesPerChecksum = (int) fileChannel.size();
             }
 
             fileChannel.position(bytesStart);
-            final byte[] bytesToChecksum = new byte[bytesPerChecksum];
-            fileInputStream.read(bytesToChecksum);
+            final ByteBuffer bytesToChecksum = ByteBuffer.allocate(bytesPerChecksum);
+            int bytesRead = fileChannel.read(bytesToChecksum, bytesStart);
+
+            assert(bytesRead == bytesPerChecksum);
 
             // Adler32 because it's faster than SHA / MD5 and Cassandra uses it - https://issues.apache.org/jira/browse/CASSANDRA-5862
             final Adler32 adler32 = new Adler32();
-            adler32.update(bytesToChecksum);
-            final long checksum = adler32.getValue();
+            adler32.update(bytesToChecksum.array());
 
-            return String.valueOf(checksum);
+            return String.valueOf(adler32.getValue());
         }
     }
 

@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -38,9 +39,8 @@ public class AzureDownloader extends Downloader {
     @Override
     public void downloadFile(final Path localPath, final RemoteObjectReference object) throws Exception {
         final CloudBlockBlob blob = ((AzureRemoteObjectReference) object).blob;
-        final File localFilePath = localPath.toFile();
-        localFilePath.getParentFile().mkdirs();
-        blob.downloadToFile(localFilePath.toString());
+        Files.createDirectories(localPath);
+        blob.downloadToFile(localPath.toAbsolutePath().toString());
     }
 
     @Override

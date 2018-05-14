@@ -31,9 +31,8 @@ public class LocalFileDownloader extends Downloader {
     public void downloadFile(final Path localFilePath, final RemoteObjectReference object) throws Exception {
         Path remoteFilePath = sourceDirectory.resolve(Paths.get(((LocalFileObjectReference) object).canonicalPath));
 
-        File localFileDirectory = localFilePath.getParent().toFile();
-        if (!localFileDirectory.exists())
-            localFileDirectory.mkdirs();
+        //Assume that any path passed in to this function is a file
+        Files.createDirectories(localFilePath.getParent());
 
         Files.copy(remoteFilePath, localFilePath);
     }

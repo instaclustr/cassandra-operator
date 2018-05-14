@@ -14,7 +14,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -41,21 +43,11 @@ public class GCPDownloader extends Downloader {
 
     @Override
     public void downloadFile(final Path localFile, final RemoteObjectReference object) throws Exception {
-        final File localFilePath = localFile.toFile();
         final BlobId blobId = ((GCPRemoteObjectReference) object).blobId;
+        Files.createDirectories(localFile);
 
         try (final ReadChannel inputChannel = storage.reader(blobId)) {
-            localFilePath.getParentFile().mkdirs();
-            FileChannel fileChannel = new FileOutputStream(localFilePath).getChannel();
-            ByteBuffer bytes = ByteBuffer.allocate(64 * 1024);
-
-            while (inputChannel.read(bytes) > 0) {
-                bytes.flip();
-                fileChannel.write(bytes);
-                bytes.clear();
-            }
-
-            fileChannel.close();
+            Files.copy(Channels.newInputStream(inputChannel), localFile);
         }
     }
 

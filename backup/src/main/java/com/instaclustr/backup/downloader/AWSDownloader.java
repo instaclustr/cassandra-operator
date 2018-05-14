@@ -51,8 +51,7 @@ public class AWSDownloader extends Downloader {
 
     @Override
     public void downloadFile(final Path localPath, final RemoteObjectReference object) throws Exception {
-        final AWSRemoteObjectReference awsRemoteObjectReference = (AWSRemoteObjectReference) object;
-        final GetObjectRequest getObjectRequest = new GetObjectRequest(restoreFromBackupBucket, awsRemoteObjectReference.canonicalPath);
+        final GetObjectRequest getObjectRequest = new GetObjectRequest(restoreFromBackupBucket, object.canonicalPath);
 
         S3ProgressListener s3ProgressListener = new S3ProgressListener() {
             @Override
@@ -63,16 +62,13 @@ public class AWSDownloader extends Downloader {
             @Override
             public void progressChanged(final ProgressEvent progressEvent) {
                 if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-                    logger.debug("Successfully downloaded {}.", awsRemoteObjectReference.canonicalPath);
+                    logger.debug("Successfully downloaded {}.", object.canonicalPath);
                 }
             }
         };
 
         Files.createDirectories(localPath.getParent());
-        final File localFilePath = localPath.toFile();
-        final Download download = transferManager.download(getObjectRequest, localFilePath, s3ProgressListener);
-
-        download.waitForCompletion();
+        transferManager.download(getObjectRequest, localPath.toFile(), s3ProgressListener).waitForCompletion();
     }
 
     @Override
