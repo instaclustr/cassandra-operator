@@ -337,7 +337,16 @@ public class ControllerService extends AbstractExecutionThreadService {
     	} catch (ApiException e) {
     	    System.err.println("Exception when calling AppsV1beta2Api#replaceNamespacedStatefulSet");
     	    e.printStackTrace();
-    	}   	
+    	}
+    	while (true) {    		
+    		Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, null, null, null).getStatus().getReplicas();
+    		if (currentReplicas == 0) 
+    			break;
+    		
+    		Thread.sleep(50);
+    	}
+    	
+    	logger.debug("done with scaling to 0");
     	
     	//Catch JsonSyntaxException to avoid crash (https://github.com/kubernetes-client/java/issues/86)
     	try {
