@@ -26,93 +26,93 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class CassandraHealthCheckService extends AbstractScheduledService {
-	static final Logger logger = LoggerFactory.getLogger(CassandraHealthCheckService.class);
+    static final Logger logger = LoggerFactory.getLogger(CassandraHealthCheckService.class);
 
-	static final ObjectName STORAGE_SERVICE;
+    static final ObjectName STORAGE_SERVICE;
 
-	static {
-		try {
-			STORAGE_SERVICE = ObjectName.getInstance("org.apache.cassandra.db:type=StorageService");
+    static {
+        try {
+            STORAGE_SERVICE = ObjectName.getInstance("org.apache.cassandra.db:type=StorageService");
 
-		} catch (final MalformedObjectNameException e) {
-			throw new IllegalStateException(e);
-		}
-	}
+        } catch (final MalformedObjectNameException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
-	private final String namespace = "default";
+    private final String namespace = "default";
 
-	private final CoreV1Api coreApi;
-	private final Cache<DataCenterKey, DataCenter> dataCenterCache;
+    private final CoreV1Api coreApi;
+    private final Cache<DataCenterKey, DataCenter> dataCenterCache;
 
-	public interface StorageServiceMBean {
-		List<String> getLiveNodes();
-		List<String> getUnreachableNodes();
+    public interface StorageServiceMBean {
+        List<String> getLiveNodes();
+        List<String> getUnreachableNodes();
 
-		String getReleaseVersion();
-		String getSchemaVersion();
+        String getReleaseVersion();
+        String getSchemaVersion();
 
-		String getOperationMode();
-	}
-
-
-	@Inject
-	public CassandraHealthCheckService(final CoreV1Api coreApi,  final Cache<DataCenterKey, DataCenter> dataCenterCache) {
-		this.coreApi = coreApi;
-		this.dataCenterCache = dataCenterCache;
-	}
+        String getOperationMode();
+    }
 
 
-	@Override
-	protected void runOneIteration() throws Exception {
-		// TODO: maybe this would be better off querying k8s for the service endpoints rather than the pods themselves...
+    @Inject
+    public CassandraHealthCheckService(final CoreV1Api coreApi,  final Cache<DataCenterKey, DataCenter> dataCenterCache) {
+        this.coreApi = coreApi;
+        this.dataCenterCache = dataCenterCache;
+    }
 
-		logger.debug("Checking health of cassandra instances...");
 
-		for (final Map.Entry<DataCenterKey, DataCenter> cacheEntry : dataCenterCache.asMap().entrySet()) {
-			final String labelSelector = String.format("cassandra-datacenter=%s", cacheEntry.getKey().name);
+    @Override
+    protected void runOneIteration() throws Exception {
+        // TODO: maybe this would be better off querying k8s for the service endpoints rather than the pods themselves...
 
-			logger.debug("Checking health of cassandra instances...");
+        logger.debug("Checking health of cassandra instances...");
 
-			final V1PodList podList = coreApi.listNamespacedPod(namespace, null, null, null, null, labelSelector, null, null, null, null);
+        for (final Map.Entry<DataCenterKey, DataCenter> cacheEntry : dataCenterCache.asMap().entrySet()) {
+            final String labelSelector = String.format("cassandra-datacenter=%s", cacheEntry.getKey().name);
 
-			for (final V1Pod pod : podList.getItems()) {
-				final InetAddress podIp = InetAddresses.forString(pod.getStatus().getPodIP());
+            logger.debug("Checking health of cassandra instances...");
 
-				logger.debug("{} pod {} has IP {}", cacheEntry.getKey(), pod.getMetadata().getName(), podIp);
+            final V1PodList podList = coreApi.listNamespacedPod(namespace, null, null, null, null, labelSelector, null, null, null, null);
 
-				final JMXServiceURL serviceURL = new JMXServiceURL(String.format("service:jmx:rmi:///jndi/rmi://%s:7199/jmxrmi", podIp));
+            for (final V1Pod pod : podList.getItems()) {
+                final InetAddress podIp = InetAddresses.forString(pod.getStatus().getPodIP());
 
-				try (final JMXConnector jmxConnector = JMXConnectorFactory.connect(serviceURL, null)) {
-					final MBeanServerConnection mBeanServerConnection = jmxConnector.getMBeanServerConnection();
+                logger.debug("{} pod {} has IP {}", cacheEntry.getKey(), pod.getMetadata().getName(), podIp);
 
-					final StorageServiceMBean storageServiceMBean = JMX.newMBeanProxy(mBeanServerConnection, STORAGE_SERVICE, StorageServiceMBean.class);
+                final JMXServiceURL serviceURL = new JMXServiceURL(String.format("service:jmx:rmi:///jndi/rmi://%s:7199/jmxrmi", podIp));
 
-					final List<String> liveNodes = storageServiceMBean.getLiveNodes();
-					final List<String> unreachableNodes = storageServiceMBean.getUnreachableNodes();
+                try (final JMXConnector jmxConnector = JMXConnectorFactory.connect(serviceURL, null)) {
+                    final MBeanServerConnection mBeanServerConnection = jmxConnector.getMBeanServerConnection();
 
-					final String operationMode = storageServiceMBean.getOperationMode();
+                    final StorageServiceMBean storageServiceMBean = JMX.newMBeanProxy(mBeanServerConnection, STORAGE_SERVICE, StorageServiceMBean.class);
 
-					final String releaseVersion = storageServiceMBean.getReleaseVersion();
-					final String schemaVersion = storageServiceMBean.getSchemaVersion();
+                    final List<String> liveNodes = storageServiceMBean.getLiveNodes();
+                    final List<String> unreachableNodes = storageServiceMBean.getUnreachableNodes();
 
-					logger.debug("{}", MoreObjects.toStringHelper(podIp.toString())
-							.add("liveNodes", liveNodes)
-							.add("unreachableNodes", unreachableNodes)
-							.add("operationMode", operationMode)
-							.add("releaseVersion", releaseVersion)
-							.add("schemaVersion", schemaVersion)
-							.toString()
-							);
+                    final String operationMode = storageServiceMBean.getOperationMode();
 
-				} catch (final Exception e) {
-					logger.warn("Failed to get Cassandra status for pod {}", podIp, e);
-				}
-			}
-		}
-	}
+                    final String releaseVersion = storageServiceMBean.getReleaseVersion();
+                    final String schemaVersion = storageServiceMBean.getSchemaVersion();
 
-	@Override
-	protected Scheduler scheduler() {
-		return Scheduler.newFixedDelaySchedule(0, 5, TimeUnit.MINUTES);
-	}
+                    logger.debug("{}", MoreObjects.toStringHelper(podIp.toString())
+                            .add("liveNodes", liveNodes)
+                            .add("unreachableNodes", unreachableNodes)
+                            .add("operationMode", operationMode)
+                            .add("releaseVersion", releaseVersion)
+                            .add("schemaVersion", schemaVersion)
+                            .toString()
+                            );
+
+                } catch (final Exception e) {
+                    logger.warn("Failed to get Cassandra status for pod {}", podIp, e);
+                }
+            }
+        }
+    }
+
+    @Override
+    protected Scheduler scheduler() {
+        return Scheduler.newFixedDelaySchedule(0, 5, TimeUnit.MINUTES);
+    }
 }
