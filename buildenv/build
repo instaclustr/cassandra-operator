@@ -11,4 +11,5 @@ source ./buildenv/repo
 
 echo "Building ${REPO}:${TAG}"
 
-docker build --tag "${REPO}:${TAG}" --tag "$1" docker/${1} 1>/dev/null
+#Latest tag will just stay local
+docker build --tag "${REPO}:${TAG}" --tag "${REPO}:latest" --tag "$1" docker/${1} 1>/dev/null

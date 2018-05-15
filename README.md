@@ -36,7 +36,7 @@ See the [Resources and Labels](./doc/user/resource_labels.md) doc for an overvie
 
 ## Deploy Cassandra operator
 
-See [instructions on how to install/uninstall Cassandra operator](doc/user/op_guide.md) .
+See [instructions on how to install/uninstall Cassandra operator](doc/op_guide.md) .
 
 ## Create and destroy an Cassandra cluster
 
