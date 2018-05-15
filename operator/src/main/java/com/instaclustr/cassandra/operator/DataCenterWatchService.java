@@ -29,10 +29,10 @@ public class DataCenterWatchService extends AbstractExecutionThreadService {
 
     @Inject
     DataCenterWatchService(final ApiClient apiClient,
-                           final CustomObjectsApi customObjectsApi,
-                           final Cache<DataCenterKey, DataCenter> dataCenterCache,
-                           final DataCenterEvent.Factory dataCenterEventFactory,
-                           final EventBus eventBus) {
+            final CustomObjectsApi customObjectsApi,
+            final Cache<DataCenterKey, DataCenter> dataCenterCache,
+            final DataCenterEvent.Factory dataCenterEventFactory,
+            final EventBus eventBus) {
         this.apiClient = apiClient;
         this.customObjectsApi = customObjectsApi;
         this.dataCenterCache = dataCenterCache;
@@ -51,14 +51,14 @@ public class DataCenterWatchService extends AbstractExecutionThreadService {
 
     // TODO: make the watches configurable via injection of something like the WatchConfig object below.
 
-//    static class WatchConfig<K, T> {
-//        public final Call watchCall;
-//        public final Type responseType = new TypeToken<Watch.Response<T>>() {}.getType();
-//        final WatchEvent.Factory<T> watchEventFactory;
-//        final Cache<K, T> responseCache;
-//
-//
-//    }
+    //    static class WatchConfig<K, T> {
+    //        public final Call watchCall;
+    //        public final Type responseType = new TypeToken<Watch.Response<T>>() {}.getType();
+    //        final WatchEvent.Factory<T> watchEventFactory;
+    //        final Cache<K, T> responseCache;
+    //
+    //
+    //    }
 
 
     protected void run() throws Exception {
@@ -69,8 +69,8 @@ public class DataCenterWatchService extends AbstractExecutionThreadService {
                 final Watch<DataCenter> dataCentersWatch = Watch.createWatch(apiClient,
                         customObjectsApi.listClusterCustomObjectCall("stable.instaclustr.com", "v1", "datacentres", null, null, resourceVersion, true, null, null),
                         new TypeToken<Watch.Response<DataCenter>>() {}.getType()
-                );
-//
+                        );
+                //
                 for (final Watch.Response<DataCenter> objectResponse : dataCentersWatch) {
                     final DataCenter object = objectResponse.object;
 
@@ -79,24 +79,24 @@ public class DataCenterWatchService extends AbstractExecutionThreadService {
                     logger.debug("Watch over datacenters received {}", objectResponse.type);
 
                     switch (ResponseType.valueOf(objectResponse.type)) {
-                        case ADDED:
-                            dataCenterCache.put(DataCenterKey.forDataCenter(object), object);
-                            eventBus.post(dataCenterEventFactory.createAddedEvent(object));
-                            break;
+                    case ADDED:
+                        dataCenterCache.put(DataCenterKey.forDataCenter(object), object);
+                        eventBus.post(dataCenterEventFactory.createAddedEvent(object));
+                        break;
 
-                        case MODIFIED:
-                        	dataCenterCache.put(DataCenterKey.forDataCenter(object), object);
-                            eventBus.post(dataCenterEventFactory.createModifiedEvent(object, object));
-                            break;
+                    case MODIFIED:
+                        dataCenterCache.put(DataCenterKey.forDataCenter(object), object);
+                        eventBus.post(dataCenterEventFactory.createModifiedEvent(object, object));
+                        break;
 
-                        case DELETED:
-                        	dataCenterCache.invalidate(DataCenterKey.forDataCenter(object));
-                            eventBus.post(dataCenterEventFactory.createDeletedEvent(object));
-                            break;
+                    case DELETED:
+                        dataCenterCache.invalidate(DataCenterKey.forDataCenter(object));
+                        eventBus.post(dataCenterEventFactory.createDeletedEvent(object));
+                        break;
 
-                        case ERROR:
-                            // TODO: handle error? -- maybe?
-                            break;
+                    case ERROR:
+                        // TODO: handle error? -- maybe?
+                        break;
                     }
 
                 }
