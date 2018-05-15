@@ -20,19 +20,6 @@ public class BackupApplication extends Application{
 
         GlobalLock globalLock = new GlobalLock(arguments.sharedContainerPath.toString());
 
-        //TODO make schedule user configurable
-        runServices(new ServiceManager(ImmutableList.of(
-                new AbstractScheduledService() {
-                    @Override
-                    protected void runOneIteration() throws Exception {
-                        new BackupTask(arguments, globalLock).call();
-                    }
-
-                    @Override
-                    protected Scheduler scheduler() {
-                        return Scheduler.newFixedDelaySchedule(1, 12, TimeUnit.HOURS);
-                    }
-                }
-        )));
+        new BackupTask(arguments, globalLock).call();
     }
 }
