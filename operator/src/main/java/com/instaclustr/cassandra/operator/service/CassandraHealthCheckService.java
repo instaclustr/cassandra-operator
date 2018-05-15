@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class CassandraHealthCheckService extends AbstractScheduledService {
-    static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
+    static final Logger logger = LoggerFactory.getLogger(CassandraHealthCheckService.class);
 
     static final ObjectName STORAGE_SERVICE;
 
@@ -71,6 +71,8 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
         for (final Map.Entry<DataCenterKey, DataCenter> cacheEntry : dataCenterCache.asMap().entrySet()) {
             final String labelSelector = String.format("cassandra-datacenter=%s", cacheEntry.getKey().name);
 
+            logger.debug("Checking health of cassandra instances...");
+
             final V1PodList podList = coreApi.listNamespacedPod(namespace, null, null, null, null, labelSelector, null, null, null, null);
 
             for (final V1Pod pod : podList.getItems()) {
@@ -100,7 +102,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
                             .add("releaseVersion", releaseVersion)
                             .add("schemaVersion", schemaVersion)
                             .toString()
-                    );
+                            );
 
                 } catch (final Exception e) {
                     logger.warn("Failed to get Cassandra status for pod {}", podIp, e);
