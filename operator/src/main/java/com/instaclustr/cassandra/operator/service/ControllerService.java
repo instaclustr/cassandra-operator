@@ -232,7 +232,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                                 .spec(new V1PodSpec()
                                         .addContainersItem(new V1Container()
                                                 .name(dataCenterKey.name)
-                                                .image("instaclustr/k8s-cassandra") // TODO: parameterize version (not sure if we should expose the whole image as configurable)
+                                                .image(dataCenter.getSpec().getImage())
                                                 .imagePullPolicy("Never")
                                                 .ports(ImmutableList.of(
                                                         new V1ContainerPort().name("internode").containerPort(7000),
