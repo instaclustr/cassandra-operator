@@ -21,6 +21,28 @@ jobs:
     steps:
       - checkout
 
+      - run: mvn -q package
+
+      - store_test_results:
+          path: operator/target/surefire-reports
+
+  release-dev:
+    docker:
+      # specify the version you desire here
+      - image: gcr.io/cassandra-operator/jdk8-gcloud-sdk:latest
+        auth:
+          username: _json_key
+          password: $GOOGLE_AUTH
+
+    working_directory: ~/cassandra-operator
+
+    environment:
+      # Customize the JVM maximum heap limit
+      MAVEN_OPTS: -Xmx3200m
+
+    steps:
+      - checkout
+
       # Download and cache dependencies
       - run:
           name: Dump Google Cloud Credentials to file
@@ -117,7 +139,12 @@ workflows:
       - build
       - test-gcp:
           requires:
-            - build
+            - release-dev
       - test-pivotal:
           requires:
-            - build
+            - release-dev
+      - release-dev:
+          filters:
+            branches:
+              only:
+                - master
