@@ -15,8 +15,8 @@ import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
 
 import io.kubernetes.client.apis.CoreV1Api;
 
-public class CassandraRepairService extends AbstractScheduledService {
-    static final Logger logger = LoggerFactory.getLogger(CassandraRepairService.class);
+public class CassandraPeriodicReconciliationService extends AbstractScheduledService {
+    static final Logger logger = LoggerFactory.getLogger(CassandraPeriodicReconciliationService.class);
 
     private final String namespace = "default";
 
@@ -25,7 +25,7 @@ public class CassandraRepairService extends AbstractScheduledService {
     private final ControllerService controllerService;
 
     @Inject
-    public CassandraRepairService(final CoreV1Api coreApi,  final Cache<DataCenterKey, DataCenter> dataCenterCache, final ControllerService controllerService) {
+    public CassandraPeriodicReconciliationService(final CoreV1Api coreApi,  final Cache<DataCenterKey, DataCenter> dataCenterCache, final ControllerService controllerService) {
         this.coreApi = coreApi;
         this.dataCenterCache = dataCenterCache;
         this.controllerService = controllerService;

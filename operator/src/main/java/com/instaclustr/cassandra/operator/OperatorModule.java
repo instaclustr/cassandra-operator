@@ -16,7 +16,7 @@ import com.instaclustr.cassandra.operator.event.DataCenterEvent;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
 import com.instaclustr.cassandra.operator.service.CassandraHealthCheckService;
-import com.instaclustr.cassandra.operator.service.CassandraRepairService;
+import com.instaclustr.cassandra.operator.service.CassandraPeriodicReconciliationService;
 import com.instaclustr.cassandra.operator.service.ControllerService;
 import com.google.common.util.concurrent.Service;
 import com.google.inject.multibindings.Multibinder;
@@ -37,7 +37,7 @@ public class OperatorModule extends AbstractModule {
         serviceMultibinder.addBinding().to(CassandraHealthCheckService.class);
 
         serviceMultibinder.addBinding().to(DataCenterWatchService.class);
-        serviceMultibinder.addBinding().to(CassandraRepairService.class);
+        serviceMultibinder.addBinding().to(CassandraPeriodicReconciliationService.class);
 
 //        serviceMultibinder.addBinding().toProvider(SecretWatchServiceProvider.class);
 
