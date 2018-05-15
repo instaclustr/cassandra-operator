@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+kubectl delete -f bundle.yaml
+kubectl delete clusterrolebinding my-user-role-binding
