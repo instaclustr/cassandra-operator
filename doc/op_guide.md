@@ -1,5 +1,5 @@
 ##Installing the Cassandra operator
-### Development/Minikube quickstart installations
+### Quick start installations
 To build and install locally follow the below steps:
 ```bash
 #in the project root directory e.g. cd ~/git/cassandra-operator/
@@ -17,10 +17,21 @@ mvn clean package
 ./build/build-all
 
 #Create the operator using the default bundle
-kubectl apply -f bundle.yaml
+kubectl apply -f examples/common/bundle.yaml
 
 #Check status
 kubectl get pods --selector=k8s-app=cassandra-operator
 ```
 
 Verify that you can create a Cassandra cluster
+```bash
+kubectl apply -f examples/common/test.yaml
+
+#wait for all pods to be up (this may take some time)
+
+kubectl get pods --selector=cassandra-datacenter=test-dc 
+
+kubectl exec test-dc-2 -i -t -- bash -c 'cqlsh test-dc-seeds'
+```
+
+
