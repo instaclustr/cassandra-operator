@@ -129,7 +129,7 @@ public class WatchService extends AbstractService {
 //        while (isRunning()) {
 //            try {
 //                final Watch<DataCenter> dataCentersWatch = Watch.createWatch(apiClient,
-//                        customObjectsApi.listClusterCustomObjectCall("stable.instaclustr.com", "v1", "datacentres", null, null, resourceVersion, true, null, null),
+//                        customObjectsApi.listClusterCustomObjectCall("stable.instaclustr.com", "v1", "datacenters", null, null, resourceVersion, true, null, null),
 //                        new TypeToken<Watch.Response<DataCenter>>() {}.getType()
 //                );
 ////
