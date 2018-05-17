@@ -13,7 +13,7 @@ public abstract class DataCenterEvent {
 
     public interface Factory extends WatchEvent.Factory<DataCenter> {
         Added createAddedEvent(final DataCenter dataCenter);
-        Modified createModifiedEvent(@Assisted("old") final DataCenter oldDataCenter, @Assisted("new") final DataCenter newDataCentre);
+        Modified createModifiedEvent(@Assisted("old") final DataCenter oldDataCenter, @Assisted("new") final DataCenter newDataCenter);
         Deleted createDeletedEvent(final DataCenter dataCenter);
     }
 
