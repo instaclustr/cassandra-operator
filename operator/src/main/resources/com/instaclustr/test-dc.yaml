@@ -4,3 +4,4 @@ metadata:
   name: test-dc
 spec:
   replicas: 6
+  image: instaclustr/k8s-cassandra
