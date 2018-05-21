@@ -1,0 +1,5 @@
+The Cassandra Operator has been installed. Check its status by running:
+  kubectl --namespace {{ .Release.Namespace }} get pods -l "app={{ template "cassandra-operator.name" . }},release={{ .Release.Name }}"
+
+Visit https://github.com/instaclustr/cassandra-operator for instructions on how
+to create & configure Cassandra clusters using the Operator.
