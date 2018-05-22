@@ -31,7 +31,7 @@ To build the relevant docker images, run:
 ./buildenv/build-all
 ```
 
-This will by default build an images for the projects CGR development image repo, the component and the suffic `-dev` will be appended.
+This will by default build an images for the projects gcr.io development image repo, the component and the suffix `-dev` will be appended.
 The default tag is the git short hash.
 e.g. `gcr.io/cassandra-operator/cassandra-operator-dev:0cf96c3` 
 

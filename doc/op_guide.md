@@ -19,6 +19,9 @@ mvn clean package
 #Create the operator using the default bundle
 kubectl apply -f examples/common/bundle.yaml
 
+#Use rbac-bundle.yaml if you have rbac enabled. Note you will need cluster-admin permissions
+#kubectl apply -f examples/common/rbac-bundle.yaml
+
 #Check status
 kubectl get pods --selector=k8s-app=cassandra-operator
 ```
@@ -34,4 +37,24 @@ kubectl get pods --selector=cassandra-datacenter=test-dc
 kubectl exec test-dc-2 -i -t -- bash -c 'cqlsh test-dc-seeds'
 ```
 
+### Helm Instructions
+The project include in-tree helm templates to make installation simpler and repeatable. 
+To install via helm follow the steps below:
 
+```bash
+#First check and change the values.yaml file to make sure it meets your requirements:
+#e.g. vim helm/cassandra-operator/values.yaml
+
+#Install the operator
+helm install helm/cassandra-operator -n RELEASE_NAME
+
+#Create a Cassandra cluster
+#Remember to check the values.yaml file e.g. vim helm/cassandra/values.yaml
+helm install helm/cassandra -n CASSANDRA_CLUSTER_NAME
+```
+
+The Helm templates are relatively independent and can also be used to generate the deployments yaml file offline:
+```bash
+helm template helm/cassandra-operator -n RELEASE_NAME
+
+```

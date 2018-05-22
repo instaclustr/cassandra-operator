@@ -4,4 +4,4 @@ metadata:
   name: test-dc
 spec:
   replicas: 3
-  image: "gcr.io/cassandra-operator/cassandra-dev:latest"
+  image: "gcr.io/cassandra-operator/cassandra:latest"
