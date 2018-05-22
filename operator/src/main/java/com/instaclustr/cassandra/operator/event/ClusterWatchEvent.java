@@ -2,10 +2,10 @@ package com.instaclustr.cassandra.operator.event;
 
 import com.instaclustr.cassandra.operator.model.Cluster;
 
-public abstract class ClusterEvent {
+public abstract class ClusterWatchEvent {
     public final Cluster cluster;
 
-    protected ClusterEvent(final Cluster cluster) {
+    protected ClusterWatchEvent(final Cluster cluster) {
         this.cluster = cluster;
     }
 
@@ -15,19 +15,19 @@ public abstract class ClusterEvent {
         Deleted createDeletedEvent(final Cluster cluster);
     }
 
-    public static class Added extends ClusterEvent implements WatchEvent.Added {
+    public static class Added extends ClusterWatchEvent implements WatchEvent.Added {
         public Added(final Cluster cluster) {
             super(cluster);
         }
     }
 
-    public static class Modified extends ClusterEvent implements WatchEvent.Modified {
+    public static class Modified extends ClusterWatchEvent implements WatchEvent.Modified {
         public Modified(final Cluster cluster) {
             super(cluster);
         }
     }
 
-    public static class Deleted extends ClusterEvent implements WatchEvent.Deleted {
+    public static class Deleted extends ClusterWatchEvent implements WatchEvent.Deleted {
         public Deleted(final Cluster cluster) {
             super(cluster);
         }

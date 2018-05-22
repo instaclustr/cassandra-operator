@@ -1,5 +1,7 @@
 #!/bin/bash
 
 exec -a "cassandra-operator" java \
-    -jar /usr/lib/cassandra-operator/cassandra-operator.jar
+    -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap \
+    -XX:+PrintFlagsFinal \
+    -jar /opt/lib/cassandra-operator/cassandra-operator.jar
     "$@"

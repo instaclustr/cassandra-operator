@@ -1,427 +1,434 @@
 package com.instaclustr.cassandra.operator.service;
 
 import com.google.common.cache.Cache;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.eventbus.EventBus;
+import com.google.common.collect.*;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.io.Resources;
 import com.google.common.net.InetAddresses;
-import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
-import com.google.common.util.concurrent.AbstractIdleService;
-import com.google.gson.JsonSyntaxException;
-import com.instaclustr.cassandra.operator.event.ClusterEvent;
-import com.instaclustr.cassandra.operator.event.DataCenterEvent;
-import com.instaclustr.cassandra.operator.event.SecretEvent;
-import com.instaclustr.cassandra.operator.event.StatefulSetEvent;
-import com.instaclustr.cassandra.operator.model.Cluster;
+import com.instaclustr.cassandra.operator.event.*;
+import com.instaclustr.cassandra.operator.jmx.CassandraConnection;
+import com.instaclustr.cassandra.operator.jmx.CassandraConnectionFactory;
+import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
-import com.squareup.okhttp.Call;
-import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.AppsV1beta2Api;
 import io.kubernetes.client.apis.CoreV1Api;
-import io.kubernetes.client.apis.CustomObjectsApi;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.models.*;
-import io.kubernetes.client.proto.V1;
-import io.kubernetes.client.proto.V1beta2Apps;
-import io.kubernetes.client.util.Watch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ControllerService extends AbstractExecutionThreadService {
+    private static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
 
-    static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
+    private static final DataCenterKey POISON = new DataCenterKey(null, null);
 
-    static final DataCenterKey POISON = new DataCenterKey("", "");
-
-    private final String namespace = "default"; // TODO: get from injector (which is from config/cli/env)
-
-    private final CustomObjectsApi customObjectsApi;
     private final CoreV1Api coreApi;
     private final AppsV1beta2Api appsApi;
     private final Cache<DataCenterKey, DataCenter> dataCenterCache;
+    private final CassandraConnectionFactory cassandraConnectionFactory;
+    private final K8sResourceUtils k8sResourceUtils;
 
     private final BlockingQueue<DataCenterKey> dataCenterQueue = new LinkedBlockingQueue<>();
 
     @Inject
-    ControllerService(final CustomObjectsApi customObjectsApi,
-            final CoreV1Api coreApi,
-            final AppsV1beta2Api appsApi,
-            final Cache<DataCenterKey, DataCenter> dataCenterCache) {
-        this.customObjectsApi = customObjectsApi;
+    public ControllerService(final CoreV1Api coreApi,
+                             final AppsV1beta2Api appsApi,
+                             final Cache<DataCenterKey, DataCenter> dataCenterCache,
+                             final CassandraConnectionFactory cassandraConnectionFactory,
+                             final K8sResourceUtils k8sResourceUtils) {
         this.coreApi = coreApi;
         this.appsApi = appsApi;
         this.dataCenterCache = dataCenterCache;
+        this.cassandraConnectionFactory = cassandraConnectionFactory;
+        this.k8sResourceUtils = k8sResourceUtils;
     }
 
     @Subscribe
-    void clusterEvent(final ClusterEvent event) {
+    void clusterEvent(final ClusterWatchEvent event) {
         // TODO: map the Cluster object to one or more DC objects, then post a message on the queue for them
     }
 
     @Subscribe
-    void dataCenterEvent(final DataCenterEvent event) {
+    void handleDataCenterEvent(final DataCenterWatchEvent event) {
         dataCenterQueue.add(DataCenterKey.forDataCenter(event.dataCenter));
     }
 
     @Subscribe
-    void secretEvent(final SecretEvent event) {
+    void handleSecretEvent(final SecretWatchEvent event) {
         // TODO: handle updated/deleted secrets
     }
 
     @Subscribe
-    void statefulSetEvent(final StatefulSetEvent event) {
+    void handleStatefulSetEvent(final StatefulSetWatchEvent event) {
         // TODO
+    }
+
+    private static final EnumSet<CassandraConnection.Status.OperationMode> RECONCILE_OPERATION_MODES = EnumSet.of(
+            // Reconcile when nodes switch to NORMAL. There may be pending scale operations that were
+            // waiting for a healthy cluster.
+            CassandraConnection.Status.OperationMode.NORMAL,
+
+            // Reconcile when nodes have finished decommissioning. This will resume the StatefulSet
+            // reconciliation.
+            CassandraConnection.Status.OperationMode.DECOMMISSIONED
+    );
+
+    @Subscribe
+    void handleCassandraNodeOperationModeChangedEvent(final CassandraNodeStatusChangedEvent event) {
+        if (event.previousStatus.operationMode == event.currentStatus.operationMode)
+            return;
+
+        if (!RECONCILE_OPERATION_MODES.contains(event.currentStatus.operationMode))
+            return;
+
+        dataCenterQueue.add(event.dataCenterKey);
     }
 
     @Override
     protected void run() throws Exception {
         while (isRunning()) {
-            // processNextDataCenterEvent();
             final DataCenterKey dataCenterKey = dataCenterQueue.take();
             if (dataCenterKey == POISON)
                 return;
-            reconcileDataCenter(dataCenterKey);
 
-            // processNextClusterEvent();
-            // processNextSecretEvent();
-            // processNextStatefulSetEvent();
+            final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
+
+            // data center deleted
+            if (dataCenter == null) {
+                deleteDataCenter(dataCenterKey);
+                return;
+            }
+
+            // data center created or modified
+            try {
+                createOrReplaceDataCenter(dataCenter);
+            } catch (final Exception e) {
+                logger.warn("Failed to reconcile Data Center. This will be an exception in the future.", e);
+            }
         }
     }
 
-    // reconcile DataCenter current status with desired status stored in
-    // DataCenterCache
-    public void reconcileDataCenter(DataCenterKey dataCenterKey) throws Exception {
-        final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
-
-        // DELETED 
-        if (dataCenter == null) {
-            deleteDataCenter(dataCenterKey);
-            return;
-        }
-
-        // ADDED & MODIFIED (Currently only support SCALE-UP)
-        createOrReplaceDataCenter(dataCenterKey);
-    }
-
-    private void createOrReplaceDataCenter(DataCenterKey dataCenterKey) throws Exception {   	
+    private void createOrReplaceDataCenter(final DataCenter dataCenter) throws Exception {
         // create the public service (what clients use to discover the data center)
-        V1Service publicService = generatePublicService(dataCenterKey);
-        createOrReplaceNamespaceService(publicService);
+        createOrReplaceNodesService(dataCenter);
 
         // create the seed-node service (what C* nodes use to discover the DC seeds)
-        V1Service seednodeService = generateSeednodeService(dataCenterKey);
-        createOrReplaceNamespaceService(seednodeService);
+        createOrReplaceSeedNodesService(dataCenter);
 
         // create configmap
-        V1ConfigMap configMap = generateConfigMap(dataCenterKey);
-        createOrReplaceNamespaceConfigMap(configMap);
+        final V1ConfigMap configMap = createOrReplaceConfigMap(dataCenter);
 
         // create the statefulset for the DC nodes
-        V1beta2StatefulSet statefulSet = generateStatefulSet(dataCenterKey, configMap);
-        createOrReplaceNamespaceStatefulSet(statefulSet);
+        createOrReplaceStateNodesStatefulSet(dataCenter, configMap);
     }
 
-    private void deleteDataCenter(DataCenterKey dataCenterKey) throws Exception {
-        String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);
-
-        // delete statefulset
-        V1beta2StatefulSetList statefulSets = appsApi.listNamespacedStatefulSet(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
-        for (V1beta2StatefulSet statefulSet : statefulSets.getItems()) {
-            deleteStatefulSet(statefulSet);
-        }
-
-        // delete configmap
-        V1ConfigMapList configMaps = coreApi.listNamespacedConfigMap(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
-        for (V1ConfigMap configMap : configMaps.getItems()) {
-            deleteConfigMap(configMap);
-        }
-
-        // delete services
-        V1ServiceList services = coreApi.listNamespacedService(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
-        for (V1Service service : services.getItems()) {
-            deleteService(service);
-        }
+    private static Map<String, String> dataCenterLabels(final DataCenter dataCenter) {
+        return ImmutableMap.of("cassandra-datacenter", dataCenter.getMetadata().getName());
     }
 
+    private void createOrReplaceStateNodesStatefulSet(final DataCenter dataCenter, final V1ConfigMap configMap) throws ApiException {
+        final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
 
+        final Map<String, String> dataCenterLabels = dataCenterLabels(dataCenter);
 
-    @FunctionalInterface
-    private interface ApiCallable {
-        void call() throws ApiException;
-    }
-
-    private V1Service generatePublicService(DataCenterKey dataCenterKey) {
-        final V1Service publicService = new V1Service()
-                .metadata(new V1ObjectMeta()
-                        .name(dataCenterKey.name)
-                        .labels(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
-                        )
-                .spec(new V1ServiceSpec()
-                        .clusterIP("None")
-                        .ports(ImmutableList.of(new V1ServicePort().name("cql").port(9042)))
-                        .selector(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
-                        );
-
-        return publicService;
-    }
-
-    private V1Service generateSeednodeService(DataCenterKey dataCenterKey) {
-        final V1Service seednodeService = new V1Service()
-                .metadata(new V1ObjectMeta()
-                        .name(String.format("%s-seeds", dataCenterKey.name))
-                        .labels(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
-                        .putAnnotationsItem("service.alpha.kubernetes.io/tolerate-unready-endpoints", "true")
-                        )
-                .spec(new V1ServiceSpec()
-                        .publishNotReadyAddresses(true)
-                        .clusterIP("None")
-                        // a port needs to be defined for the service to be resolvable (#there-was-a-bug-ID-and-now-I-cant-find-it)
-                        .ports(ImmutableList.of(new V1ServicePort().name("internode").port(7000)))
-                        .selector(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
-                        );
-
-        return seednodeService;
-    }
-
-    private V1ConfigMap generateConfigMap(DataCenterKey dataCenterKey) throws IOException {
-        final V1ConfigMap configMap = new V1ConfigMap()
-                .metadata(new V1ObjectMeta()
-                        .name(String.format("%s-config", dataCenterKey.name))
-                        .labels(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name)))
-                .putDataItem("cassandra.yaml", resourceAsString("/com/instaclustr/cassandra/config/cassandra.yaml") +
-                        "\n\nseed_provider:\n" +
-                        "    - class_name: com.instaclustr.cassandra.k8s.SeedProvider\n" +
-                        "      parameters:\n" +
-                        String.format("          - service: %s-seeds", dataCenterKey.name)
-                        )
-                .putDataItem("logback.xml", resourceAsString("/com/instaclustr/cassandra/config/logback.xml"))
-                .putDataItem("cassandra-env.sh", resourceAsString("/com/instaclustr/cassandra/config/cassandra-env.sh"))
-                .putDataItem("jvm.options", resourceAsString("/com/instaclustr/cassandra/config/jvm.options"))
-                ;
-
-        return configMap;
-    }
-
-    private V1beta2StatefulSet generateStatefulSet(DataCenterKey dataCenterKey, V1ConfigMap configMap) {
-        final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
-
-        int replicas = 0;
-        try {
-            replicas = dataCenter.getSpec().getReplicas().intValue();
-        } catch (Exception e) {
-            logger.debug("Invalid Replica Number: {}", dataCenter.getSpec().getReplicas());
-            throw e;
-        }
+        final int replicas = dataCenter.getSpec().getReplicas();
 
         final V1beta2StatefulSet statefulSet = new V1beta2StatefulSet()
                 .metadata(new V1ObjectMeta()
-                        .name(dataCenterKey.name)
-                        .labels(ImmutableMap.of("cassandra-datacenter", dataCenterKey.name))
-                        )
+                        .name(dataCenterMetadata.getName())
+                        .namespace(dataCenterMetadata.getNamespace())
+                        .labels(dataCenterLabels)
+                )
                 .spec(new V1beta2StatefulSetSpec()
                         .serviceName("cassandra")
                         .replicas(replicas)
-                        .selector(new V1LabelSelector().putMatchLabelsItem("cassandra-datacenter", dataCenterKey.name))
+                        .selector(new V1LabelSelector().matchLabels(dataCenterLabels))
                         .template(new V1PodTemplateSpec()
-                                .metadata(new V1ObjectMeta().putLabelsItem("cassandra-datacenter", dataCenterKey.name))
+                                .metadata(new V1ObjectMeta().labels(dataCenterLabels))
                                 .spec(new V1PodSpec()
                                         .addContainersItem(new V1Container()
-                                                .name(dataCenterKey.name)
+                                                .name(dataCenterMetadata.getName())
                                                 .image(dataCenter.getSpec().getImage())
                                                 .imagePullPolicy("Never")
                                                 .ports(ImmutableList.of(
                                                         new V1ContainerPort().name("internode").containerPort(7000),
                                                         new V1ContainerPort().name("cql").containerPort(9042),
                                                         new V1ContainerPort().name("jmx").containerPort(7199)
-                                                        ))
+                                                ))
                                                 .resources(new V1ResourceRequirements()
                                                         .putLimitsItem("memory", Quantity.fromString("512Mi"))
                                                         .putRequestsItem("memory", Quantity.fromString("512Mi"))
-                                                        )
+                                                )
                                                 .readinessProbe(new V1Probe()
                                                         .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
                                                         .initialDelaySeconds(60)
                                                         .timeoutSeconds(5)
-                                                        )
+                                                )
                                                 .addVolumeMountsItem(new V1VolumeMount()
                                                         .name("config-volume")
                                                         .mountPath("/etc/cassandra")
-                                                        )
+                                                )
                                                 .addVolumeMountsItem(new V1VolumeMount()
                                                         .name("data-volume")
                                                         .mountPath("/var/lib/cassandra")
-                                                        )
                                                 )
+                                        )
                                         .addVolumesItem(new V1Volume()
                                                 .name("config-volume")
                                                 .configMap(new V1ConfigMapVolumeSource().name(configMap.getMetadata().getName()))
-                                                )
                                         )
                                 )
+                        )
                         .addVolumeClaimTemplatesItem(new V1PersistentVolumeClaim()
                                 .metadata(new V1ObjectMeta().name("data-volume"))
                                 .spec(new V1PersistentVolumeClaimSpec()
                                         .addAccessModesItem("ReadWriteOnce")
                                         .resources(new V1ResourceRequirements().putRequestsItem("storage", Quantity.fromString("100Mi"))) // TODO: parameterize
-                                        )
                                 )
-                        );
+                        )
+                );
 
-        return statefulSet;
+        // if the StatefulSet doesn't exist, create it. Otherwise scale it safely
+        K8sResourceUtils.createOrReplaceResource(
+                () -> appsApi.createNamespacedStatefulSet(statefulSet.getMetadata().getNamespace(), statefulSet, null),
+                () -> replaceStatefulSet(dataCenter, statefulSet)
+        );
     }
 
-    private static void createOrReplaceResource(final ApiCallable createCallable, final ApiCallable replaceCallable) throws ApiException {
-        try {
-            createCallable.call();
+    private V1ConfigMap createOrReplaceConfigMap(final DataCenter dataCenter) throws IOException, ApiException {
+        final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
 
-        } catch (final ApiException e) {
-            if (e.getCode() != 409)
-                throw e;
+        final V1ConfigMap configMap = new V1ConfigMap()
+                .metadata(new V1ObjectMeta()
+                        .name(String.format("%s-config", dataCenterMetadata.getName()))
+                        .namespace(dataCenterMetadata.getNamespace())
+                        .labels(dataCenterLabels(dataCenter)))
+                .putDataItem("cassandra.yaml", resourceAsString("/com/instaclustr/cassandra/config/cassandra.yaml") +
+                        "\n\nseed_provider:\n" +
+                        "    - class_name: com.instaclustr.cassandra.k8s.SeedProvider\n" +
+                        "      parameters:\n" +
+                        String.format("          - service: %s-seeds", dataCenterMetadata.getName())
+                )
+                .putDataItem("logback.xml", resourceAsString("/com/instaclustr/cassandra/config/logback.xml"))
+                .putDataItem("cassandra-env.sh", resourceAsString("/com/instaclustr/cassandra/config/cassandra-env.sh"))
+                .putDataItem("jvm.options", resourceAsString("/com/instaclustr/cassandra/config/jvm.options"));
 
-            replaceCallable.call();
+        k8sResourceUtils.createOrReplaceNamespaceConfigMap(configMap);
+
+        return configMap;
+    }
+
+    private void createOrReplaceSeedNodesService(final DataCenter dataCenter) throws ApiException {
+        final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
+
+        final Map<String, String> dataCenterLabels = dataCenterLabels(dataCenter);
+
+        final V1Service service = new V1Service()
+                .metadata(new V1ObjectMeta()
+                        .name(String.format("%s-seeds", dataCenterMetadata.getName()))
+                        .namespace(dataCenterMetadata.getNamespace())
+                        .labels(dataCenterLabels)
+                        .putAnnotationsItem("service.alpha.kubernetes.io/tolerate-unready-endpoints", "true")
+                )
+                .spec(new V1ServiceSpec()
+                        .publishNotReadyAddresses(true)
+                        .clusterIP("None")
+                        // a port needs to be defined for the service to be resolvable (#there-was-a-bug-ID-and-now-I-cant-find-it)
+                        .ports(ImmutableList.of(new V1ServicePort().name("internode").port(7000)))
+                        .selector(dataCenterLabels)
+                );
+
+        k8sResourceUtils.createOrReplaceNamespaceService(service);
+    }
+
+    private void createOrReplaceNodesService(final DataCenter dataCenter) throws ApiException {
+        final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
+
+        final Map<String, String> dataCenterLabels = dataCenterLabels(dataCenter);
+
+        final V1Service service = new V1Service()
+                .metadata(new V1ObjectMeta()
+                        .name(String.format("%s-nodes", dataCenterMetadata.getName()))
+                        .namespace(dataCenterMetadata.getNamespace())
+                        .labels(dataCenterLabels)
+                )
+                .spec(new V1ServiceSpec()
+                        .clusterIP("None")
+                        .ports(ImmutableList.of(
+                                new V1ServicePort().name("cql").port(9042),
+                                new V1ServicePort().name("jmx").port(7199)
+                        ))
+                        .selector(dataCenterLabels)
+                );
+
+        k8sResourceUtils.createOrReplaceNamespaceService(service);
+    }
+
+    private void deleteDataCenter(final DataCenterKey dataCenterKey) throws Exception {
+        final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);
+
+        // delete statefulset
+        final V1beta2StatefulSetList statefulSets = appsApi.listNamespacedStatefulSet(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
+        for (final V1beta2StatefulSet statefulSet : statefulSets.getItems()) {
+            deleteStatefulSet(statefulSet);
+        }
+
+        // delete configmap
+        final V1ConfigMapList configMaps = coreApi.listNamespacedConfigMap(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
+        for (final V1ConfigMap configMap : configMaps.getItems()) {
+            deleteConfigMap(configMap);
+        }
+
+        // delete services
+        final V1ServiceList services = coreApi.listNamespacedService(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
+        for (final V1Service service : services.getItems()) {
+            deleteService(service);
         }
     }
 
-    private void createOrReplaceNamespaceStatefulSet(final V1beta2StatefulSet statefulSet) throws ApiException {
-        createOrReplaceResource(
-                () -> appsApi.createNamespacedStatefulSet(namespace, statefulSet, null),
-                () -> replaceStatefulSet(statefulSet)
-                );
-    }
 
-    private void replaceStatefulSet(final V1beta2StatefulSet statefulSet) throws ApiException {
-        Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, null, null, null).getSpec().getReplicas();
-        Integer desiredReplicas = statefulSet.getSpec().getReplicas();
+    private static final Pattern STATEFUL_SET_POD_NAME_PATTERN = Pattern.compile(".*-(?<index>\\d+)");
 
-        //logger.debug("current replicas: {}", currentReplicas);
-        //logger.debug("desired replicas: {}", desiredReplicas);
+    // comparator comparing StatefulSet Pods based on their names (which include an index)
+    // "newest" pod first.
+    private static final Comparator<V1Pod> STATEFUL_SET_POD_COMPARATOR = Comparator.comparingInt((V1Pod p) -> {
+        final String podName = p.getMetadata().getName();
+        final Matcher matcher = STATEFUL_SET_POD_NAME_PATTERN.matcher(podName);
 
-        // SCALE-DOWN
-        if (desiredReplicas < currentReplicas) {
-            logger.debug("SCALE-DOWN is under implementing.");
-            final V1PodList podList = coreApi.listNamespacedPod(namespace, null, null, null, null, "cassandra-datacenter=test-dc", null, null, null, null);
-
-            // sort pods in a reverse order
-            podList.getItems().sort(new Comparator<V1Pod>() {
-                public int compare(V1Pod pod1, V1Pod pod2) {
-                    String pod1Name = pod1.getMetadata().getName();
-                    int index1 = Integer.parseInt(pod1Name.split("-")[pod1Name.split("-").length-1]);
-                    String pod2Name = pod2.getMetadata().getName();
-                    int index2 = Integer.parseInt(pod2Name.split("-")[pod2Name.split("-").length-1]);
-
-                    return index2 - index1;
-                }
-            });
-
-
-            for (int i = 0; i < currentReplicas - desiredReplicas; i++) {
-                V1Pod pod = podList.getItems().get(i);
-                final InetAddress podIp = InetAddresses.forString(pod.getStatus().getPodIP());
-                logger.debug("pod {} has IP {}", pod.getMetadata().getName(), podIp);
-                // TODO: decommission current cassandra node inside this pod through JMX call
-            }
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException(String.format("Pod %s name doesn't match expression %s", podName, STATEFUL_SET_POD_NAME_PATTERN));
         }
 
-        appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null);	
+        return Integer.valueOf(matcher.group("index"));
+    }).reversed();
+
+    private void replaceStatefulSet(final DataCenter dataCenter, final V1beta2StatefulSet statefulSet) throws ApiException {
+        final int currentReplicas;
+        {
+            final V1beta2StatefulSet existingStatefulSet = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), null, null, null);
+            currentReplicas = existingStatefulSet.getSpec().getReplicas();
+        }
+        final int desiredReplicas = dataCenter.getSpec().getReplicas();
+
+        // ideally this should use the same selector as the StatefulSet.
+        // why does listNamespacedPod take a string for the selector when V1LabelSelector exists?
+        final String labelSelector = String.format("cassandra-datacenter=%s", dataCenter.getMetadata().getName());
+
+        // TODO: handle lists larger than the max returned (via continue attribute)
+        final List<V1Pod> pods = ImmutableList.sortedCopyOf(STATEFUL_SET_POD_COMPARATOR,
+                coreApi.listNamespacedPod(dataCenter.getMetadata().getNamespace(), null, null, null, null, labelSelector, null, null, null, null).getItems()
+        );
+
+
+        // TODO: this will be slow for a large number of nodes -- introduce some parallelism
+        final ImmutableListMultimap<CassandraConnection.Status.OperationMode, V1Pod> podCassandraOperationModes = Multimaps.index(pods, p -> {
+            final CassandraConnection cassandraConnection = cassandraConnectionFactory.connectionForPod(p);
+
+            return cassandraConnection.status().operationMode;
+        });
+
+
+        if (EnumSet.of(CassandraConnection.Status.OperationMode.NORMAL, CassandraConnection.Status.OperationMode.DECOMMISSIONED).equals(podCassandraOperationModes.keySet())) {
+            // change statefulset size
+
+            // TODO: handle/assert that the newest pod is the one that was decommissioned
+
+            statefulSet.getSpec().setReplicas(currentReplicas - 1);
+            appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), statefulSet, null);
+
+            return;
+        }
+
+        if (!EnumSet.of(CassandraConnection.Status.OperationMode.NORMAL).equals(podCassandraOperationModes.keySet())) {
+            logger.warn("Skipping StatefulSet reconciliation as some Cassandra nodes are not in the NORMAL state: {}",
+                    Multimaps.transformValues(podCassandraOperationModes, (V1Pod p) -> p.getMetadata().getName())
+            );
+
+            return;
+        }
+
+
+        if (desiredReplicas >= currentReplicas) {
+            // scale up or modify
+            appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), statefulSet, null);
+
+        } else  {
+            // scale down
+
+            // decommission the newest pod
+            cassandraConnectionFactory.connectionForPod(pods.get(0)).decommission();
+        }
     }
 
 
-    private void createOrReplaceNamespaceService(final V1Service service) throws ApiException {
-        createOrReplaceResource(
-                () -> coreApi.createNamespacedService(namespace, service, null),
-                () -> {return;} //coreApi.replaceNamespacedService(service.getMetadata().getName(), namespace, service, null)
-
-                );
-    }
-
-    private void createOrReplaceNamespaceConfigMap(final V1ConfigMap configMap) throws ApiException {
-        createOrReplaceResource(
-                () -> coreApi.createNamespacedConfigMap(namespace, configMap, null),
-                () -> coreApi.replaceNamespacedConfigMap(configMap.getMetadata().getName(), namespace, configMap, null)
-                );
-    }
-
-    public static String resourceAsString(final String resourceName) throws IOException {
+    private static String resourceAsString(final String resourceName) throws IOException {
         return Resources.toString(Resources.getResource(ControllerService.class, resourceName), StandardCharsets.UTF_8);
     }
 
-    private static void deleteResource(final ApiCallable deleteCallable) throws ApiException {
-        try {
-            deleteCallable.call();
-
-        } catch (final ApiException e) {
-            if (e.getCode() != 409)
-                throw e;
-        }
-    }
 
     private void deleteStatefulSet(final V1beta2StatefulSet statefulSet) throws Exception {
         V1DeleteOptions deleteOptions = new V1DeleteOptions();
-        deleteOptions.setPropagationPolicy("Foreground");
 
-        //Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
-        statefulSet.getSpec().setReplicas(0);
-        try {
-            appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null);
-        } catch (ApiException e) {
-            throw e;
-        }
-        while (true) {    		
-            Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, null, null, null).getStatus().getReplicas();
-            if (currentReplicas == 0) 
-                break;
+        // TODO: verify if the below behaviour still exists in 1.6+
+        // (as the ticket is closed)
 
-            Thread.sleep(50);
-        }
+//        deleteOptions.setPropagationPolicy("Foreground");
+//
+//        //Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
+//        statefulSet.getSpec().setReplicas(0);
+//
+//        appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null);
+//
+//        while (true) {
+//            Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, null, null, null).getStatus().getReplicas();
+//            if (currentReplicas == 0)
+//                break;
+//
+//            Thread.sleep(50);
+//        }
+//
+//        logger.debug("done with scaling to 0");
 
-        logger.debug("done with scaling to 0");
 
-        //Catch JsonSyntaxException to avoid crash (https://github.com/kubernetes-client/java/issues/86)
-        try {
-            deleteResource(
-                    () -> appsApi.deleteNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, deleteOptions, null, null, null, "Foreground")
-                    );
-        }
-        catch (JsonSyntaxException e) {
-            if (e.getCause() instanceof IllegalStateException) {
-                IllegalStateException ise = (IllegalStateException) e.getCause();
-                if (ise.getMessage() != null && ise.getMessage().contains("Expected a string but was BEGIN_OBJECT"))
-                    logger.debug("Catching exception because of issue https://github.com/kubernetes-client/java/issues/86");
-                else throw e;
-            }
-            else throw e;
-        }
+        final V1ObjectMeta statefulSetMetadata = statefulSet.getMetadata();
 
+        k8sResourceUtils.deleteResource(appsApi.deleteNamespacedStatefulSetCall(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), deleteOptions, null, null, null, "Foreground", null, null));
     }
 
     private void deleteConfigMap(final V1ConfigMap configMap) throws Exception {
-        V1DeleteOptions deleteOptions = new V1DeleteOptions();
+        final V1DeleteOptions deleteOptions = new V1DeleteOptions();
 
-        deleteResource(
-                () -> coreApi.deleteNamespacedConfigMap(configMap.getMetadata().getName(), namespace, deleteOptions, null, null, null, null)
-                );
+        final V1ObjectMeta configMapMetadata = configMap.getMetadata();
+
+        k8sResourceUtils.deleteResource(coreApi.deleteNamespacedConfigMapCall(configMapMetadata.getName(), configMapMetadata.getNamespace(), deleteOptions, null, null, null, null, null, null));
     }
 
-    private void deleteService(final V1Service service) throws ApiException {    	
-        deleteResource(
-                () -> coreApi.deleteNamespacedService(service.getMetadata().getName(), namespace, null)
-                );
+    private void deleteService(final V1Service service) throws ApiException {
+        final V1ObjectMeta serviceMetadata = service.getMetadata();
+
+        k8sResourceUtils.deleteResource(coreApi.deleteNamespacedServiceCall(serviceMetadata.getName(), serviceMetadata.getNamespace(), null, null, null));
     }
+
+//    private void cassandraDataCenterNodeOperationModes(final DataCenterKey dataCenterKey) {
+//        final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
+//
+//        dataCenter.
+//    }
 
     @Override
     protected void triggerShutdown() {

@@ -1,7 +1,7 @@
 -Xms128M
 -Xmx128M
 
--Dcassandra.jmx.local.port=7199
+-Dcassandra.jmx.remote.port=7199
 -Dcom.sun.management.jmxremote.authenticate=false
 
 -Dcassandra.consistent.rangemovement=false

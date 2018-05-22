@@ -1,9 +1,10 @@
 FROM base-openjre
 
-RUN dagi maven git
+RUN mkdir -p /opt/{bin,lib/cassandra-operator}
 
-RUN mkdir -p /opt/cassandra-operator
+COPY operator-1.0-SNAPSHOT-final.jar /opt/lib/cassandra-operator/cassandra-operator.jar
+COPY cassandra-operator.sh /opt/bin/cassandra-operator
 
-COPY operator-1.0-SNAPSHOT-final.jar /opt/cassandra-operator/operator-1.0.jar
+ENV PATH = $PATH:/opt/bin
 
-CMD java $JVMOPTS -jar /opt/cassandra-operator/operator-1.0.jar
+CMD cassandra-operator
