@@ -11,11 +11,6 @@ import io.kubernetes.client.util.ClientBuilder;
 public class K8sModule extends AbstractModule {
     @Override
     protected void configure() {
-//        final Multibinder<Service> serviceMultibinder = Multibinder.newSetBinder(binder(), Service.class);
-//
-//        serviceMultibinder.addBinding().to(WatchService.class);
-//
-//        Multibinder.newSetBinder(binder(), WatchConfig.class);
     }
 
     @Provides
