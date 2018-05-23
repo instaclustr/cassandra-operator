@@ -1,0 +1,15 @@
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraDataCenter
+metadata:
+  name: {{ template "cassandra.fullname" . }}
+  labels:
+    app: {{ template "cassandra.name" . }}
+    chart: {{ template "cassandra.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+{{- if .Values.labels }}
+{{ toYaml .Values.labels | indent 4 }}
+{{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

@@ -29,13 +29,6 @@ rules:
   verbs:
   - "*"
 - apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - cassandras
-  - cassandras/finalizers
-  verbs:
-  - "*"
-- apiGroups:
   - apps
   resources:
   - statefulsets
@@ -85,7 +78,7 @@ spec:
         k8s-app: cassandra-operator
     spec:
       containers:
-      - image: gcr.io/cassandra-operator/cassandra-operator:latest
+      - image: {{}}
         name: cassandra-operator
         ports:
         - containerPort: 8080
