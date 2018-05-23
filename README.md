@@ -78,7 +78,7 @@ Modify the file and change `replicas` from 3 to 5.
 
 ```yaml
 apiVersion: stable.instaclustr.com/v1
-kind: CassandraDataCentre
+kind: CassandraDataCenter
 metadata:
   name: test-dc
 spec:
@@ -105,7 +105,7 @@ Similarly we can decrease the size of cluster from 5 back to 3 by changing the s
 
 ```yaml
 apiVersion: stable.instaclustr.com/v1
-kind: CassandraDataCentre
+kind: CassandraDataCenter
 metadata:
   name: test-dc
 spec:

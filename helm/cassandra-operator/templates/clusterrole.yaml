@@ -26,8 +26,8 @@ rules:
   resources:
   - cluster
   - clusters
-  - datacentre
-  - datacentres
+  - datacenter
+  - datacenters
   verbs:
   - '*'
 - apiGroups:
