@@ -4,10 +4,10 @@ import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 
-public abstract class DataCenterEvent {
+public abstract class DataCenterWatchEvent {
     public DataCenter dataCenter;
 
-    protected DataCenterEvent(final DataCenter dataCenter) {
+    protected DataCenterWatchEvent(final DataCenter dataCenter) {
         this.dataCenter = dataCenter;
     }
 
@@ -17,7 +17,7 @@ public abstract class DataCenterEvent {
         Deleted createDeletedEvent(final DataCenter dataCenter);
     }
 
-    public static class Added extends DataCenterEvent implements WatchEvent.Added {
+    public static class Added extends DataCenterWatchEvent implements WatchEvent.Added {
         @Inject
         public Added(@Assisted final DataCenter dataCenter) {
             super(dataCenter);
@@ -25,14 +25,14 @@ public abstract class DataCenterEvent {
     }
 
 
-    public static class Modified extends DataCenterEvent implements WatchEvent.Modified {
+    public static class Modified extends DataCenterWatchEvent implements WatchEvent.Modified {
         @Inject
         public Modified(@Assisted("old") final DataCenter oldDataCenter, @Assisted("new") final DataCenter newDataCenter) {
             super(newDataCenter);
         }
     }
 
-    public static class Deleted extends DataCenterEvent implements WatchEvent.Deleted {
+    public static class Deleted extends DataCenterWatchEvent implements WatchEvent.Deleted {
         @Inject
         public Deleted(@Assisted final DataCenter dataCenter) {
             super(dataCenter);

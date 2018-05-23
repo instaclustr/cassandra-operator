@@ -25,7 +25,8 @@
       "type": "object",
       "properties": {
         "replicas": {
-          "type": "number"
+          "type": "number",
+          "javaType": "int"
         },
         "image" : {
           "type": "string"

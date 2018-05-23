@@ -5,26 +5,15 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.eventbus.EventBus;
 import com.google.inject.*;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
-import com.google.inject.matcher.AbstractMatcher;
-import com.google.inject.matcher.Matcher;
-import com.google.inject.matcher.Matchers;
-import com.google.inject.spi.InjectionListener;
-import com.google.inject.spi.ProvisionListener;
-import com.google.inject.spi.TypeEncounter;
-import com.google.inject.spi.TypeListener;
-import com.instaclustr.cassandra.operator.event.DataCenterEvent;
+import com.instaclustr.cassandra.operator.event.DataCenterWatchEvent;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
 import com.instaclustr.cassandra.operator.service.CassandraHealthCheckService;
-import com.instaclustr.cassandra.operator.service.CassandraPeriodicReconciliationService;
 import com.instaclustr.cassandra.operator.service.ControllerService;
 import com.google.common.util.concurrent.Service;
 import com.google.inject.multibindings.Multibinder;
+import com.instaclustr.cassandra.operator.service.DataCenterWatchService;
 import com.instaclustr.cassandra.operator.service.GarbageCollectorService;
-import com.instaclustr.k8s.WatchConfig;
-import com.instaclustr.k8s.WatchService;
-
-import java.util.Set;
 
 public class OperatorModule extends AbstractModule {
 
@@ -37,7 +26,6 @@ public class OperatorModule extends AbstractModule {
         serviceMultibinder.addBinding().to(CassandraHealthCheckService.class);
 
         serviceMultibinder.addBinding().to(DataCenterWatchService.class);
-        serviceMultibinder.addBinding().to(CassandraPeriodicReconciliationService.class);
 
 //        serviceMultibinder.addBinding().toProvider(SecretWatchServiceProvider.class);
 
@@ -69,18 +57,6 @@ public class OperatorModule extends AbstractModule {
 
         bind(new TypeLiteral<Cache<DataCenterKey, DataCenter>>() {}).toInstance(CacheBuilder.newBuilder().build());
 
-        install(new FactoryModuleBuilder().build(DataCenterEvent.Factory.class));
-
-        final Multibinder<WatchConfig> watchConfigMultibinder = Multibinder.newSetBinder(binder(), WatchConfig.class);
-
-        //watchConfigMultibinder.addBinding().toProvider(new)
-    }
-
-    static class SecretWatchServiceProvider implements Provider<WatchService> {
-
-        @Override
-        public WatchService get() {
-            return null;
-        }
+        install(new FactoryModuleBuilder().build(DataCenterWatchEvent.Factory.class));
     }
 }
