@@ -113,10 +113,12 @@ public class BackupTask implements Callable<Void> {
     @VisibleForTesting
     public void takeCassandraSnapshot(final StorageServiceMBean storageServiceMBean, final List<String> keyspaces, final String tag, final String columnFamily, final boolean drain) throws IOException, ExecutionException, InterruptedException {
         if (columnFamily != null) {
-            final String keyspace = Iterables.getOnlyElement(keyspaces);
+            final String tableWithKS = columnFamily + "." + Iterables.getOnlyElement(keyspaces);
 
-            logger.info("Taking snapshot \"{}\" on {}.{}.", tag, keyspace, columnFamily);
-            storageServiceMBean.takeColumnFamilySnapshot(keyspace, columnFamily, tag);
+            logger.info("Taking snapshot \"{}\" on {}.", tag, tableWithKS);
+            // Currently only supported option by Cassandra during snapshot is to skipFlush
+            // An empty map is used as skipping flush is currently not implemented.
+            storageServiceMBean.takeSnapshot(tag, Collections.emptyMap(), tableWithKS);
 
         } else {
             logger.info("Taking snapshot \"{}\" on {}.", tag, (keyspaces.isEmpty() ? "\"all\"" : keyspaces));
