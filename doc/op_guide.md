@@ -1,4 +1,4 @@
-##Installing the Cassandra operator
+## Installing the Cassandra operator
 ### Quick start installations
 To build and install locally follow the below steps:
 ```bash
