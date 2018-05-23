@@ -26,6 +26,9 @@
       "properties": {
         "replicas": {
           "type": "number"
+        },
+        "image" : {
+          "type": "string"
         }
       }
     }

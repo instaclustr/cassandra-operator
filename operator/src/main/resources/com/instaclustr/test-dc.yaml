@@ -1,6 +1,7 @@
 apiVersion: stable.instaclustr.com/v1
-kind: CassandraDataCentre
+kind: CassandraDataCenter
 metadata:
   name: test-dc
 spec:
   replicas: 6
+  image: instaclustr/k8s-cassandra
