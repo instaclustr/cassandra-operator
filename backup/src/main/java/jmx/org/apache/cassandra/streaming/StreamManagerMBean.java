@@ -1,4 +1,4 @@
-package jmx.org.apache.cassandra.two.zero.streaming;
+package jmx.org.apache.cassandra.streaming;
 
 import javax.management.NotificationEmitter;
 import javax.management.openmbean.CompositeData;

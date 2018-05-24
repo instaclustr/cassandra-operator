@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package jmx.org.apache.cassandra.two.zero.service;
+package jmx.org.apache.cassandra.service;
 
 import javax.management.NotificationEmitter;
 import java.io.IOException;
@@ -203,10 +203,10 @@ public interface StorageServiceMBean extends NotificationEmitter
      * Takes the snapshot of a specific column family. A snapshot name must be specified.
      *
      * @param keyspaceName the keyspace which holds the specified column family
-     * @param columnFamilyName the column family to snapshot
+     * @param tableName the column family to snapshot
      * @param tag the tag given to the snapshot; may not be null or empty
      */
-    public void takeColumnFamilySnapshot(String keyspaceName, String columnFamilyName, String tag) throws IOException;
+    public void takeTableSnapshot(String keyspaceName, String tableName, String tag) throws IOException;
 
     /**
      * Remove the snapshot with the given name from the given keyspaces.
