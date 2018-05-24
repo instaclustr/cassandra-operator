@@ -15,10 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package jmx.org.apache.cassandra.two.one.service;
+package jmx.org.apache.cassandra.service;
 
 import javax.management.NotificationEmitter;
-import javax.management.openmbean.TabularData;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -204,40 +203,16 @@ public interface StorageServiceMBean extends NotificationEmitter
      * Takes the snapshot of a specific column family. A snapshot name must be specified.
      *
      * @param keyspaceName the keyspace which holds the specified column family
-     * @param columnFamilyName the column family to snapshot
+     * @param tableName the column family to snapshot
      * @param tag the tag given to the snapshot; may not be null or empty
      */
-    public void takeColumnFamilySnapshot(String keyspaceName, String columnFamilyName, String tag) throws IOException;
+    public void takeTableSnapshot(String keyspaceName, String tableName, String tag) throws IOException;
 
-    /**
-     * Takes the snapshot of a multiple column family from different keyspaces. A snapshot name must be specified.
-     * 
-     * @param tag
-     *            the tag given to the snapshot; may not be null or empty
-     * @param columnFamilyList
-     *            list of columnfamily from different keyspace in the form of ks1.cf1 ks2.cf2
-     */
-    public void takeMultipleColumnFamilySnapshot(String tag, String... columnFamilyList) throws IOException;
-    
-    
-    
     /**
      * Remove the snapshot with the given name from the given keyspaces.
      * If no tag is specified we will remove all snapshots.
      */
     public void clearSnapshot(String tag, String... keyspaceNames) throws IOException;
-
-    /**
-     *  Get the details of all the snapshot
-     * @return A map of snapshotName to all its details in Tabular form.
-     */
-    public Map<String, TabularData> getSnapshotDetails();
-
-    /**
-     * Get the true size taken by all snapshots across all keyspaces.
-     * @return True size taken by all the snapshots.
-     */
-    public long trueSnapshotsSize();
 
     /**
      * Forces major compaction of a single keyspace
@@ -247,7 +222,7 @@ public interface StorageServiceMBean extends NotificationEmitter
     /**
      * Trigger a cleanup of keys on a single keyspace
      */
-    public int forceKeyspaceCleanup(String keyspaceName, String... columnFamilies) throws IOException, ExecutionException, InterruptedException;
+    public void forceKeyspaceCleanup(String keyspaceName, String... columnFamilies) throws IOException, ExecutionException, InterruptedException;
 
     /**
      * Scrub (deserialize + reserialize at the latest version, skipping bad rows if any) the given keyspace.
@@ -255,13 +230,13 @@ public interface StorageServiceMBean extends NotificationEmitter
      *
      * Scrubbed CFs will be snapshotted first, if disableSnapshot is false
      */
-    public int scrub(boolean disableSnapshot, boolean skipCorrupted, String keyspaceName, String... columnFamilies) throws IOException, ExecutionException, InterruptedException;
+    public void scrub(boolean disableSnapshot, boolean skipCorrupted, String keyspaceName, String... columnFamilies) throws IOException, ExecutionException, InterruptedException;
 
     /**
      * Rewrite all sstables to the latest version.
      * Unlike scrub, it doesn't skip bad rows and do not snapshot sstables first.
      */
-    public int upgradeSSTables(String keyspaceName, boolean excludeCurrentVersion, String... columnFamilies) throws IOException, ExecutionException, InterruptedException;
+    public void upgradeSSTables(String keyspaceName, boolean excludeCurrentVersion, String... columnFamilies) throws IOException, ExecutionException, InterruptedException;
 
     /**
      * Flush all memtables for the given column families, or all columnfamilies for the given keyspace
@@ -277,51 +252,74 @@ public interface StorageServiceMBean extends NotificationEmitter
      * You can track repair progress by subscribing JMX notification sent from this StorageServiceMBean.
      * Notification format is:
      *   type: "repair"
-     *   userObject: int array of length 2, [0]=command number, [1]=ordinal of ActiveRepairService.Status
+     *   userObject: int array of length 2, [0]=command number, [1]=ordinal of AntiEntropyService.Status
      *
      * @return Repair command number, or 0 if nothing to repair
      */
-    public int forceRepairAsync(String keyspace, boolean isSequential, Collection<String> dataCenters, Collection<String> hosts, boolean primaryRange, boolean repairedAt, String... columnFamilies) throws IOException;
+    public int forceRepairAsync(String keyspace, boolean isSequential, Collection<String> dataCenters, final Collection<String> hosts, boolean primaryRange, String... columnFamilies);
 
     /**
      * Invoke repair asynchronously.
      * You can track repair progress by subscribing JMX notification sent from this StorageServiceMBean.
      * Notification format is:
      *   type: "repair"
-     *   userObject: int array of length 2, [0]=command number, [1]=ordinal of ActiveRepairService.Status
+     *   userObject: int array of length 2, [0]=command number, [1]=ordinal of AntiEntropyService.Status
      *
      * @param parallelismDegree 0: sequential, 1: parallel, 2: DC parallel
      * @return Repair command number, or 0 if nothing to repair
      */
-    public int forceRepairAsync(String keyspace, int parallelismDegree, Collection<String> dataCenters, Collection<String> hosts, boolean primaryRange, boolean fullRepair, String... columnFamilies);
+    public int forceRepairAsync(String keyspace, int parallelismDegree, Collection<String> dataCenters, final Collection<String> hosts, boolean primaryRange, String... columnFamilies);
 
     /**
      * Same as forceRepairAsync, but handles a specified range
      */
-    public int forceRepairRangeAsync(String beginToken, String endToken, String keyspaceName, boolean isSequential, Collection<String> dataCenters, Collection<String> hosts, boolean repairedAt, String... columnFamilies) throws IOException;
+    public int forceRepairRangeAsync(String beginToken, String endToken, final String keyspaceName, boolean isSequential, Collection<String> dataCenters, final Collection<String> hosts, final String... columnFamilies);
 
     /**
      * Same as forceRepairAsync, but handles a specified range
      *
      * @param parallelismDegree 0: sequential, 1: parallel, 2: DC parallel
      */
-    public int forceRepairRangeAsync(String beginToken, String endToken, String keyspaceName, int parallelismDegree, Collection<String> dataCenters, Collection<String> hosts, boolean fullRepair, String... columnFamilies);
+    public int forceRepairRangeAsync(String beginToken, String endToken, final String keyspaceName, int parallelismDegree, Collection<String> dataCenters, final Collection<String> hosts, final String... columnFamilies);
 
     /**
      * Invoke repair asynchronously.
      * You can track repair progress by subscribing JMX notification sent from this StorageServiceMBean.
      * Notification format is:
      *   type: "repair"
-     *   userObject: int array of length 2, [0]=command number, [1]=ordinal of ActiveRepairService.Status
+     *   userObject: int array of length 2, [0]=command number, [1]=ordinal of AntiEntropyService.Status
      *
      * @return Repair command number, or 0 if nothing to repair
+     * @see #forceKeyspaceRepair(String, boolean, boolean, String...)
      */
-    public int forceRepairAsync(String keyspace, boolean isSequential, boolean isLocal, boolean primaryRange, boolean fullRepair, String... columnFamilies);
+    public int forceRepairAsync(String keyspace, boolean isSequential, boolean isLocal, boolean primaryRange, String... columnFamilies);
 
     /**
      * Same as forceRepairAsync, but handles a specified range
      */
-    public int forceRepairRangeAsync(String beginToken, String endToken, String keyspaceName, boolean isSequential, boolean isLocal, boolean repairedAt, String... columnFamilies);
+    public int forceRepairRangeAsync(String beginToken, String endToken, final String keyspaceName, boolean isSequential, boolean isLocal, final String... columnFamilies);
+
+    /**
+     * Triggers proactive repair for given column families, or all columnfamilies for the given keyspace
+     * if none are explicitly listed.
+     * @param keyspaceName
+     * @param columnFamilies
+     * @throws IOException
+     */
+    public void forceKeyspaceRepair(String keyspaceName, boolean isSequential, boolean isLocal, String... columnFamilies) throws IOException;
+
+    /**
+     * Triggers proactive repair but only for the node primary range.
+     */
+    public void forceKeyspaceRepairPrimaryRange(String keyspaceName, boolean isSequential, boolean isLocal, String... columnFamilies) throws IOException;
+
+    /**
+     * Perform repair of a specific range.
+     *
+     * This allows incremental repair to be performed by having an external controller submitting repair jobs.
+     * Note that the provided range much be a subset of one of the node local range.
+     */
+    public void forceKeyspaceRepairRange(String beginToken, String endToken, String keyspaceName, boolean isSequential, boolean isLocal, String... columnFamilies) throws IOException;
 
     public void forceTerminateAllRepairSessions();
 
@@ -352,24 +350,9 @@ public interface StorageServiceMBean extends NotificationEmitter
      */
     public void forceRemoveCompletion();
 
-    /**
-     * set the logging level at runtime<br>
-     * <br>
-     * If both classQualifer and level are empty/null, it will reload the configuration to reset.<br>
-     * If classQualifer is not empty but level is empty/null, it will set the level to null for the defined classQualifer<br>
-     * If level cannot be parsed, then the level will be defaulted to DEBUG<br>
-     * <br>
-     * The logback configuration should have < jmxConfigurator /> set
-     * 
-     * @param classQualifier The logger's classQualifer
-     * @param level The log level
-     * @throws Exception
-     * 
-     *  @see ch.qos.logback.classic.Level#toLevel(String)
-     */
-    public void setLoggingLevel(String classQualifier, String level) throws Exception;
+    /** set the logging level at runtime */
+    public void setLog4jLevel(String classQualifier, String level);
 
-    /** getUploader the runtime logging levels */
     public Map<String,String> getLoggingLevels();
 
     /** getUploader the operational mode (leaving, joining, normal, decommissioned, client) **/

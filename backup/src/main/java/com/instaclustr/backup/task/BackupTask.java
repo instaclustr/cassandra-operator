@@ -12,7 +12,7 @@ import com.instaclustr.backup.uploader.FilesUploader;
 import com.instaclustr.backup.util.Directories;
 import com.instaclustr.backup.util.GlobalLock;
 import com.microsoft.azure.storage.StorageException;
-import jmx.org.apache.cassandra.two.zero.service.StorageServiceMBean;
+import jmx.org.apache.cassandra.service.StorageServiceMBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +25,6 @@ import javax.naming.ConfigurationException;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -113,12 +112,12 @@ public class BackupTask implements Callable<Void> {
     @VisibleForTesting
     public void takeCassandraSnapshot(final StorageServiceMBean storageServiceMBean, final List<String> keyspaces, final String tag, final String columnFamily, final boolean drain) throws IOException, ExecutionException, InterruptedException {
         if (columnFamily != null) {
-            final String tableWithKS = columnFamily + "." + Iterables.getOnlyElement(keyspaces);
+            final String keyspace = Iterables.getOnlyElement(keyspaces);
 
-            logger.info("Taking snapshot \"{}\" on {}.", tag, tableWithKS);
+            logger.info("Taking snapshot \"{}\" on {}.{}.", tag, keyspace, columnFamily);
             // Currently only supported option by Cassandra during snapshot is to skipFlush
             // An empty map is used as skipping flush is currently not implemented.
-            storageServiceMBean.takeSnapshot(tag, Collections.emptyMap(), tableWithKS);
+            storageServiceMBean.takeTableSnapshot(keyspace, columnFamily, tag);
 
         } else {
             logger.info("Taking snapshot \"{}\" on {}.", tag, (keyspaces.isEmpty() ? "\"all\"" : keyspaces));
