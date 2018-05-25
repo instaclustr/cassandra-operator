@@ -20,4 +20,5 @@ cd `dirname "$BASH_SOURCE"`/..
 
 source ./buildenv/repo
 
-docker push "${REPO}:${TAG}" 1>/dev/null
+docker push "${REPO}:${TAG}"  1>/dev/null
+docker push "${REPO}:latest"  1>/dev/null
