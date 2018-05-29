@@ -47,5 +47,8 @@ spec:
               description: Valid values are "Never" "Always" "IfNotPresent".
             resources:
               type: object
-              description: the compute resource to construct pod.
+              description: the cpu & memory to construct pod.
+            capacity:
+              type: object
+              description: the disk storage to construct pod.
             

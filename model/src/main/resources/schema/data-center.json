@@ -35,7 +35,12 @@
           "type": "string"
         },
         "resources": {
-          "description": "Resource describes the compute resource requirements.",
+          "description": "Resource describes the memory & cpu requirements.",
+          "type": "object",
+          "javaType": "io.kubernetes.client.models.V1ResourceRequirements"
+        },
+        "capacity": {
+          "description": "Capacity describes the storage requirements.",
           "type": "object",
           "javaType": "io.kubernetes.client.models.V1ResourceRequirements"
         }

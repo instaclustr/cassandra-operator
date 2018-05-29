@@ -195,7 +195,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                                 .metadata(new V1ObjectMeta().name("data-volume"))
                                 .spec(new V1PersistentVolumeClaimSpec()
                                         .addAccessModesItem("ReadWriteOnce")
-                                        .resources(new V1ResourceRequirements().putRequestsItem("storage", Quantity.fromString("100Mi"))) // TODO: parameterize
+                                        .resources(dataCenter.getSpec().getCapacity())
                                         )
                                 )
                         );

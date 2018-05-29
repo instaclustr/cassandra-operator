@@ -11,3 +11,6 @@ spec:
       memory: 512Mi
     requests:
       memory: 512Mi
+  capacity:
+    requests:
+      storage: 100Mi
