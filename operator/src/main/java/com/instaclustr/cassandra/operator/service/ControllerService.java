@@ -47,10 +47,10 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     @Inject
     public ControllerService(final CoreV1Api coreApi,
-                             final AppsV1beta2Api appsApi,
-                             final Cache<DataCenterKey, DataCenter> dataCenterCache,
-                             final CassandraConnectionFactory cassandraConnectionFactory,
-                             final K8sResourceUtils k8sResourceUtils) {
+            final AppsV1beta2Api appsApi,
+            final Cache<DataCenterKey, DataCenter> dataCenterCache,
+            final CassandraConnectionFactory cassandraConnectionFactory,
+            final K8sResourceUtils k8sResourceUtils) {
         this.coreApi = coreApi;
         this.appsApi = appsApi;
         this.dataCenterCache = dataCenterCache;
@@ -86,7 +86,7 @@ public class ControllerService extends AbstractExecutionThreadService {
             // Reconcile when nodes have finished decommissioning. This will resume the StatefulSet
             // reconciliation.
             CassandraConnection.Status.OperationMode.DECOMMISSIONED
-    );
+            );
 
     @Subscribe
     void handleCassandraNodeOperationModeChangedEvent(final CassandraNodeStatusChangedEvent event) {
@@ -153,7 +153,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                         .name(dataCenterMetadata.getName())
                         .namespace(dataCenterMetadata.getNamespace())
                         .labels(dataCenterLabels)
-                )
+                        )
                 .spec(new V1beta2StatefulSetSpec()
                         .serviceName("cassandra")
                         .replicas(replicas)
@@ -164,50 +164,47 @@ public class ControllerService extends AbstractExecutionThreadService {
                                         .addContainersItem(new V1Container()
                                                 .name(dataCenterMetadata.getName())
                                                 .image(dataCenter.getSpec().getImage())
-                                                .imagePullPolicy("Never")
+                                                .imagePullPolicy(dataCenter.getSpec().getImagePullPolicy())
                                                 .ports(ImmutableList.of(
                                                         new V1ContainerPort().name("internode").containerPort(7000),
                                                         new V1ContainerPort().name("cql").containerPort(9042),
                                                         new V1ContainerPort().name("jmx").containerPort(7199)
-                                                ))
-                                                .resources(new V1ResourceRequirements()
-                                                        .putLimitsItem("memory", Quantity.fromString("512Mi"))
-                                                        .putRequestsItem("memory", Quantity.fromString("512Mi"))
-                                                )
+                                                        ))
+                                                .resources(dataCenter.getSpec().getResources())
                                                 .readinessProbe(new V1Probe()
                                                         .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
                                                         .initialDelaySeconds(60)
                                                         .timeoutSeconds(5)
-                                                )
+                                                        )
                                                 .addVolumeMountsItem(new V1VolumeMount()
                                                         .name("config-volume")
                                                         .mountPath("/etc/cassandra")
-                                                )
+                                                        )
                                                 .addVolumeMountsItem(new V1VolumeMount()
                                                         .name("data-volume")
                                                         .mountPath("/var/lib/cassandra")
+                                                        )
                                                 )
-                                        )
                                         .addVolumesItem(new V1Volume()
                                                 .name("config-volume")
                                                 .configMap(new V1ConfigMapVolumeSource().name(configMap.getMetadata().getName()))
+                                                )
                                         )
                                 )
-                        )
                         .addVolumeClaimTemplatesItem(new V1PersistentVolumeClaim()
                                 .metadata(new V1ObjectMeta().name("data-volume"))
                                 .spec(new V1PersistentVolumeClaimSpec()
                                         .addAccessModesItem("ReadWriteOnce")
                                         .resources(new V1ResourceRequirements().putRequestsItem("storage", Quantity.fromString("100Mi"))) // TODO: parameterize
+                                        )
                                 )
-                        )
-                );
+                        );
 
         // if the StatefulSet doesn't exist, create it. Otherwise scale it safely
         K8sResourceUtils.createOrReplaceResource(
                 () -> appsApi.createNamespacedStatefulSet(statefulSet.getMetadata().getNamespace(), statefulSet, null),
                 () -> replaceStatefulSet(dataCenter, statefulSet)
-        );
+                );
     }
 
     private V1ConfigMap createOrReplaceConfigMap(final DataCenter dataCenter) throws IOException, ApiException {
@@ -223,7 +220,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                         "    - class_name: com.instaclustr.cassandra.k8s.SeedProvider\n" +
                         "      parameters:\n" +
                         String.format("          - service: %s-seeds", dataCenterMetadata.getName())
-                )
+                        )
                 .putDataItem("logback.xml", resourceAsString("/com/instaclustr/cassandra/config/logback.xml"))
                 .putDataItem("cassandra-env.sh", resourceAsString("/com/instaclustr/cassandra/config/cassandra-env.sh"))
                 .putDataItem("jvm.options", resourceAsString("/com/instaclustr/cassandra/config/jvm.options"));
@@ -244,14 +241,14 @@ public class ControllerService extends AbstractExecutionThreadService {
                         .namespace(dataCenterMetadata.getNamespace())
                         .labels(dataCenterLabels)
                         .putAnnotationsItem("service.alpha.kubernetes.io/tolerate-unready-endpoints", "true")
-                )
+                        )
                 .spec(new V1ServiceSpec()
                         .publishNotReadyAddresses(true)
                         .clusterIP("None")
                         // a port needs to be defined for the service to be resolvable (#there-was-a-bug-ID-and-now-I-cant-find-it)
                         .ports(ImmutableList.of(new V1ServicePort().name("internode").port(7000)))
                         .selector(dataCenterLabels)
-                );
+                        );
 
         k8sResourceUtils.createOrReplaceNamespaceService(service);
     }
@@ -266,15 +263,15 @@ public class ControllerService extends AbstractExecutionThreadService {
                         .name(String.format("%s-nodes", dataCenterMetadata.getName()))
                         .namespace(dataCenterMetadata.getNamespace())
                         .labels(dataCenterLabels)
-                )
+                        )
                 .spec(new V1ServiceSpec()
                         .clusterIP("None")
                         .ports(ImmutableList.of(
                                 new V1ServicePort().name("cql").port(9042),
                                 new V1ServicePort().name("jmx").port(7199)
-                        ))
+                                ))
                         .selector(dataCenterLabels)
-                );
+                        );
 
         k8sResourceUtils.createOrReplaceNamespaceService(service);
     }
@@ -332,7 +329,7 @@ public class ControllerService extends AbstractExecutionThreadService {
         // TODO: handle lists larger than the max returned (via continue attribute)
         final List<V1Pod> pods = ImmutableList.sortedCopyOf(STATEFUL_SET_POD_COMPARATOR,
                 coreApi.listNamespacedPod(dataCenter.getMetadata().getNamespace(), null, null, null, null, labelSelector, null, null, null, null).getItems()
-        );
+                );
 
 
         // TODO: this will be slow for a large number of nodes -- introduce some parallelism
@@ -357,7 +354,7 @@ public class ControllerService extends AbstractExecutionThreadService {
         if (!EnumSet.of(CassandraConnection.Status.OperationMode.NORMAL).equals(podCassandraOperationModes.keySet())) {
             logger.warn("Skipping StatefulSet reconciliation as some Cassandra nodes are not in the NORMAL state: {}",
                     Multimaps.transformValues(podCassandraOperationModes, (V1Pod p) -> p.getMetadata().getName())
-            );
+                    );
 
             return;
         }
@@ -387,22 +384,22 @@ public class ControllerService extends AbstractExecutionThreadService {
         // TODO: verify if the below behaviour still exists in 1.6+
         // (as the ticket is closed)
 
-//        deleteOptions.setPropagationPolicy("Foreground");
-//
-//        //Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
-//        statefulSet.getSpec().setReplicas(0);
-//
-//        appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null);
-//
-//        while (true) {
-//            Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, null, null, null).getStatus().getReplicas();
-//            if (currentReplicas == 0)
-//                break;
-//
-//            Thread.sleep(50);
-//        }
-//
-//        logger.debug("done with scaling to 0");
+        //        deleteOptions.setPropagationPolicy("Foreground");
+        //
+        //        //Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
+        //        statefulSet.getSpec().setReplicas(0);
+        //
+        //        appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null);
+        //
+        //        while (true) {
+        //            Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, null, null, null).getStatus().getReplicas();
+        //            if (currentReplicas == 0)
+        //                break;
+        //
+        //            Thread.sleep(50);
+        //        }
+        //
+        //        logger.debug("done with scaling to 0");
 
 
         final V1ObjectMeta statefulSetMetadata = statefulSet.getMetadata();
@@ -424,11 +421,11 @@ public class ControllerService extends AbstractExecutionThreadService {
         k8sResourceUtils.deleteResource(coreApi.deleteNamespacedServiceCall(serviceMetadata.getName(), serviceMetadata.getNamespace(), null, null, null));
     }
 
-//    private void cassandraDataCenterNodeOperationModes(final DataCenterKey dataCenterKey) {
-//        final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
-//
-//        dataCenter.
-//    }
+    //    private void cassandraDataCenterNodeOperationModes(final DataCenterKey dataCenterKey) {
+    //        final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
+    //
+    //        dataCenter.
+    //    }
 
     @Override
     protected void triggerShutdown() {

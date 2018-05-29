@@ -5,3 +5,9 @@ metadata:
 spec:
   replicas: 6
   image: instaclustr/k8s-cassandra
+  imagePullPolicy: Never
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      memory: 512Mi
