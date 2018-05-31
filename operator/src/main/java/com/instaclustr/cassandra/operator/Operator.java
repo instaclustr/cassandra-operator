@@ -1,6 +1,7 @@
 package com.instaclustr.cassandra.operator;
 
 import ch.qos.logback.classic.Level;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.*;
 import com.instaclustr.cassandra.operator.preflight.Preflight;
 import com.instaclustr.cassandra.operator.preflight.PreflightModule;
@@ -35,7 +36,9 @@ public class Operator implements Callable<Void> {
     static final Logger logger = LoggerFactory.getLogger(Operator.class);
 
     static class LoggingOptions {
-        @Option(names = {"-v", "--verbose"}, description = {"Be verbose.", "Specify @|italic --verbose|@ multiple times to increase verbosity."})
+        @Option(names = {"-v", "--verbose"}, description = {"Be verbose for the com.instaclustr package (enable DEBUG level logging).",
+                                                            "Specify @|italic --verbose|@ twice to increase verbosity (enable TRACE level logging).",
+                                                            "For other packages configure Logback via @|italic logback.xml|@"})
         boolean[] verbosity;
     }
 
@@ -84,10 +87,9 @@ public class Operator implements Callable<Void> {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
-
         if (loggingOptions.verbosity != null) {
-            final ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-            rootLogger.setLevel(Level.TRACE);
+            final ch.qos.logback.classic.Logger packageLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("com.instaclustr");
+            packageLogger.setLevel(Level.TRACE);
         }
 
 
@@ -101,6 +103,9 @@ public class Operator implements Callable<Void> {
                 new AbstractModule() {
                     @Override
                     protected void configure() {
+
+                        bind(K8sVersionValidator.Options.class).toInstance(versionValidatorOptions);
+
 //                        bind(KubeConfig.class).toInstance(kubeConfig);
                         try {
                             bind(ClientBuilder.class).toInstance(ClientBuilder.standard());

@@ -10,7 +10,7 @@ import javax.inject.Inject;
 import java.util.concurrent.Callable;
 
 public class K8sVersionValidator implements Callable<Void> {
-    static final Logger logger = LoggerFactory.getLogger(K8sVersionValidator.class);
+    private static final Logger logger = LoggerFactory.getLogger(K8sVersionValidator.class);
 
     static class Options {
         @CommandLine.Option(names = "--no-version-check")

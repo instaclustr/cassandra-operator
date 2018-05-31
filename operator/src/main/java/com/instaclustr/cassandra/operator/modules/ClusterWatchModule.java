@@ -31,9 +31,9 @@ public class ClusterWatchModule extends AbstractModule {
     }
 
     @ProvidesIntoSet
-    Service provideDataCenterWatchService(final ApiClient apiClient, final CustomObjectsApi customObjectsApi,
-                                          final EventBus eventBus, final ClusterWatchEvent.Factory clusterWatchEventFactory,
-                                          final Map<ClusterKey, Cluster> cache) {
+    Service provideClusterWatchService(final ApiClient apiClient, final CustomObjectsApi customObjectsApi,
+                                       final EventBus eventBus, final ClusterWatchEvent.Factory clusterWatchEventFactory,
+                                       final Map<ClusterKey, Cluster> cache) {
 
         // TODO: parameterise namespace
         final ListCallProvider listCallProvider = (resourceVersion, watch) ->
