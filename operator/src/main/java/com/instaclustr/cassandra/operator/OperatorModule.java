@@ -11,7 +11,6 @@ import com.instaclustr.cassandra.operator.service.CassandraHealthCheckService;
 import com.instaclustr.cassandra.operator.service.ControllerService;
 import com.instaclustr.cassandra.operator.service.GarbageCollectorService;
 
-
 public class OperatorModule extends AbstractModule {
 
     @Override

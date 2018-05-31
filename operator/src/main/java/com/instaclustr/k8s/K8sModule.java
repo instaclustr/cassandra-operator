@@ -7,7 +7,6 @@ import io.kubernetes.client.apis.*;
 import io.kubernetes.client.util.ClientBuilder;
 
 public class K8sModule extends AbstractModule {
-
     @Provides
     public ApiClient provideApiClient(final ClientBuilder clientBuilder) {
         return clientBuilder.build();
@@ -37,5 +36,4 @@ public class K8sModule extends AbstractModule {
     public AppsV1beta2Api provideAppsV1beta2Api(final ApiClient apiClient) {
         return new AppsV1beta2Api(apiClient);
     }
-
 }

@@ -20,11 +20,14 @@ spec:
     # shortNames allow shorter string to match your resource on the CLI
     shortNames:
     - cdc
-    - cassandra
   validation:
     openAPIV3Schema:
       properties:
         spec:
+          required:
+          - replicas
+          - image
+          - imagePullPolicy
           properties:
             name:
               type: string
@@ -32,8 +35,20 @@ spec:
             clusterName:
               type: string
               description: Name of the cluster. If null, will default to a generated name.
-            size:
+            replicas:
               type: integer
               minimum: 1
               description: Number of nodes in the data center.
+            image:
+              type: string
+              description: Image to be used for data center.
+            imagePullPolicy:
+              type: string
+              description: Valid values are "Never" "Always" "IfNotPresent".
+            resources:
+              type: object
+              description: the cpu & memory to construct pod.
+            capacity:
+              type: object
+              description: the disk storage to construct pod.
             

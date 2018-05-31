@@ -1,0 +1,7 @@
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraDataCenter
+metadata:
+  name: test-dc
+spec:
+  replicas: 3
+  image: "gcr.io/cassandra-operator/cassandra:latest"

@@ -147,7 +147,7 @@ public class ControllerService extends AbstractExecutionThreadService {
 
         // create configmap
         final V1ConfigMap configMap = createOrReplaceConfigMap(dataCenter);
-
+        
         // create the statefulset for the DC nodes
         createOrReplaceStateNodesStatefulSet(dataCenter, configMap);
     }
@@ -158,9 +158,7 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     private void createOrReplaceStateNodesStatefulSet(final DataCenter dataCenter, final V1ConfigMap configMap) throws ApiException {
         final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
-
         final Map<String, String> dataCenterLabels = dataCenterLabels(dataCenter);
-
         final int replicas = dataCenter.getSpec().getReplicas();
 
         final V1beta2StatefulSet statefulSet = new V1beta2StatefulSet()
@@ -179,16 +177,13 @@ public class ControllerService extends AbstractExecutionThreadService {
                                         .addContainersItem(new V1Container()
                                                 .name(dataCenterMetadata.getName())
                                                 .image(dataCenter.getSpec().getImage())
-                                                .imagePullPolicy("Never")
+                                                .imagePullPolicy(dataCenter.getSpec().getImagePullPolicy())
                                                 .ports(ImmutableList.of(
                                                         new V1ContainerPort().name("internode").containerPort(7000),
                                                         new V1ContainerPort().name("cql").containerPort(9042),
                                                         new V1ContainerPort().name("jmx").containerPort(7199)
                                                 ))
-                                                .resources(new V1ResourceRequirements()
-                                                        .putLimitsItem("memory", Quantity.fromString("512Mi"))
-                                                        .putRequestsItem("memory", Quantity.fromString("512Mi"))
-                                                )
+                                                .resources(dataCenter.getSpec().getResources())
                                                 .readinessProbe(new V1Probe()
                                                         .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
                                                         .initialDelaySeconds(60)
@@ -213,7 +208,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                                 .metadata(new V1ObjectMeta().name("data-volume"))
                                 .spec(new V1PersistentVolumeClaimSpec()
                                         .addAccessModesItem("ReadWriteOnce")
-                                        .resources(new V1ResourceRequirements().putRequestsItem("storage", Quantity.fromString("100Mi"))) // TODO: parameterize
+                                        .resources(dataCenter.getSpec().getCapacity())
                                 )
                         )
                 );
@@ -438,12 +433,6 @@ public class ControllerService extends AbstractExecutionThreadService {
 
         k8sResourceUtils.deleteResource(coreApi.deleteNamespacedServiceCall(serviceMetadata.getName(), serviceMetadata.getNamespace(), null, null, null));
     }
-
-//    private void cassandraDataCenterNodeOperationModes(final DataCenterKey dataCenterKey) {
-//        final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
-//
-//        dataCenter.
-//    }
 
     @Override
     protected void triggerShutdown() {

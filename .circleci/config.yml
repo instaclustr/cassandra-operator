@@ -92,7 +92,7 @@ jobs:
               command: ./test/pivotaltests
 
           - run:
-              name: Cleanup GCP resources
+              name: Cleanup Pivotal resources
               command: ./test/cleanup
               when: always
 
