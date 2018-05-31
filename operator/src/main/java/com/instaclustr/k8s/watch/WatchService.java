@@ -100,6 +100,7 @@ public class WatchService<ResourceT, ResourceListT, ResourceKeyT extends Key<Res
         currentCall = listCallProvider.get(listResourceVersion, true);
 
         try (final Watch<JsonObject> watch = Watch.createWatch(apiClient, currentCall, new TypeToken<Watch.Response<JsonObject>>() {}.getType())) {
+
             for (final Watch.Response<JsonObject> objectResponse : watch) {
                 final ResponseType responseType = ResponseType.valueOf(objectResponse.type);
 
@@ -128,7 +129,7 @@ public class WatchService<ResourceT, ResourceListT, ResourceKeyT extends Key<Res
                         break;
                 }
             }
-            
+
         } catch (final RuntimeException e) {
             final Throwable cause = e.getCause();
 
