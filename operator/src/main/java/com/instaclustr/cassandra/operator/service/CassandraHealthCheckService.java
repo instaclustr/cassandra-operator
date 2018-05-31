@@ -25,7 +25,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
     private static final Logger logger = LoggerFactory.getLogger(CassandraHealthCheckService.class);
 
     private final CoreV1Api coreApi;
-    private final Cache<DataCenterKey, DataCenter> dataCenterCache;
+    private final Map<DataCenterKey, DataCenter> dataCenterCache;
     private final CassandraConnectionFactory cassandraConnectionFactory;
     private final EventBus eventBus;
 
@@ -36,7 +36,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
 
     @Inject
     public CassandraHealthCheckService(final CoreV1Api coreApi,
-                                       final Cache<DataCenterKey, DataCenter> dataCenterCache,
+                                       final Map<DataCenterKey, DataCenter> dataCenterCache,
                                        final CassandraConnectionFactory cassandraConnectionFactory,
                                        final EventBus eventBus) {
         this.coreApi = coreApi;
@@ -52,7 +52,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
 
         logger.debug("Checking health of cassandra instances...");
 
-        for (final Map.Entry<DataCenterKey, DataCenter> cacheEntry : dataCenterCache.asMap().entrySet()) {
+        for (final Map.Entry<DataCenterKey, DataCenter> cacheEntry : dataCenterCache.entrySet()) {
             final DataCenterKey dataCenterKey = cacheEntry.getKey();
 
             final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);

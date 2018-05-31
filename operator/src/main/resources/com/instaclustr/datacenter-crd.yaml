@@ -14,7 +14,7 @@ spec:
     # plural name to be used in the URL: /apis/<group>/<version>/<plural>
     plural: cassandra-datacenters
     # singular name to be used as an alias on the CLI and for display
-    singular: cassandra-datacenters
+    singular: cassandra-datacenter
     # kind is normally the CamelCased singular type. Your resource manifests use this.
     kind: CassandraDataCenter
     # shortNames allow shorter string to match your resource on the CLI

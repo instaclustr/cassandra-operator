@@ -4,8 +4,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
-public final class Preflight {
+public final class Preflight implements Callable<Void> {
     static final Logger logger = LoggerFactory.getLogger(Preflight.class);
 
     private final Set<Operation> operations;
@@ -15,7 +16,8 @@ public final class Preflight {
         this.operations = operations;
     }
 
-    public void run() throws Exception {
+    @Override
+    public Void call() throws Exception {
         logger.debug("Preflight operations to run: [{}]", operations);
 
         for (final Operation operation : operations) {
@@ -30,5 +32,7 @@ public final class Preflight {
                 throw e;
             }
         }
+
+        return null;
     }
 }

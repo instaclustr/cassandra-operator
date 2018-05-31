@@ -1,8 +1,13 @@
 package com.instaclustr.cassandra.operator.event;
 
+import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.operator.model.Cluster;
 
-public abstract class ClusterWatchEvent {
+import javax.annotation.Nullable;
+import javax.inject.Inject;
+
+@SuppressWarnings("WeakerAccess")
+public abstract class ClusterWatchEvent extends WatchEvent {
     public final Cluster cluster;
 
     protected ClusterWatchEvent(final Cluster cluster) {
@@ -11,24 +16,31 @@ public abstract class ClusterWatchEvent {
 
     public interface Factory extends WatchEvent.Factory<Cluster> {
         Added createAddedEvent(final Cluster cluster);
-        Modified createModifiedEvent(final Cluster cluster);
+        Modified createModifiedEvent(@Nullable @Assisted("old") final Cluster oldCluster, @Assisted("new") final Cluster newCluster);
         Deleted createDeletedEvent(final Cluster cluster);
     }
 
     public static class Added extends ClusterWatchEvent implements WatchEvent.Added {
-        public Added(final Cluster cluster) {
+        @Inject
+        public Added(@Assisted final Cluster cluster) {
             super(cluster);
         }
     }
 
     public static class Modified extends ClusterWatchEvent implements WatchEvent.Modified {
-        public Modified(final Cluster cluster) {
-            super(cluster);
+        @Nullable
+        public final Cluster oldCluster;
+
+        @Inject
+        public Modified(@Nullable @Assisted("old") final Cluster oldCluster, @Assisted("new") final Cluster newCluster) {
+            super(newCluster);
+            this.oldCluster = oldCluster;
         }
     }
 
     public static class Deleted extends ClusterWatchEvent implements WatchEvent.Deleted {
-        public Deleted(final Cluster cluster) {
+        @Inject
+        public Deleted(@Assisted final Cluster cluster) {
             super(cluster);
         }
     }
