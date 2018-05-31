@@ -1,0 +1,34 @@
+{
+  "info": {
+    "title": "CassandraDataCenter",
+    "version": "v1"
+  },
+  "type": "object",
+  "javaType": "com.instaclustr.cassandra.operator.model.DataCenter",
+  "description": "",
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "javaType": "io.kubernetes.client.models.V1ObjectMeta",
+      "type": "object"
+    },
+    "spec": {
+      "javaType": "com.instaclustr.cassandra.operator.model.DataCenterSpec",
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "type": "number",
+          "javaType": "int"
+        },
+        "image" : {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

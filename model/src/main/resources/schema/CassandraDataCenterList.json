@@ -1,0 +1,25 @@
+{
+  "info": {
+    "title": "CassandraDataCenterList",
+    "version": "v1"
+  },
+  "type": "object",
+  "javaType": "com.instaclustr.cassandra.operator.model.DataCenterList",
+  "description": "A List of DataCenter objects",
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "javaType": "io.kubernetes.client.models.V1ListMeta",
+      "type": "object"
+    },
+    "items": {
+      "javaType": "java.util.List<com.instaclustr.cassandra.operator.model.DataCenter>",
+      "type": "array"
+    }
+  }
+}

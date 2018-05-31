@@ -1,14 +1,14 @@
 package com.instaclustr.cassandra.operator;
 
 import ch.qos.logback.classic.Level;
-import com.google.common.eventbus.EventBus;
-import com.google.common.util.concurrent.Service;
-import com.google.common.util.concurrent.ServiceManager;
 import com.google.inject.*;
 import com.instaclustr.cassandra.operator.preflight.Preflight;
 import com.instaclustr.cassandra.operator.preflight.PreflightModule;
+import com.instaclustr.guava.Application;
+import com.instaclustr.guava.EventBusModule;
 import com.instaclustr.guava.ServiceManagerModule;
 import com.instaclustr.k8s.K8sModule;
+import com.instaclustr.picocli.ManifestVersionProvider;
 import com.instaclustr.picocli.typeconverter.ExistingFilePathTypeConverter;
 import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.KubeConfig;
@@ -21,31 +21,25 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-@Command(name = "cassandra-operator", mixinStandardHelpOptions = true, version = "cassandra-operator 0.1.0",
-         description = "A Kubernetes operator for Apache Cassandra.",
-         versionProvider = Operator.ManifestVersionProvider.class,
-         sortOptions = false)
+@Command(name = "cassandra-operator",
+        mixinStandardHelpOptions = true,
+        description = "A Kubernetes operator for Apache Cassandra.",
+        versionProvider = ManifestVersionProvider.class,
+        sortOptions = false
+)
 public class Operator implements Callable<Void> {
     static final Logger logger = LoggerFactory.getLogger(Operator.class);
 
-    static class ManifestVersionProvider implements CommandLine.IVersionProvider {
-        @Override
-        public String[] getVersion() throws Exception {
-            return new String[]{"Version information not available"}; // TODO: load from MANIFEST.MF (and insert build/commit details into manifest on mvn pkg)
-        }
+    static class LoggingOptions {
+        @Option(names = {"-v", "--verbose"}, description = {"Be verbose.", "Specify @|italic --verbose|@ multiple times to increase verbosity."})
+        boolean[] verbosity;
     }
 
     static class OperatorOptions {
-        @Option(names = {"-v", "--verbose"}, description = {"Be verbose.", "Specify @|italic --verbose|@ multiple times to increase verbosity."})
-        boolean[] verbosity;
-
         @Option(names = {"-n", "--namespace"}, description = "")
         String namespace;
     }
@@ -61,13 +55,15 @@ public class Operator implements Callable<Void> {
         @CommandLine.Option(names = "--no-kube-config")
         boolean noKubeConfig;
 
-
         @CommandLine.Option(names = "--host")
         String host;
 
         @CommandLine.Option(names = "--insecure-tls")
         boolean disableTlsVerification;
     }
+
+    @Mixin
+    LoggingOptions loggingOptions;
 
     @Mixin
     OperatorOptions operatorOptions;
@@ -79,7 +75,7 @@ public class Operator implements Callable<Void> {
     K8sVersionValidator.Options versionValidatorOptions;
 
 
-    public static void main(String[] args) {
+    public static void main(final String[] args) {
         CommandLine.call(new Operator(), System.err, CommandLine.Help.Ansi.ON, args);
     }
 
@@ -88,8 +84,11 @@ public class Operator implements Callable<Void> {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
-        final ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("com.instaclustr.cassandra.operator");
-        rootLogger.setLevel(Level.DEBUG);
+
+        if (loggingOptions.verbosity != null) {
+            final ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+            rootLogger.setLevel(Level.TRACE);
+        }
 
 
 //        final KubeConfig kubeConfig;
@@ -111,78 +110,18 @@ public class Operator implements Callable<Void> {
                     }
                 },
                 new ServiceManagerModule(),
+                new EventBusModule(),
                 new K8sModule(),
                 new PreflightModule(),
                 new OperatorModule()
         );
 
-        injector.getInstance(K8sVersionValidator.class).call(); // TODO: maybe make preflight, but requires ordering since PF operations can use the K8s client -- this need to be done first
+        injector.getInstance(K8sVersionValidator.class).call();
 
         // run Preflight operations
-        injector.getInstance(Preflight.class).run();
+        injector.getInstance(Preflight.class).call();
 
-        runServices(injector);
-
-        return null;
+        return injector.getInstance(Application.class).call();
     }
 
-
-    private void runServices(final Injector injector) throws TimeoutException {
-        final ServiceManager serviceManager = injector.getInstance(ServiceManager.class);
-
-        // TODO: this probably belongs somewhere else
-        {
-            final EventBus eventBus = injector.getInstance(EventBus.class);
-
-            for (final Service service : serviceManager.servicesByState().values()) {
-                eventBus.register(service);
-            }
-        }
-
-
-        logger.info("Services to start: {}", serviceManager.servicesByState().get(Service.State.NEW));
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            logger.info("Shutting down {}.", serviceManager.servicesByState().get(Service.State.RUNNING));
-
-            serviceManager.stopAsync();
-
-            while (true) {
-                try {
-                    serviceManager.awaitStopped(1, TimeUnit.MINUTES);
-                    break;
-
-                } catch (final TimeoutException e) {
-                    logger.warn("Timeout waiting for {} to stop. Retrying.", serviceManager.servicesByState().get(Service.State.STOPPING), e);
-                }
-            }
-
-            logger.info("Successfully shut down all services.");
-        }, "ServiceManager Shutdown Hook"));
-
-        // add a listener to catch any service failures
-        serviceManager.addListener(new ServiceManager.Listener() {
-            @Override
-            public void failure(final Service service) {
-                logger.error("Service {} failed. Shutting down.", service, service.failureCause());
-                System.exit(1);
-            }
-        });
-
-        try {
-            logger.info("Starting services.");
-            serviceManager.startAsync().awaitHealthy(1, TimeUnit.MINUTES);
-            logger.info("Successfully started all services.");
-
-        } catch (final TimeoutException e) {
-            logger.error("Timeout waiting for {} to start.", serviceManager.servicesByState().get(Service.State.STARTING));
-            throw e;
-
-        } catch (final IllegalStateException e) {
-            logger.error("Services {} failed to start.", serviceManager.servicesByState().get(Service.State.FAILED));
-            throw e;
-        }
-
-        serviceManager.awaitStopped();
-    }
 }

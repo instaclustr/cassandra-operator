@@ -37,7 +37,7 @@ public class K8sVersionValidator implements Callable<Void> {
 
         logger.debug("Server version: {}", versionInfo);
 
-        if (!options.noVersionCheck) {
+        if (options.noVersionCheck) {
             logger.warn("Skipping K8s version check.");
             return null;
         }

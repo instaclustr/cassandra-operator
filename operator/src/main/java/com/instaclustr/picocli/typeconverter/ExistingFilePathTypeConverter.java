@@ -7,11 +7,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /***
- * A {@link CommandLine.ITypeConverter} for {@link java.nio.file.Path}s that must exist.
+ * A {@link CommandLine.ITypeConverter} for {@link java.nio.file.Path}s that must exist and must be regular files.
  */
 public class ExistingFilePathTypeConverter implements CommandLine.ITypeConverter<Path> {
     @Override
-    public Path convert(final String value) throws Exception {
+    public Path convert(final String value) {
         if ("".equals(value))
             return null;
 

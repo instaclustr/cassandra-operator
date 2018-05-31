@@ -1,17 +1,12 @@
 package com.instaclustr.k8s;
 
-import com.google.common.util.concurrent.Service;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.google.inject.multibindings.Multibinder;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.apis.*;
 import io.kubernetes.client.util.ClientBuilder;
 
 public class K8sModule extends AbstractModule {
-    @Override
-    protected void configure() {
-    }
 
     @Provides
     public ApiClient provideApiClient(final ClientBuilder clientBuilder) {
@@ -42,4 +37,5 @@ public class K8sModule extends AbstractModule {
     public AppsV1beta2Api provideAppsV1beta2Api(final ApiClient apiClient) {
         return new AppsV1beta2Api(apiClient);
     }
+
 }
