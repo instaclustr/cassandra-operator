@@ -19,6 +19,7 @@ import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -39,7 +40,7 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     private final CoreV1Api coreApi;
     private final AppsV1beta2Api appsApi;
-    private final Cache<DataCenterKey, DataCenter> dataCenterCache;
+    private final Map<DataCenterKey, DataCenter> dataCenterCache;
     private final CassandraConnectionFactory cassandraConnectionFactory;
     private final K8sResourceUtils k8sResourceUtils;
 
@@ -48,7 +49,7 @@ public class ControllerService extends AbstractExecutionThreadService {
     @Inject
     public ControllerService(final CoreV1Api coreApi,
                              final AppsV1beta2Api appsApi,
-                             final Cache<DataCenterKey, DataCenter> dataCenterCache,
+                             final Map<DataCenterKey, DataCenter> dataCenterCache,
                              final CassandraConnectionFactory cassandraConnectionFactory,
                              final K8sResourceUtils k8sResourceUtils) {
         this.coreApi = coreApi;
@@ -60,21 +61,25 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     @Subscribe
     void clusterEvent(final ClusterWatchEvent event) {
+        logger.trace("Received ClusterWatchEvent {}.", event);
         // TODO: map the Cluster object to one or more DC objects, then post a message on the queue for them
     }
 
     @Subscribe
     void handleDataCenterEvent(final DataCenterWatchEvent event) {
+        logger.trace("Received DataCenterWatchEvent {}.", event);
         dataCenterQueue.add(DataCenterKey.forDataCenter(event.dataCenter));
     }
 
     @Subscribe
     void handleSecretEvent(final SecretWatchEvent event) {
+        logger.trace("Received SecretWatchEvent {}.", event);
         // TODO: handle updated/deleted secrets
     }
 
     @Subscribe
     void handleStatefulSetEvent(final StatefulSetWatchEvent event) {
+        logger.trace("Received StatefulSetWatchEvent {}.", event);
         // TODO
     }
 
@@ -90,6 +95,8 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     @Subscribe
     void handleCassandraNodeOperationModeChangedEvent(final CassandraNodeStatusChangedEvent event) {
+        logger.trace("Received CassandraNodeStatusChangedEvent {}.", event);
+
         if (event.previousStatus.operationMode == event.currentStatus.operationMode)
             return;
 
@@ -106,19 +113,27 @@ public class ControllerService extends AbstractExecutionThreadService {
             if (dataCenterKey == POISON)
                 return;
 
-            final DataCenter dataCenter = dataCenterCache.getIfPresent(dataCenterKey);
+            try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterName = MDC.putCloseable("DataCenter", dataCenterKey.name);
+                 @SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterNamespace = MDC.putCloseable("Namespace", dataCenterKey.namespace)) {
 
-            // data center deleted
-            if (dataCenter == null) {
-                deleteDataCenter(dataCenterKey);
-                return;
-            }
+                final DataCenter dataCenter = dataCenterCache.get(dataCenterKey);
 
-            // data center created or modified
-            try {
-                createOrReplaceDataCenter(dataCenter);
-            } catch (final Exception e) {
-                logger.warn("Failed to reconcile Data Center. This will be an exception in the future.", e);
+                // data center deleted
+                if (dataCenter == null) {
+                    logger.info("Deleting Data Center.", dataCenterKey);
+                    deleteDataCenter(dataCenterKey);
+
+                    return;
+                }
+
+                // data center created or modified
+                try {
+                    logger.info("Reconciling Data Center.");
+                    createOrReplaceDataCenter(dataCenter);
+
+                } catch (final Exception e) {
+                    logger.warn("Failed to reconcile Data Center. This will be an exception in the future.", e);
+                }
             }
         }
     }
