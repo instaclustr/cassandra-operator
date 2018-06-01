@@ -22,6 +22,7 @@ import io.kubernetes.client.util.Watch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -93,13 +94,12 @@ public class WatchService<ResourceT, ResourceListT, ResourceKeyT extends Key<Res
         }
     }
 
-    private void watchResourceList(final String listResourceVersion) throws ApiException {
+    private void watchResourceList(final String listResourceVersion) throws ApiException, IOException {
         logger.debug("Watching resource list.");
 
-        try {
-            currentCall = listCallProvider.get(listResourceVersion, true);
+        currentCall = listCallProvider.get(listResourceVersion, true);
 
-            final Watch<JsonObject> watch = Watch.createWatch(apiClient, currentCall, new TypeToken<Watch.Response<JsonObject>>() {}.getType());
+        try (final Watch<JsonObject> watch = Watch.createWatch(apiClient, currentCall, new TypeToken<Watch.Response<JsonObject>>() {}.getType())) {
 
             for (final Watch.Response<JsonObject> objectResponse : watch) {
                 final ResponseType responseType = ResponseType.valueOf(objectResponse.type);
