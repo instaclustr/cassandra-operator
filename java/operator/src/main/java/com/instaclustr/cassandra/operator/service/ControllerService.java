@@ -11,6 +11,7 @@ import com.instaclustr.cassandra.operator.jmx.CassandraConnection;
 import com.instaclustr.cassandra.operator.jmx.CassandraConnectionFactory;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
 import com.instaclustr.cassandra.operator.model.DataCenter;
+import com.instaclustr.cassandra.operator.model.DataCenterSpec;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.AppsV1beta2Api;
@@ -158,8 +159,9 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     private void createOrReplaceStateNodesStatefulSet(final DataCenter dataCenter, final V1ConfigMap configMap) throws ApiException {
         final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
+        final DataCenterSpec dataCenterSpec = dataCenter.getSpec();
+
         final Map<String, String> dataCenterLabels = dataCenterLabels(dataCenter);
-        final int replicas = dataCenter.getSpec().getReplicas();
 
         final V1beta2StatefulSet statefulSet = new V1beta2StatefulSet()
                 .metadata(new V1ObjectMeta()
@@ -169,21 +171,21 @@ public class ControllerService extends AbstractExecutionThreadService {
                 )
                 .spec(new V1beta2StatefulSetSpec()
                         .serviceName("cassandra")
-                        .replicas(replicas)
+                        .replicas(dataCenterSpec.getReplicas())
                         .selector(new V1LabelSelector().matchLabels(dataCenterLabels))
                         .template(new V1PodTemplateSpec()
                                 .metadata(new V1ObjectMeta().labels(dataCenterLabels))
                                 .spec(new V1PodSpec()
                                         .addContainersItem(new V1Container()
-                                                .name(dataCenterMetadata.getName())
-                                                .image(dataCenter.getSpec().getImage())
-                                                .imagePullPolicy(dataCenter.getSpec().getImagePullPolicy())
+                                                .name(dataCenterMetadata.getName() + "-cassandra")
+                                                .image(dataCenterSpec.getImage())
+                                                .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                                                 .ports(ImmutableList.of(
                                                         new V1ContainerPort().name("internode").containerPort(7000),
                                                         new V1ContainerPort().name("cql").containerPort(9042),
                                                         new V1ContainerPort().name("jmx").containerPort(7199)
                                                 ))
-                                                .resources(dataCenter.getSpec().getResources())
+                                                .resources(dataCenterSpec.getResources())
                                                 .readinessProbe(new V1Probe()
                                                         .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
                                                         .initialDelaySeconds(60)
@@ -206,10 +208,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                         )
                         .addVolumeClaimTemplatesItem(new V1PersistentVolumeClaim()
                                 .metadata(new V1ObjectMeta().name("data-volume"))
-                                .spec(new V1PersistentVolumeClaimSpec()
-                                        .addAccessModesItem("ReadWriteOnce")
-                                        .resources(dataCenter.getSpec().getCapacity())
-                                )
+                                .spec(dataCenterSpec.getDataVolumeClaim())
                         )
                 );
 

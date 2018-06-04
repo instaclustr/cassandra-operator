@@ -14,7 +14,7 @@ import java.util.concurrent.TimeoutException;
  * An Application is a collection of Services, managed by a ServiceManager.
  */
 public class Application implements Callable<Void> {
-    static final Logger logger = LoggerFactory.getLogger(Application.class);
+    private static final Logger logger = LoggerFactory.getLogger(Application.class);
 
     private final ServiceManager serviceManager;
 

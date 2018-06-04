@@ -13,14 +13,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class EventBusModule extends AbstractModule {
-    static final Logger logger = LoggerFactory.getLogger(EventBusModule.class);
+    private static final Logger logger = LoggerFactory.getLogger(EventBusModule.class);
 
     private final EventBus eventBus = new EventBus();
 
     public EventBusModule() {
         eventBus.register(new Object() {
             @Subscribe
-            void foo(final DeadEvent event) {
+            void handleDeadEvent(final DeadEvent event) {
                 logger.trace("{} was posted to the bus and nobody cared.", event.getEvent());
             }
         });

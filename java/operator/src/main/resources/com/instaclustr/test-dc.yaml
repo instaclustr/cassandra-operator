@@ -4,13 +4,17 @@ metadata:
   name: test-dc
 spec:
   replicas: 6
-  image: instaclustr/k8s-cassandra
+  version: 3.11.2
+  image: instaclustr/k8s-cassandra:3.11.2
   imagePullPolicy: Never
   resources:
     limits:
       memory: 512Mi
     requests:
       memory: 512Mi
-  capacity:
-    requests:
-      storage: 100Mi
+  dataVolumeClaim:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Mi

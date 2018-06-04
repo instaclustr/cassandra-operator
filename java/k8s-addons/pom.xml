@@ -12,8 +12,7 @@
 
     <artifactId>k8s-addons</artifactId>
     <version>1.0-SNAPSHOT</version>
-
-    <name>k8s-addons</name>
+    <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
@@ -22,14 +21,6 @@
             <version>3.11.2</version>
             <scope>provided</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.testng/testng -->
-        <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
-            <version>6.14.3</version>
-            <scope>test</scope>
-        </dependency>
-
     </dependencies>
 
 
