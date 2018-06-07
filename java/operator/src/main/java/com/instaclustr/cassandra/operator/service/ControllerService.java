@@ -292,6 +292,12 @@ public class ControllerService extends AbstractExecutionThreadService {
     private void deleteDataCenter(final DataCenterKey dataCenterKey) throws Exception {
         final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);
 
+        // delete persistent volumes & persistent volume claims
+        final V1PodList pods = coreApi.listNamespacedPod(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, null, null);
+        for (final V1Pod pod : pods.getItems()) {
+            deletePersistentVolumeAndPersistentVolumeClaim(pod);
+        }
+
         // delete statefulset
         final V1beta2StatefulSetList statefulSets = appsApi.listNamespacedStatefulSet(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
         for (final V1beta2StatefulSet statefulSet : statefulSets.getItems()) {
@@ -361,6 +367,12 @@ public class ControllerService extends AbstractExecutionThreadService {
             statefulSet.getSpec().setReplicas(currentReplicas - 1);
             appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), statefulSet, null);
 
+            try {
+                deletePersistentVolumeAndPersistentVolumeClaim(pods.get(0));
+            } catch (final Exception e) {
+                logger.warn("Failed to delete PersistentVolume & PersistentVolumeClaim. Reason is: ", e);
+            }
+
             return;
         }
 
@@ -389,31 +401,37 @@ public class ControllerService extends AbstractExecutionThreadService {
     private static String resourceAsString(final String resourceName) throws IOException {
         return Resources.toString(Resources.getResource(ControllerService.class, resourceName), StandardCharsets.UTF_8);
     }
+    
+    private void deletePersistentVolumeAndPersistentVolumeClaim(V1Pod pod) throws Exception {
+        V1DeleteOptions deleteOptions = new V1DeleteOptions().propagationPolicy("Foreground");
+        
+        String pvcName = pod.getSpec().getVolumes().get(0).getPersistentVolumeClaim().getClaimName();
+        V1PersistentVolumeClaim pvc = coreApi.readNamespacedPersistentVolumeClaim(pvcName, pod.getMetadata().getNamespace(), null, null, null);
+        
+        k8sResourceUtils.deleteResource(coreApi.deleteNamespacedPersistentVolumeClaimCall(pvcName, pod.getMetadata().getNamespace(), deleteOptions, null, null, null, null, null, null));
+        k8sResourceUtils.deleteResource(coreApi.deletePersistentVolumeCall(pvc.getSpec().getVolumeName(), deleteOptions, null, null, null, null, null, null));
+    }
 
 
     private void deleteStatefulSet(final V1beta2StatefulSet statefulSet) throws Exception {
         V1DeleteOptions deleteOptions = new V1DeleteOptions();
 
-        // TODO: verify if the below behaviour still exists in 1.6+
-        // (as the ticket is closed)
+        deleteOptions.setPropagationPolicy("Foreground");
 
-//        deleteOptions.setPropagationPolicy("Foreground");
-//
-//        //Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
-//        statefulSet.getSpec().setReplicas(0);
-//
-//        appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null);
-//
-//        while (true) {
-//            Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, null, null, null).getStatus().getReplicas();
-//            if (currentReplicas == 0)
-//                break;
-//
-//            Thread.sleep(50);
-//        }
-//
-//        logger.debug("done with scaling to 0");
+        //Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
+        statefulSet.getSpec().setReplicas(0);
 
+        appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), statefulSet, null);
+
+        while (true) {
+            Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), null, null, null).getStatus().getReplicas();
+            if (currentReplicas == 0)
+                break;
+
+            Thread.sleep(50);
+        }
+
+        logger.debug("done with scaling to 0");
 
         final V1ObjectMeta statefulSetMetadata = statefulSet.getMetadata();
 
