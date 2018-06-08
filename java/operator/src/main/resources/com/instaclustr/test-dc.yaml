@@ -4,8 +4,7 @@ metadata:
   name: test-dc
 spec:
   replicas: 6
-  version: 3.11.2
-  image: instaclustr/k8s-cassandra:3.11.2
+  image: gcr.io/cassandra-operator/cassandra:latest # todo: build images with C* version as tags
   imagePullPolicy: Never
   resources:
     limits:
