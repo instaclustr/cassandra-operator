@@ -128,5 +128,4 @@ public class Operator implements Callable<Void> {
 
         return injector.getInstance(Application.class).call();
     }
-
 }

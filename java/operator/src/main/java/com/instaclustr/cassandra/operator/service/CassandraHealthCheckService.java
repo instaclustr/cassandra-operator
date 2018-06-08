@@ -72,7 +72,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
 
                     logger.debug("{}", status);
 
-                    if (previousStatus != null) {
+                    if (previousStatus != null && !previousStatus.equals(status)) {
                         eventBus.post(new CassandraNodeStatusChangedEvent(pod, dataCenterKey, previousStatus, status));
                     }
 
