@@ -125,7 +125,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                     logger.info("Deleting Data Center.", dataCenterKey);
                     deleteDataCenter(dataCenterKey);
 
-                    return;
+                    continue;
                 }
 
                 // data center created or modified
