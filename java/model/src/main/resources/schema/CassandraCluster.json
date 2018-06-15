@@ -1,0 +1,20 @@
+{
+  "info": {
+    "title": "CassandraCluster",
+    "version": "v1"
+  },
+  "type": "object",
+  "javaType": "com.instaclustr.cassandra.operator.model.Cluster",
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "javaType": "io.kubernetes.client.models.V1ObjectMeta",
+      "type": "object"
+    }
+  }
+}

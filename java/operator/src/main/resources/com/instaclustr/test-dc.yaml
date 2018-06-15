@@ -1,0 +1,19 @@
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraDataCenter
+metadata:
+  name: test-dc
+spec:
+  replicas: 6
+  image: gcr.io/cassandra-operator/cassandra:latest # todo: build images with C* version as tags
+  imagePullPolicy: Never
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      memory: 512Mi
+  dataVolumeClaim:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Mi

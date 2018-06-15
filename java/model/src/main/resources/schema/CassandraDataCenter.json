@@ -1,0 +1,47 @@
+{
+  "info": {
+    "title": "CassandraDataCenter",
+    "version": "v1"
+  },
+  "type": "object",
+  "javaType": "com.instaclustr.cassandra.operator.model.DataCenter",
+  "description": "",
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "javaType": "io.kubernetes.client.models.V1ObjectMeta",
+      "type": "object"
+    },
+    "spec": {
+      "javaType": "com.instaclustr.cassandra.operator.model.DataCenterSpec",
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "description": "Number of Cassandra nodes in this data center.",
+          "type": "number",
+          "javaType": "int"
+        },
+        "image" : {
+          "type": "string"
+        },
+        "imagePullPolicy" : {
+          "type": "string"
+        },
+        "resources": {
+          "description": "Resource requirements for the Cassandra container.",
+          "type": "object",
+          "javaType": "io.kubernetes.client.models.V1ResourceRequirements"
+        },
+        "dataVolumeClaim": {
+          "type": "object",
+          "javaType": "io.kubernetes.client.models.V1PersistentVolumeClaimSpec"
+        }
+      }
+    }
+  }
+}
