@@ -33,6 +33,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class ControllerService extends AbstractExecutionThreadService {
     private static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
@@ -124,7 +125,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                     logger.info("Deleting Data Center.", dataCenterKey);
                     deleteDataCenter(dataCenterKey);
 
-                    return;
+                    continue;
                 }
 
                 // data center created or modified
@@ -351,10 +352,12 @@ public class ControllerService extends AbstractExecutionThreadService {
 
 
         // TODO: this will be slow for a large number of nodes -- introduce some parallelism
-        final ImmutableListMultimap<CassandraConnection.Status.OperationMode, V1Pod> podCassandraOperationModes = Multimaps.index(pods, p -> {
-            final CassandraConnection cassandraConnection = cassandraConnectionFactory.connectionForPod(p);
+        final ImmutableListMultimap<CassandraConnection.Status.OperationMode, V1Pod> podCassandraOperationModes = Multimaps.index(
+                pods.stream().filter(p -> p.getStatus().getPhase().equals("Running")).collect(Collectors.toList()), 
+                p -> {
+                    final CassandraConnection cassandraConnection = cassandraConnectionFactory.connectionForPod(p);
 
-            return cassandraConnection.status().operationMode;
+                    return cassandraConnection.status().operationMode;
         });
 
 

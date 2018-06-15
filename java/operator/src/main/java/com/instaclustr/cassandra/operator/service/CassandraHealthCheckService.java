@@ -60,6 +60,9 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
             final V1PodList podList = coreApi.listNamespacedPod(cacheEntry.getValue().getMetadata().getNamespace(), null, null, null, null, labelSelector, null, null, null, null);
 
             for (final V1Pod pod : podList.getItems()) {
+                // Skip when a Pod is not in a "Running" state
+                if (!pod.getStatus().getPhase().equals("Running")) continue;
+                
                 final InetAddress podIp = InetAddresses.forString(pod.getStatus().getPodIP());
 
                 try {
