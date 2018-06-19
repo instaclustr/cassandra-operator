@@ -3,10 +3,7 @@ package com.instaclustr.cassandra.operator;
 import com.google.common.util.concurrent.Service;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
-import com.instaclustr.cassandra.operator.modules.ClusterWatchModule;
-import com.instaclustr.cassandra.operator.modules.ConfigMapWatchModule;
-import com.instaclustr.cassandra.operator.modules.DataCenterWatchModule;
-import com.instaclustr.cassandra.operator.modules.StatefulSetWatchModule;
+import com.instaclustr.cassandra.operator.modules.*;
 import com.instaclustr.cassandra.operator.service.CassandraHealthCheckService;
 import com.instaclustr.cassandra.operator.service.ControllerService;
 import com.instaclustr.cassandra.operator.service.GarbageCollectorService;
@@ -25,5 +22,6 @@ public class OperatorModule extends AbstractModule {
         install(new DataCenterWatchModule());
         install(new StatefulSetWatchModule());
         install(new ConfigMapWatchModule());
+        install(new BackupWatchModule());
     }
 }
