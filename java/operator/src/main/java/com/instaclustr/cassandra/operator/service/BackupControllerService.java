@@ -1,18 +1,33 @@
 package com.instaclustr.cassandra.operator.service;
 
+import com.google.common.eventbus.Subscribe;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
+import com.instaclustr.backup.BackupArguments;
+import com.instaclustr.backup.CommonBackupArguments;
+import com.instaclustr.backup.StorageProvider;
+import com.instaclustr.cassandra.operator.configuration.BackupConfiguration;
+import com.instaclustr.cassandra.operator.event.BackupWatchEvent;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
 import com.instaclustr.cassandra.operator.model.Backup;
 import com.instaclustr.cassandra.operator.model.key.BackupKey;
+import com.instaclustr.cassandra.sidecar.model.BackupResponse;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.models.V1Pod;
 import io.kubernetes.client.models.V1PodSpec;
+import io.kubernetes.client.models.V1PodStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import javax.inject.Inject;
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.UriBuilder;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -20,11 +35,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
 public class BackupControllerService extends AbstractExecutionThreadService {
-    private static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
+    private static final Logger logger = LoggerFactory.getLogger(BackupControllerService.class);
     private static final BackupKey POISON = new BackupKey(null, null);
     private final K8sResourceUtils k8sResourceUtils;
     private final CoreV1Api coreApi;
     private final Map<BackupKey, Backup> backupCache;
+    private Client client;
+
 
     private final BlockingQueue<BackupKey> backupQueue = new LinkedBlockingQueue<>();
 
@@ -36,6 +53,14 @@ public class BackupControllerService extends AbstractExecutionThreadService {
         this.k8sResourceUtils = k8sResourceUtils;
         this.coreApi = coreApi;
         this.backupCache = backupCache;
+        client = ClientBuilder.newClient();
+
+    }
+
+    @Subscribe
+    void handleBackupEvent(final BackupWatchEvent event) {
+        logger.info("Received BackupWatchEvent {}.", event);
+        backupQueue.add(BackupKey.forBackup(event.backup));
     }
 
     @Override
@@ -45,7 +70,7 @@ public class BackupControllerService extends AbstractExecutionThreadService {
             if(backupKey == POISON)
                 return;
 
-            try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterName = MDC.putCloseable("DataCenter", backupKey.name);
+            try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterName = MDC.putCloseable("Backup", backupKey.name);
                  @SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterNamespace = MDC.putCloseable("Namespace", backupKey.namespace)) {
 
                 final Backup dataCenter = backupCache.get(backupKey);
@@ -70,10 +95,25 @@ public class BackupControllerService extends AbstractExecutionThreadService {
         }
     }
 
-    private boolean callBackupApi(final String hostname) {
-        boolean success = false;
-        //TODO: Call api
-        return success;
+    private boolean callBackupApi(final String ip, Backup backup) {
+        try {
+            WebTarget target = client.target("http://" + ip + ":4567").path("backups");
+            BackupArguments backupArguments = BackupConfiguration.generateBackupArguments(ip,
+                    7199,
+                    backup.getMetadata().getName(),
+                    StorageProvider.valueOf(backup.getSpec().getBackupType()),
+                    backup.getSpec().getTarget(),
+                    backup.getMetadata().getLabels().get("cassandra-datacenter"));
+
+            backupArguments.backupId = ip;
+            backupArguments.speed = CommonBackupArguments.Speed.LUDICROUS;
+
+            BackupResponse response = target.request(MediaType.APPLICATION_JSON_TYPE).post(Entity.entity(backupArguments, MediaType.APPLICATION_JSON_TYPE), BackupResponse.class);
+            return response.getStatus().equals("success");
+        } catch (BadRequestException e) {
+            logger.warn("bad request", e);
+            return false;
+        }
     }
 
 
@@ -82,19 +122,25 @@ public class BackupControllerService extends AbstractExecutionThreadService {
                 .map(x -> x.getKey() + "=" + x.getValue())
                 .collect(Collectors.joining(","));
 
-        coreApi.listNamespacedPod(backup.getMetadata().getNamespace(), null, null,
+        if(coreApi.listNamespacedPod(backup.getMetadata().getNamespace(), null, null,
                 null, null, labels, null, null, null, null)
                 .getItems()
                 .stream()
-                .map(V1Pod::getSpec)
-                .map(V1PodSpec::getHostname)
-                .parallel()
-                .map(this::callBackupApi)
-                .anyMatch(e -> !e);
+                .map(V1Pod::getStatus)
+                .map(V1PodStatus::getPodIP)
+                .map(x -> callBackupApi(x, backup))
+                .anyMatch(e -> !e)) {
+            //TODO: Set backup status to PROCESSED
+        }
 
     }
 
     private void deleteBackup(BackupKey backupKey) {
 
+    }
+
+    @Override
+    protected void triggerShutdown() {
+        backupQueue.add(POISON);
     }
 }

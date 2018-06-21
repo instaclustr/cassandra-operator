@@ -22,6 +22,11 @@ public abstract class BaseArguments {
         this.stream = stream;
     }
 
+    public BaseArguments() {
+        this.appName = "";
+        this.stream = null;
+    }
+
     public void parseArguments(String[] args) {
         try {
             this.parser = new CmdLineParser(this, ParserProperties.defaults().withUsageWidth(120).withOptionSorter(null));
@@ -73,6 +78,54 @@ public abstract class BaseArguments {
 
     @Option(name = "-c", aliases = {"--cluster"}, metaVar = "cluster ID", usage = "Parent cluster of node to restore from.", required = true)
     public String clusterId;
+
+    public void setParser(CmdLineParser parser) {
+        this.parser = parser;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
+    }
+
+    public void setConcurrentConnections(Integer concurrentConnections) {
+        this.concurrentConnections = concurrentConnections;
+    }
+
+    public void setWaitForLock(boolean waitForLock) {
+        this.waitForLock = waitForLock;
+    }
+
+    public void setShowHelp(boolean showHelp) {
+        this.showHelp = showHelp;
+    }
+
+    public void setStorageProvider(StorageProvider storageProvider) {
+        this.storageProvider = storageProvider;
+    }
+
+    public void setClusterId(String clusterId) {
+        this.clusterId = clusterId;
+    }
+
+    public void setCassandraDirectory(@Nullable Path cassandraDirectory) {
+        this.cassandraDirectory = cassandraDirectory;
+    }
+
+    public void setFileBackupDirectory(@Nullable Path fileBackupDirectory) {
+        this.fileBackupDirectory = fileBackupDirectory;
+    }
+
+    public void setCassandraConfigDirectory(@Nullable Path cassandraConfigDirectory) {
+        this.cassandraConfigDirectory = cassandraConfigDirectory;
+    }
+
+    public void setSharedContainerPath(@Nullable Path sharedContainerPath) {
+        this.sharedContainerPath = sharedContainerPath;
+    }
 
     //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
     @Option(name = "--dd", aliases = {"--data-directory"}, usage = "Base directory that contains the Cassandra data, cache and commitlog directories", metaVar = "/cassandra", handler = PathOptionHandler.class)

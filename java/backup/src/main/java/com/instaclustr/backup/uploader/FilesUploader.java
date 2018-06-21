@@ -35,6 +35,8 @@ public class FilesUploader {
 
     private final SnapshotUploader snapshotUploaderProvider;
     private final CommonBackupArguments arguments;
+    public final ListeningExecutorService executorService;
+
 //    private final Meter uploadThroughputMeter;
 
     public class RateLimitedInputStream extends FilterInputStream {
@@ -73,6 +75,7 @@ public class FilesUploader {
     public FilesUploader(final BackupArguments arguments) throws StorageException, ConfigurationException, URISyntaxException {
         this.snapshotUploaderProvider = CloudDownloadUploadFactory.getUploader(arguments);
         this.arguments = arguments;
+        this.executorService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(arguments.concurrentConnections));
     }
 
     public void uploadOrFreshenFiles(final Collection<ManifestEntry> manifest) throws Exception {
@@ -124,7 +127,6 @@ public class FilesUploader {
             }));
 
             // create a ThreadPoolExecutor with a fixed size queue RejectedExecutionHandler that retries queue.offer() as queue.put() (blocking)
-            final ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(arguments.concurrentConnections));
 
             final CountDownLatch completionLatch = new CountDownLatch(manifest.size() - 1); // latch to prevent the manifest from being uploaded until the very end
 

@@ -205,7 +205,8 @@ public class ControllerService extends AbstractExecutionThreadService {
                                         )
                                         .addContainersItem(new V1Container()
                                                 .name(dataCenterMetadata.getName() + "-sidecar")
-                                                .image("instaclustr/k8s-cassandra-sidecar")
+                                                .env(dataCenter.getSpec().getEnv())
+                                                .image("gcr.io/cassandra-operator/cassandra-sidecar-dev")
                                                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                                                 .ports(ImmutableList.of(
                                                         new V1ContainerPort().name("http").containerPort(4567)
@@ -430,6 +431,7 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     private void deleteStatefulSet(final V1beta2StatefulSet statefulSet) throws Exception {
         V1DeleteOptions deleteOptions = new V1DeleteOptions();
+        deleteOptions.setPropagationPolicy("Foreground");
 
         // TODO: verify if the below behaviour still exists in 1.6+
         // (as the ticket is closed)

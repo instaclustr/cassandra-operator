@@ -33,7 +33,7 @@ public class BackupWatchModule extends AbstractModule {
         // TODO: parameterise namespace
         final ListCallProvider listCallProvider = (resourceVersion, watch) ->
                 customObjectsApi.listNamespacedCustomObjectCall(
-                        "stable.instaclustr.com", "v1", "default", "cassandra-datacenters", null, null, resourceVersion, watch, null, null);
+                        "stable.instaclustr.com", "v1", "default", "cassandra-backups", null, null, resourceVersion, watch, null, null);
 
         return new WatchService<Backup, BackupList, BackupKey>(
                 apiClient, eventBus,

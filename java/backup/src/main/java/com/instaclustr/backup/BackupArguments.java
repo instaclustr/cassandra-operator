@@ -14,6 +14,26 @@ public class BackupArguments extends CommonBackupArguments {
         super(appName, stream);
     }
 
+    public void setSnapshotTag(String snapshotTag) {
+        this.snapshotTag = snapshotTag;
+    }
+
+    public void setColumnFamily(@Nullable String columnFamily) {
+        this.columnFamily = columnFamily;
+    }
+
+    public void setDrain(boolean drain) {
+        this.drain = drain;
+    }
+
+    public void setKeyspaces(List<String> keyspaces) {
+        this.keyspaces = keyspaces;
+    }
+
+    public BackupArguments() {
+        super();
+    }
+
     @Override
     public void parseArguments(String[] args) {
         super.parseArguments(args);

@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.Service;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import com.instaclustr.cassandra.operator.modules.*;
+import com.instaclustr.cassandra.operator.service.BackupControllerService;
 import com.instaclustr.cassandra.operator.service.CassandraHealthCheckService;
 import com.instaclustr.cassandra.operator.service.ControllerService;
 import com.instaclustr.cassandra.operator.service.GarbageCollectorService;
@@ -17,6 +18,7 @@ public class OperatorModule extends AbstractModule {
         serviceMultibinder.addBinding().to(ControllerService.class);
         serviceMultibinder.addBinding().to(GarbageCollectorService.class);
         serviceMultibinder.addBinding().to(CassandraHealthCheckService.class);
+        serviceMultibinder.addBinding().to(BackupControllerService.class);
 
         install(new ClusterWatchModule());
         install(new DataCenterWatchModule());

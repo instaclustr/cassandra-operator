@@ -11,6 +11,9 @@
     <artifactId>operator</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
+    <properties>
+        <jersey.version>2.27</jersey.version>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -63,6 +66,42 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-common</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish.jersey.inject</groupId>
+            <artifactId>jersey-hk2</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-jdk-http</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+
+        <dependency>
+        <groupId>org.glassfish.jersey.media</groupId>
+        <artifactId>jersey-media-json-jackson</artifactId>
+        <version>${jersey.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.instaclustr.cassandra-operator</groupId>
+            <artifactId>backup</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.instaclustr.cassandra-operator</groupId>
+            <artifactId>sidecar</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
 
 

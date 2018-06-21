@@ -30,3 +30,6 @@ spec:
             backupType:
               type: string
               description: The backup mechanism type e.g. S3, FILE
+            target:
+              type: string
+              description: The uri for the backup target location e.g. s3 bucket, filepath

@@ -9,14 +9,15 @@ import javax.inject.Inject;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * An Application is a collection of Services, managed by a ServiceManager.
  */
 public class Application implements Callable<Void> {
     private static final Logger logger = LoggerFactory.getLogger(Application.class);
-
-    private final ServiceManager serviceManager;
+    public volatile boolean started = false; //Visible for testing
+    public volatile ServiceManager serviceManager;
 
     @Inject
     public Application(final ServiceManager serviceManager) {
@@ -57,6 +58,7 @@ public class Application implements Callable<Void> {
             logger.info("Starting services.");
             serviceManager.startAsync().awaitHealthy(1, TimeUnit.MINUTES);
             logger.info("Successfully started all services.");
+            started = true;
 
         } catch (final TimeoutException e) {
             logger.error("Timeout waiting for {} to start.", serviceManager.servicesByState().get(Service.State.STARTING));

@@ -13,3 +13,10 @@ metadata:
 spec:
   replicas: {{ .Values.replicaCount }}
   image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+  imagePullPolicy: {{ .Values.imagePullPolicy }}
+  resources:
+{{ toYaml .Values.resources | indent 4 }}
+  dataVolumeClaim:
+{{ toYaml .Values.dataVolumeClaim | indent 4 }}
+  env:
+{{ toYaml .Values.env | indent 4 }}

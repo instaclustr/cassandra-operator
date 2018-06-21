@@ -51,4 +51,7 @@ spec:
             capacity:
               type: object
               description: the disk storage to construct pod.
+            env:
+              type: array
+              description: list of env vars to insert into the sidecar
             

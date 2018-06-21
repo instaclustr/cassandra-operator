@@ -23,6 +23,9 @@
       "properties": {
         "backupType" : {
           "type": "string"
+        },
+        "target" : {
+          "type": "string"
         }
       }
     }

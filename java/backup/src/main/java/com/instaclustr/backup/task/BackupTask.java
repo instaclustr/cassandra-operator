@@ -320,6 +320,10 @@ public class BackupTask implements Callable<Void> {
         return ImmutableList.of(new ManifestEntry(backupManifestsRootKey.resolve(manifestFilePath.getFileName()), manifestFilePath, ManifestEntry.Type.MANIFEST_FILE));
     }
 
+    public void stopBackupTask() {
+        filesUploader.executorService.shutdownNow();
+    }
+
     private Iterable<ManifestEntry> saveTokenList(List<String> tokens) throws IOException {
         final Path tokensFilePath = snapshotTokensDirectory.resolve(String.format("%s-tokens.yaml", arguments.snapshotTag));
 
