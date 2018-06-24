@@ -45,15 +45,15 @@ To install via helm follow the steps below:
 #e.g. vim helm/cassandra-operator/values.yaml
 
 #Install the operator
-helm install helm/cassandra-operator -n RELEASE_NAME
+helm install helm/cassandra-operator -n cassandra-operator
 
 #Create a Cassandra cluster
 #Remember to check the values.yaml file e.g. vim helm/cassandra/values.yaml
-helm install helm/cassandra -n CASSANDRA_CLUSTER_NAME
+helm install helm/cassandra -n test-cluster
 ```
 
 The Helm templates are relatively independent and can also be used to generate the deployments yaml file offline:
 ```bash
-helm template helm/cassandra-operator -n RELEASE_NAME
+helm template helm/cassandra-operator -n cassandra-operator
 
 ```
