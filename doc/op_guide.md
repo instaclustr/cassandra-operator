@@ -21,8 +21,8 @@ cd -
 #Create the operator using the default bundle
 kubectl apply -f examples/common/bundle.yaml
 
-#Use rbac-bundle.yaml if you have rbac enabled. Note you will need cluster-admin permissions
-#kubectl apply -f examples/common/rbac-bundle.yaml
+#Note you will need cluster-admin permissions to install RBAC
+kubectl apply -f examples/common/rbac-bundle.yaml
 
 #Check status
 kubectl get pods --selector=k8s-app=cassandra-operator
