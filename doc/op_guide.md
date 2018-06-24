@@ -5,7 +5,7 @@ To build and install locally follow the below steps:
 #in the project root directory e.g. cd ~/git/cassandra-operator/
 
 #Start a minikube cluster with enough resources, cassandra is hungry!
-minikube start --cpus 4 --memory 4096 --vm-driver hyperkit --kubernetes-version v1.9.4
+minikube start --cpus 4 --memory 4096 --kubernetes-version v1.9.4
 
 #Use the minikube docker context 
 eval $(minikube docker-env)
