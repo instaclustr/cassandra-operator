@@ -19,9 +19,6 @@ cd -
 ./buildenv/build-all
 
 #Create the operator using the default bundle
-kubectl apply -f examples/common/bundle.yaml
-
-#Note you will need cluster-admin permissions to install RBAC
 kubectl apply -f examples/common/rbac-bundle.yaml
 
 #Check status
