@@ -11,10 +11,12 @@ minikube start --cpus 4 --memory 4096 --kubernetes-version v1.9.4
 eval $(minikube docker-env)
 
 #Build the operator
+cd java
 mvn clean package
+cd -
 
 #Build the required docker images
-./build/build-all
+./buildenv/build-all
 
 #Create the operator using the default bundle
 kubectl apply -f examples/common/bundle.yaml
