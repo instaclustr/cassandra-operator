@@ -9,6 +9,7 @@ import org.kohsuke.args4j.spi.PathOptionHandler;
 import javax.annotation.Nullable;
 import java.io.PrintStream;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public abstract class BaseArguments {
     final String appName;
@@ -130,7 +131,7 @@ public abstract class BaseArguments {
     //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
     @Option(name = "--dd", aliases = {"--data-directory"}, usage = "Base directory that contains the Cassandra data, cache and commitlog directories", metaVar = "/cassandra", handler = PathOptionHandler.class)
     @Nullable
-    public Path cassandraDirectory;
+    public Path cassandraDirectory = Paths.get("/var/lib/cassandra/");
 
 
     //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
@@ -141,11 +142,11 @@ public abstract class BaseArguments {
     //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
     @Option(name = "--cd", aliases = {"--config-directory"}, usage = "Base directory that contains the Cassandra data, cache and commitlog directories", metaVar = "/cassandra", handler = PathOptionHandler.class)
     @Nullable
-    public Path cassandraConfigDirectory;
+    public Path cassandraConfigDirectory = Paths.get("/etc/cassandra/");
 
 
     @Option(name = "-p", aliases = {"--shared-path"}, usage = "Shared Container path for pod", metaVar = "/", handler = PathOptionHandler.class)
     @Nullable
-    public Path sharedContainerPath;
+    public Path sharedContainerPath = Paths.get("/");
 
 }

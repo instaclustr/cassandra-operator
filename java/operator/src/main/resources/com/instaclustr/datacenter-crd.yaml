@@ -54,4 +54,7 @@ spec:
             env:
               type: array
               description: list of env vars to insert into the sidecar
+            restoreFromBackup:
+              type: string
+              description: Name of an optional backup to restore from.
             

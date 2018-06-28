@@ -48,6 +48,10 @@
         "dataVolumeClaim": {
           "type": "object",
           "javaType": "io.kubernetes.client.models.V1PersistentVolumeClaimSpec"
+        },
+        "restoreFromBackup": {
+          "type" : "string",
+          "description" : "Name of the CassandraBackup to restore from"
         }
       }
     }

@@ -1,6 +1,7 @@
 package com.instaclustr.cassandra.operator.configuration;
 
 import com.instaclustr.backup.BackupArguments;
+import com.instaclustr.backup.RestoreArguments;
 import com.instaclustr.backup.StorageProvider;
 
 import java.nio.file.Paths;
@@ -20,6 +21,11 @@ public class BackupConfiguration {
         backupArguments.secret = "";
         backupArguments.clusterId = cluster;
         return backupArguments;
+    }
+
+    public static RestoreArguments generateRestoreArguments() {
+        RestoreArguments restoreArguments = new RestoreArguments();
+        return restoreArguments;
     }
 }
 

@@ -13,6 +13,10 @@ public class RestoreArguments extends BaseArguments {
         super(appName, stream);
     }
 
+    public RestoreArguments() {
+        super();
+    }
+
     @Override
     void printHelp() {
         stream.println("Restore the Cassandra data on this node to a specified point-in-time.");
