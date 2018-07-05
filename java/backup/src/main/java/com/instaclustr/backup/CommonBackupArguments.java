@@ -101,6 +101,14 @@ public abstract class CommonBackupArguments extends BaseArguments {
     @Option(name = "-j", aliases = {"--jmx"}, usage = "JMX service url for Cassandra", metaVar = "jmx-url", handler = JMXUrlOptionHandler.class, forbids = "--offline")
     public JMXServiceURL jmxServiceURL;
 
+    @Option(name = "--ju", usage = "JMX service user for Cassandra", metaVar = "jmx-user", forbids = "--offline")
+    @Nullable
+    public String jmxUser;
+
+    @Option(name = "--jp", usage = "JMX service password for Cassandra", metaVar = "jmx-password", forbids = "--offline")
+    @Nullable
+    public String jmxPassword;
+
     @Option(name = "--bucket", aliases = {"--backup-bucket"}, usage = "Container or bucket to store backups in", metaVar = "bucket_name")
     public String backupBucket;
 
