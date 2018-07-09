@@ -5,4 +5,4 @@ metadata:
 spec:
   replicas: 3
   image: "gcr.io/cassandra-operator/cassandra:latest"
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always

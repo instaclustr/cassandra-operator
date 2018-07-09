@@ -90,6 +90,7 @@ spec:
     spec:
       containers:
       - image: gcr.io/cassandra-operator/cassandra-operator:latest
+        imagePullPolicy: Always
         name: cassandra-operator
         ports:
         - containerPort: 8080
