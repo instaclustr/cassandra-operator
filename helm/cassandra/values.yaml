@@ -7,8 +7,7 @@ replicaCount: 3
 image:
   repository: gcr.io/cassandra-operator/cassandra-dev
   tag: latest
-
-imagePullPolicy: Never
+  pullPolicy: Always
 
 resources:
   limits:

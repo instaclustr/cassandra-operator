@@ -13,7 +13,7 @@ metadata:
 spec:
   replicas: {{ .Values.replicaCount }}
   image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-  imagePullPolicy: {{ .Values.imagePullPolicy }}
+  imagePullPolicy: {{ .Values.image.pullPolicy }}
   resources:
 {{ toYaml .Values.resources | indent 4 }}
   dataVolumeClaim:

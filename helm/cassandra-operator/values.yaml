@@ -9,7 +9,7 @@ apiVersion: stable.instaclustr.com/v1
 image:
   repository: gcr.io/cassandra-operator/cassandra-operator-dev
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 resources: {}
   # Suggested resource limits for the operator itself (not cassandra), works with a reasonable sized minikube.
