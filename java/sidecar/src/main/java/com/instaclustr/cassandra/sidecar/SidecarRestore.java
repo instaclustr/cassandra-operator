@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SidecarRestore {
@@ -20,11 +22,17 @@ public class SidecarRestore {
         final RestoreArguments arguments = new RestoreArguments("cassandra-restore", System.err);
         arguments.parseArguments(args);
 
-        String name = Files.readAllLines(Paths.get("/etc/podinfo/name")).stream().collect(Collectors.joining());
+        Pattern p = Pattern.compile("(\\d+$)");
+        Matcher m = p.matcher(Files.readAllLines(Paths.get("/etc/podinfo/name")).stream().collect(Collectors.joining()));
+        m.find();
+        String ordinal = m.group();
+
+
+        logger.info("detected ordinal is {}", ordinal);
 
         try {
             GlobalLock globalLock = new GlobalLock("/tmp");
-            arguments.sourceNodeID = arguments.sourceNodeID + name.split("-")[2]; //make getting the ordinal more robust
+            arguments.sourceNodeID = arguments.sourceNodeID  + "-"  + ordinal; //make getting the ordinal more robust
             new RestoreTask(
                     globalLock,
                     arguments

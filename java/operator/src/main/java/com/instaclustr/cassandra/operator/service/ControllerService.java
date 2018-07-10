@@ -6,6 +6,7 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.io.Resources;
 import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
+import com.google.gson.reflect.TypeToken;
 import com.instaclustr.cassandra.operator.event.*;
 import com.instaclustr.cassandra.operator.jmx.CassandraConnection;
 import com.instaclustr.cassandra.operator.jmx.CassandraConnectionFactory;
@@ -14,6 +15,7 @@ import com.instaclustr.cassandra.operator.model.Backup;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.DataCenterSpec;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
+import com.squareup.okhttp.Call;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.AppsV1beta2Api;
 import io.kubernetes.client.apis.CoreV1Api;
@@ -26,6 +28,7 @@ import org.slf4j.MDC;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -238,30 +241,38 @@ public class ControllerService extends AbstractExecutionThreadService {
                         ));
 
         if (dataCenter.getSpec().getRestoreFromBackup() != null) {
-            //type probably doesn't cast
-            Backup backup = (Backup) customObjectsApi.getNamespacedCustomObject("stable.instaclustr.com", "v1", "default", "cassandra-backups", dataCenter.getSpec().getRestoreFromBackup());
+
+//            Custom objects api object doesn't give us a nice way to pass in the type we want so we do it manually
+            Call call = customObjectsApi.getNamespacedCustomObjectCall("stable.instaclustr.com", "v1", "default", "cassandra-backups", dataCenter.getSpec().getRestoreFromBackup(), null, null);
+
+            Backup backup = (Backup) customObjectsApi.getApiClient().execute(call, new TypeToken<Backup>(){}.getType()).getData();
 
             podSpec.addInitContainersItem(new V1Container()
-                            .name(dataCenterMetadata.getName() + "-sidecar")
+                            .name(dataCenterMetadata.getName() + "-sidecar-restore")
                             .env(dataCenter.getSpec().getEnv())
                             .image("gcr.io/cassandra-operator/cassandra-sidecar-dev")
                             .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
-                            .addVolumeMountsItem(new V1VolumeMount()
-                                    .name("data-volume")
-                                    .mountPath("/var/lib/cassandra")
-                            )
                     .command(ImmutableList.of(
                             "java", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap",
                             "-cp", "/opt/lib/cassandra-sidecar/cassandra-sidecar.jar",
                             "com.instaclustr.cassandra.sidecar.SidecarRestore",
                             "-bb", backup.getSpec().getTarget(),
+                            "-c", backup.getMetadata().getLabels().get("cassandra-datacenter"), //note the ordinal needs to added here
                             "-bi", backup.getMetadata().getLabels().get("cassandra-datacenter"), //note the ordinal needs to added here
                             "-s", backup.getMetadata().getName(),
-                            "-rs", "true"
+                            "--bs", backup.getSpec().getBackupType(),
+                            "-rs"
                     ))
                     .addVolumeMountsItem(new V1VolumeMount()
                             .name("pod-info")
                             .mountPath("/etc/podinfo"))
+                    .addVolumeMountsItem(new V1VolumeMount()
+                            .name("config-volume")
+                            .mountPath("/etc/cassandra")
+                    ).addVolumeMountsItem(new V1VolumeMount()
+                            .name("data-volume")
+                            .mountPath("/var/lib/cassandra")
+                    )
             );
         }
 

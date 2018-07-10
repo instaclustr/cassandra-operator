@@ -95,17 +95,17 @@ public class BackupControllerService extends AbstractExecutionThreadService {
         }
     }
 
-    private boolean callBackupApi(final String ip, Backup backup) {
+    private boolean callBackupApi(final V1Pod pod, Backup backup) {
         try {
-            WebTarget target = client.target("http://" + ip + ":4567").path("backups");
-            BackupArguments backupArguments = BackupConfiguration.generateBackupArguments(ip,
+            WebTarget target = client.target("http://" + pod.getStatus().getPodIP() + ":4567").path("backups");
+            BackupArguments backupArguments = BackupConfiguration.generateBackupArguments(pod.getStatus().getPodIP(),
                     7199,
                     backup.getMetadata().getName(),
                     StorageProvider.valueOf(backup.getSpec().getBackupType()),
                     backup.getSpec().getTarget(),
                     backup.getMetadata().getLabels().get("cassandra-datacenter"));
 
-            backupArguments.backupId = ip;
+            backupArguments.backupId = pod.getSpec().getHostname();
             backupArguments.speed = CommonBackupArguments.Speed.LUDICROUS;
 
             BackupResponse response = target.request(MediaType.APPLICATION_JSON_TYPE).post(Entity.entity(backupArguments, MediaType.APPLICATION_JSON_TYPE), BackupResponse.class);
@@ -125,9 +125,7 @@ public class BackupControllerService extends AbstractExecutionThreadService {
         if(coreApi.listNamespacedPod(backup.getMetadata().getNamespace(), null, null,
                 null, null, labels, null, null, null, null)
                 .getItems()
-                .stream()
-                .map(V1Pod::getStatus)
-                .map(V1PodStatus::getPodIP)
+                .parallelStream()
                 .map(x -> callBackupApi(x, backup))
                 .anyMatch(e -> !e)) {
             //TODO: Set backup status to PROCESSED

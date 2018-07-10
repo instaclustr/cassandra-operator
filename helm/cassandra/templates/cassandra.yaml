@@ -20,3 +20,6 @@ spec:
 {{ toYaml .Values.dataVolumeClaim | indent 4 }}
   env:
 {{ toYaml .Values.env | indent 4 }}
+{{- if .Values.restoreFromBackup }}
+  restoreFromBackup: {{ .Values.restoreFromBackup }}
+{{- end }}

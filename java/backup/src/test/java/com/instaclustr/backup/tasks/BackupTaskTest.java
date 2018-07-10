@@ -127,9 +127,9 @@ public class BackupTaskTest {
             final Path cassandraYaml = sharedContainerRoot.resolve(confDir).resolve("cassandra.yaml");
             Assert.assertTrue(cassandraYaml.toFile().exists());
             String cassandraYamlText = new String(Files.readAllBytes(cassandraYaml));
-            Assert.assertTrue(cassandraYamlText.contains("initial_token: ")); //this is not really testing that we have configured tokens properly
-            Assert.assertTrue(cassandraYamlText.contains("auto_bootstrap: false"));
-            Assert.assertFalse(cassandraYamlText.contains("auto_bootstrap: true"));
+//            Assert.assertTrue(cassandraYamlText.contains("initial_token: ")); //this is not really testing that we have configured tokens properly
+//            Assert.assertTrue(cassandraYamlText.contains("auto_bootstrap: false"));
+//            Assert.assertFalse(cassandraYamlText.contains("auto_bootstrap: true"));
 
     }
 

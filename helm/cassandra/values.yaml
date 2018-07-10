@@ -35,3 +35,5 @@ env:
         key: secret
   - name: AWS_REGION
     value: "us-west-2"
+
+restoreFromBackup: backup-hostname
