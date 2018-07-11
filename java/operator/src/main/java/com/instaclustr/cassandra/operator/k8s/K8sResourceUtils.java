@@ -59,7 +59,9 @@ public class K8sResourceUtils {
     public void createOrReplaceNamespaceService(final V1Service service) throws ApiException {
         createOrReplaceResource(
                 coreApi.createNamespacedServiceCall(service.getMetadata().getNamespace(), service, null, null, null),
-                coreApi.replaceNamespacedServiceCall(service.getMetadata().getName(), service.getMetadata().getNamespace(), service, null, null, null)
+                //coreApi.replaceNamespacedServiceCall(service.getMetadata().getName(), service.getMetadata().getNamespace(), service, null, null, null)
+                // temporarily disable service replace call to fix issue #41 since service can't be customized right now
+                coreApi.readNamespacedServiceCall(service.getMetadata().getName(), service.getMetadata().getNamespace(), null, null, null, null, null)
         );
     }
 

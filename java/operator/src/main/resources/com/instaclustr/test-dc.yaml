@@ -4,8 +4,7 @@ metadata:
   name: test-dc
 spec:
   replicas: 6
-  version: 3.11.2
-  image: instaclustr/k8s-cassandra:3.11.2
+  image: gcr.io/cassandra-operator/cassandra:latest # todo: build images with C* version as tags
   imagePullPolicy: Never
   resources:
     limits:
@@ -18,14 +17,3 @@ spec:
     resources:
       requests:
         storage: 100Mi
-
-
-
-apiVersion: stable.instaclustr.com/v1
-kind: CassandraBackup
-metadata:
-  name: backup-now
-  labels:
-    cassandra-datacenter: backup1-cassandra
-spec:
-  backupType: "S3"

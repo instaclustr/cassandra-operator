@@ -5,22 +5,19 @@ To build and install locally follow the below steps:
 #in the project root directory e.g. cd ~/git/cassandra-operator/
 
 #Start a minikube cluster with enough resources, cassandra is hungry!
-minikube start --cpus 4 --memory 4096 --vm-driver hyperkit --kubernetes-version v1.9.4
+minikube start --cpus 4 --memory 4096 --kubernetes-version v1.9.4
 
 #Use the minikube docker context 
 eval $(minikube docker-env)
 
 #Build the operator
-mvn clean package
+mvn -f java clean package
 
 #Build the required docker images
-./build/build-all
+./buildenv/build-all
 
 #Create the operator using the default bundle
-kubectl apply -f examples/common/bundle.yaml
-
-#Use rbac-bundle.yaml if you have rbac enabled. Note you will need cluster-admin permissions
-#kubectl apply -f examples/common/rbac-bundle.yaml
+kubectl apply -f examples/common/rbac-bundle.yaml
 
 #Check status
 kubectl get pods --selector=k8s-app=cassandra-operator
@@ -46,15 +43,15 @@ To install via helm follow the steps below:
 #e.g. vim helm/cassandra-operator/values.yaml
 
 #Install the operator
-helm install helm/cassandra-operator -n RELEASE_NAME
+helm install helm/cassandra-operator -n cassandra-operator
 
 #Create a Cassandra cluster
 #Remember to check the values.yaml file e.g. vim helm/cassandra/values.yaml
-helm install helm/cassandra -n CASSANDRA_CLUSTER_NAME
+helm install helm/cassandra -n test-cluster
 ```
 
 The Helm templates are relatively independent and can also be used to generate the deployments yaml file offline:
 ```bash
-helm template helm/cassandra-operator -n RELEASE_NAME
+helm template helm/cassandra-operator -n cassandra-operator
 
 ```

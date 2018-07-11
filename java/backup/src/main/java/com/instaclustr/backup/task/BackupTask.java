@@ -181,7 +181,13 @@ public class BackupTask implements Callable<Void> {
         if (arguments.offlineSnapshot) {
             doUpload(tokens);
         } else {
-            try (final JMXConnector jmxConnector = JMXConnectorFactory.connect(cassandraJMXServiceURL)) {
+            HashMap<String, String[]> environment = null; //we can pass nulls to the jmxconnectorFactory
+            if(arguments.jmxPassword != null && arguments.jmxUser != null) {
+                environment = new HashMap<>();
+                String[] credentials = new String[] {arguments.jmxUser, arguments.jmxPassword};
+                environment.put(JMXConnector.CREDENTIALS, credentials);
+            }
+            try (final JMXConnector jmxConnector = JMXConnectorFactory.connect(cassandraJMXServiceURL, environment)) {
 
                 final MBeanServerConnection cassandraMBeanServerConnection = jmxConnector.getMBeanServerConnection();
                 final StorageServiceMBean storageServiceMBean = JMX.newMBeanProxy(cassandraMBeanServerConnection, CassandraObjectNames.STORAGE_SERVICE, StorageServiceMBean.class);

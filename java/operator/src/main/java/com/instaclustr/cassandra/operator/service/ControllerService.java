@@ -1,10 +1,8 @@
 package com.instaclustr.cassandra.operator.service;
 
-import com.google.common.cache.Cache;
 import com.google.common.collect.*;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.io.Resources;
-import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.gson.reflect.TypeToken;
 import com.instaclustr.cassandra.operator.event.*;
@@ -20,7 +18,6 @@ import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.AppsV1beta2Api;
 import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.apis.CustomObjectsApi;
-import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +25,6 @@ import org.slf4j.MDC;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -38,6 +34,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class ControllerService extends AbstractExecutionThreadService {
     private static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
@@ -132,7 +129,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                     logger.info("Deleting Data Center.", dataCenterKey);
                     deleteDataCenter(dataCenterKey);
 
-                    return;
+                    continue;
                 }
 
                 // data center created or modified
@@ -375,6 +372,12 @@ public class ControllerService extends AbstractExecutionThreadService {
     private void deleteDataCenter(final DataCenterKey dataCenterKey) throws Exception {
         final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);
 
+        // delete persistent volumes & persistent volume claims
+        final V1PodList pods = coreApi.listNamespacedPod(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, null, null);
+        for (final V1Pod pod : pods.getItems()) {
+            deletePersistentVolumeAndPersistentVolumeClaim(pod);
+        }
+
         // delete statefulset
         final V1beta2StatefulSetList statefulSets = appsApi.listNamespacedStatefulSet(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
         for (final V1beta2StatefulSet statefulSet : statefulSets.getItems()) {
@@ -429,10 +432,12 @@ public class ControllerService extends AbstractExecutionThreadService {
 
 
         // TODO: this will be slow for a large number of nodes -- introduce some parallelism
-        final ImmutableListMultimap<CassandraConnection.Status.OperationMode, V1Pod> podCassandraOperationModes = Multimaps.index(pods, p -> {
-            final CassandraConnection cassandraConnection = cassandraConnectionFactory.connectionForPod(p);
+        final ImmutableListMultimap<CassandraConnection.Status.OperationMode, V1Pod> podCassandraOperationModes = Multimaps.index(
+                pods.stream().filter(p -> p.getStatus().getPhase().equals("Running")).collect(Collectors.toList()), 
+                p -> {
+                    final CassandraConnection cassandraConnection = cassandraConnectionFactory.connectionForPod(p);
 
-            return cassandraConnection.status().operationMode;
+                    return cassandraConnection.status().operationMode;
         });
 
 
@@ -443,6 +448,12 @@ public class ControllerService extends AbstractExecutionThreadService {
 
             statefulSet.getSpec().setReplicas(currentReplicas - 1);
             appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), statefulSet, null);
+
+            try {
+                deletePersistentVolumeAndPersistentVolumeClaim(pods.get(0));
+            } catch (final Exception e) {
+                logger.warn("Failed to delete PersistentVolume & PersistentVolumeClaim. Reason is: ", e);
+            }
 
             return;
         }
@@ -472,32 +483,38 @@ public class ControllerService extends AbstractExecutionThreadService {
     private static String resourceAsString(final String resourceName) throws IOException {
         return Resources.toString(Resources.getResource(ControllerService.class, resourceName), StandardCharsets.UTF_8);
     }
+    
+    private void deletePersistentVolumeAndPersistentVolumeClaim(V1Pod pod) throws Exception {
+        V1DeleteOptions deleteOptions = new V1DeleteOptions().propagationPolicy("Foreground");
+        
+        String pvcName = pod.getSpec().getVolumes().get(0).getPersistentVolumeClaim().getClaimName();
+        V1PersistentVolumeClaim pvc = coreApi.readNamespacedPersistentVolumeClaim(pvcName, pod.getMetadata().getNamespace(), null, null, null);
+        
+        k8sResourceUtils.deleteResource(coreApi.deleteNamespacedPersistentVolumeClaimCall(pvcName, pod.getMetadata().getNamespace(), deleteOptions, null, null, null, null, null, null));
+        k8sResourceUtils.deleteResource(coreApi.deletePersistentVolumeCall(pvc.getSpec().getVolumeName(), deleteOptions, null, null, null, null, null, null));
+    }
 
 
     private void deleteStatefulSet(final V1beta2StatefulSet statefulSet) throws Exception {
         V1DeleteOptions deleteOptions = new V1DeleteOptions();
         deleteOptions.setPropagationPolicy("Foreground");
 
-        // TODO: verify if the below behaviour still exists in 1.6+
-        // (as the ticket is closed)
+        deleteOptions.setPropagationPolicy("Foreground");
 
-//        deleteOptions.setPropagationPolicy("Foreground");
-//
-//        //Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
-//        statefulSet.getSpec().setReplicas(0);
-//
-//        appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, statefulSet, null);
-//
-//        while (true) {
-//            Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), namespace, null, null, null).getStatus().getReplicas();
-//            if (currentReplicas == 0)
-//                break;
-//
-//            Thread.sleep(50);
-//        }
-//
-//        logger.debug("done with scaling to 0");
+        //Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
+        statefulSet.getSpec().setReplicas(0);
 
+        appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), statefulSet, null);
+
+        while (true) {
+            Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), null, null, null).getStatus().getReplicas();
+            if (currentReplicas == 0)
+                break;
+
+            Thread.sleep(50);
+        }
+
+        logger.debug("done with scaling to 0");
 
         final V1ObjectMeta statefulSetMetadata = statefulSet.getMetadata();
 

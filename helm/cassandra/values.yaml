@@ -22,18 +22,19 @@ dataVolumeClaim:
     requests:
       storage: 100Mi
 
-env:
-  - name: AWS_ACCESS_KEY_ID
-    valueFrom:
-      secretKeyRef:
-        name: awsbackuptest
-        key: access
-  - name: AWS_SECRET_ACCESS_KEY
-    valueFrom:
-      secretKeyRef:
-        name: awsbackuptest
-        key: secret
-  - name: AWS_REGION
-    value: "us-west-2"
-
-restoreFromBackup: backup-hostname
+#Example restore from a back on AWS S3
+#env:
+#  - name: AWS_ACCESS_KEY_ID
+#    valueFrom:
+#      secretKeyRef:
+#        name: awsbackuptest
+#        key: access
+#  - name: AWS_SECRET_ACCESS_KEY
+#    valueFrom:
+#      secretKeyRef:
+#        name: awsbackuptest
+#        key: secret
+#  - name: AWS_REGION
+#    value: "us-west-2"
+#
+#restoreFromBackup: backup-hostname
