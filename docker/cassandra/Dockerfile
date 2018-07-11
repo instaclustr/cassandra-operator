@@ -9,7 +9,6 @@ RUN /tmp/install-cassandra ${cassandra_version}
 COPY cassandra.sh /usr/sbin/cassandra
 COPY nodetool.sh /usr/bin/nodetool
 COPY cassandra.in.sh /usr/share/cassandra/
-COPY readiness-probe.sh /usr/bin/readiness-probe
 
 COPY k8s-addons-1.0-SNAPSHOT.jar /usr/share/cassandra/lib
 
