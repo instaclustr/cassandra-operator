@@ -1,8 +1,12 @@
 package com.instaclustr.backup.util;
 
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class DataRate extends Measure<Long, DataRate.DataRateUnit> {
-    public DataRate(final Long value, final DataRateUnit unit) {
+    @JsonCreator
+    public DataRate(@JsonProperty("value") final Long value, @JsonProperty("unit") final DataRateUnit unit) {
         super(value, unit);
     }
 
@@ -34,7 +38,8 @@ public class DataRate extends Measure<Long, DataRate.DataRateUnit> {
 
         final String unit, description;
 
-        DataRateUnit(final String unit, final String description) {
+        @JsonCreator
+        DataRateUnit(@JsonProperty("unit") final String unit, @JsonProperty("description") final String description) {
             this.unit = unit;
             this.description = description;
         }

@@ -31,7 +31,7 @@ cp /etc/cassandra/hotspot_compiler /usr/share/cassandra/
 rm -rf /etc/cassandra/* /var/lib/cassandra/*
 
 # add image config .d directories
-mkdir /etc/cassandra/cassandra.yaml.d
+mkdir /etc/cassandra.yaml.d
 mkdir /etc/cassandra/cassandra.env.d
 
 # clean-up

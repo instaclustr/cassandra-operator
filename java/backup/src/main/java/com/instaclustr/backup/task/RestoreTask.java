@@ -45,6 +45,7 @@ public class RestoreTask implements Callable<Void> {
     private final Path commitLogRestoreDirectory;
     private final Path fullCommitLogRestoreDirectory;
     private final Multimap<String, String> keyspaceTableSubset;
+    private boolean enableCommitLogRestore = false;
 
     public RestoreTask(final GlobalLock globalLock,
                        final RestoreArguments arguments
@@ -194,33 +195,37 @@ public class RestoreTask implements Callable<Void> {
         // 7. Download files in the manifest
         downloader.downloadFiles(downloadManifest, "snapshot-download", arguments.concurrentConnections);
 
-        // 8. Download commitlogs
-        downloadCommitLogs(downloader, arguments.timestampStart, arguments.timestampEnd);
+        if(enableCommitLogRestore) {
+            // 8. Download commitlogs
+            downloadCommitLogs(downloader, arguments.timestampStart, arguments.timestampEnd);
 
-        // 9. Update config to initiate a restore
-        final Path commitlogArchivingPropertiesPath = cassandraConfigDirectory.resolve("commitlog_archiving.properties");
-        java.util.Properties commitlogArchivingProperties = new java.util.Properties();
+            // 9. Update config to initiate a restore
+            final Path commitlogArchivingPropertiesPath = cassandraConfigDirectory.resolve("commitlog_archiving.properties");
+            java.util.Properties commitlogArchivingProperties = new java.util.Properties();
 
-        if (commitlogArchivingPropertiesPath.toFile().exists())
-            try (final BufferedReader reader = Files.newBufferedReader(commitlogArchivingPropertiesPath, StandardCharsets.UTF_8)) {
-                commitlogArchivingProperties.load(reader);
+            if (commitlogArchivingPropertiesPath.toFile().exists())
+                try (final BufferedReader reader = Files.newBufferedReader(commitlogArchivingPropertiesPath, StandardCharsets.UTF_8)) {
+                    commitlogArchivingProperties.load(reader);
+                } catch (final IOException e) {
+                    logger.warn("Failed to load file \"{}\".", commitlogArchivingPropertiesPath, e);
+                }
+
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
+
+            commitlogArchivingProperties.setProperty("restore_command", "cp -f %from %to");
+            commitlogArchivingProperties.setProperty("restore_directories", commitLogRestoreDirectory.toString());
+            // Restore mutations created up to and including this timestamp in GMT.
+            // Format: yyyy:MM:dd HH:mm:ss (2012:04:31 20:43:12)
+            commitlogArchivingProperties.setProperty("restore_point_in_time", dateFormat.format(new Date(arguments.timestampEnd)));
+
+            try (OutputStream output = new FileOutputStream(commitlogArchivingPropertiesPath.toFile())) {
+                commitlogArchivingProperties.store(output, null);
             } catch (final IOException e) {
-                logger.warn("Failed to load file \"{}\".", commitlogArchivingPropertiesPath, e);
+                logger.warn("Failed to write to file \"{}\".", commitlogArchivingPropertiesPath, e);
             }
-
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
-
-        commitlogArchivingProperties.setProperty("restore_command", "cp -f %from %to");
-        commitlogArchivingProperties.setProperty("restore_directories", commitLogRestoreDirectory.toString());
-        // Restore mutations created up to and including this timestamp in GMT.
-        // Format: yyyy:MM:dd HH:mm:ss (2012:04:31 20:43:12)
-        commitlogArchivingProperties.setProperty("restore_point_in_time", dateFormat.format(new Date(arguments.timestampEnd)));
-
-        try (OutputStream output = new FileOutputStream(commitlogArchivingPropertiesPath.toFile())) {
-            commitlogArchivingProperties.store(output, null);
-        } catch (final IOException e) {
-            logger.warn("Failed to write to file \"{}\".", commitlogArchivingPropertiesPath, e);
         }
+
+
 
         writeConfigOptions(downloader, isTableSubsetOnly);
     }
@@ -283,29 +288,32 @@ public class RestoreTask implements Callable<Void> {
     private void writeConfigOptions(final Downloader downloader, final boolean isTableSubsetOnly) throws Exception {
         final StringBuilder cassandraEnvStringBuilder = new StringBuilder();
 
-        if (isTableSubsetOnly) {
-            cassandraEnvStringBuilder
-                    .append("JVM_OPTS=\"$JVM_OPTS -Dcassandra.replayList=")
-                    .append(Joiner.on(",").withKeyValueSeparator(".").join(keyspaceTableSubset.entries()))
-                    .append("\"\n");
+        if(enableCommitLogRestore) {
+            if (isTableSubsetOnly) {
+                cassandraEnvStringBuilder
+                        .append("JVM_OPTS=\"$JVM_OPTS -Dcassandra.replayList=")
+                        .append(Joiner.on(",").withKeyValueSeparator(".").join(keyspaceTableSubset.entries()))
+                        .append("\"\n");
+            }
+
+            Files.write(cassandraConfigDirectory.resolve("cassandra-env.sh"), cassandraEnvStringBuilder.toString().getBytes(), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
         }
 
-        Files.write(cassandraConfigDirectory.resolve("cassandra-env.sh"), cassandraEnvStringBuilder.toString().getBytes(), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-
+        //TODO: re-enable once cascading yaml loader lands
         // Can't write to cassandra-env.sh as nodetool could generate "File name too long" error
         RemoteObjectReference tokens = downloader.objectKeyToRemoteReference(Paths.get("tokens/" + arguments.snapshotTag + "-tokens.yaml"));
-        final Path tokensPath = cassandraDataDirectory.resolve(tokens.getObjectKey());
+        final Path tokensPath = cassandraDataDirectory.resolve("tokens.yaml");
         downloader.downloadFile(tokensPath, tokens);
-
-        final StringBuilder stringBuilder = new StringBuilder();
-        final String contents = new String(Files.readAllBytes(cassandraConfigDirectory.resolve("cassandra.yaml")));
-        // Just replace. In case nodepoint later doesn't write auto_bootstrap, just delete here and append later to guarantee we're setting it
-        stringBuilder.append(contents.replace("auto_bootstrap: true", ""));
-
-        stringBuilder.append(System.lineSeparator());
-        stringBuilder.append(new String(Files.readAllBytes(tokensPath)));
-        // Don't stream on Cassandra startup, as tokens and SSTables are already present on node
-        stringBuilder.append("auto_bootstrap: false");
-        Files.write(cassandraConfigDirectory.resolve("cassandra.yaml"), ImmutableList.of(stringBuilder.toString()), StandardOpenOption.WRITE, StandardOpenOption.CREATE);
+//
+//        final StringBuilder stringBuilder = new StringBuilder();
+//        final String contents = new String(Files.readAllBytes(cassandraConfigDirectory.resolve("cassandra.yaml")));
+//        // Just replace. In case nodepoint later doesn't write auto_bootstrap, just delete here and append later to guarantee we're setting it
+//        stringBuilder.append(contents.replace("auto_bootstrap: true", ""));
+//
+//        stringBuilder.append(System.lineSeparator());
+//        stringBuilder.append(new String(Files.readAllBytes(tokensPath)));
+//        // Don't stream on Cassandra startup, as tokens and SSTables are already present on node
+//        stringBuilder.append("auto_bootstrap: false");
+//        Files.write(cassandraConfigDirectory.resolve("cassandra.yaml"), ImmutableList.of(stringBuilder.toString()), StandardOpenOption.WRITE, StandardOpenOption.CREATE);
     }
 }

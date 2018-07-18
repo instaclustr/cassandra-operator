@@ -1,25 +1,68 @@
 package com.instaclustr.backup;
 
-import com.instaclustr.backup.util.DataRate;
-import com.instaclustr.backup.util.JMXUrlOptionHandler;
-import com.instaclustr.backup.util.MeasureOptionHandler;
-import com.instaclustr.backup.util.Time;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.instaclustr.backup.util.*;
 import org.kohsuke.args4j.Option;
 
 import javax.annotation.Nullable;
 import javax.management.remote.JMXServiceURL;
 import java.io.PrintStream;
+import java.net.MalformedURLException;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public abstract class CommonBackupArguments extends BaseArguments {
-    enum Speed {
+    public CommonBackupArguments() {
+        super();
+    }
+
+    public void setSpeed(@Nullable Speed speed) {
+        this.speed = speed;
+    }
+
+    public void setDuration(@Nullable Time duration) {
+        this.duration = duration;
+    }
+
+    public void setBandwidth(@Nullable DataRate bandwidth) {
+        this.bandwidth = bandwidth;
+    }
+
+    public void setJmxServiceURL(JMXServiceURL jmxServiceURL) {
+        this.jmxServiceURL = jmxServiceURL;
+    }
+
+    public void setJmxServiceURLFromIp(String ip, int port) {
+
+        //format service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi
+        try {
+            this.jmxServiceURL = new JMXServiceURL("service:jmx:rmi:///jndi/rmi://" + ip + ":" + port + "/jmxrmi");
+        } catch (MalformedURLException e) {
+            e.printStackTrace(); //TODO handle better
+        }
+    }
+
+    public void setBackupBucket(String backupBucket) {
+        this.backupBucket = backupBucket;
+    }
+
+    public void setBackupId(String backupId) {
+        this.backupId = backupId;
+    }
+
+    public void setOfflineSnapshot(Boolean offlineSnapshot) {
+        this.offlineSnapshot = offlineSnapshot;
+    }
+
+    public enum Speed {
         SLOW(new DataRate(1L, DataRate.DataRateUnit.MBPS), 1),
         FAST(new DataRate(10L, DataRate.DataRateUnit.MBPS), 1),
         LUDICROUS(new DataRate(10L, DataRate.DataRateUnit.MBPS), 10),
         PLAID(null, 100);
+
 
         Speed(final DataRate bandwidth, final int concurrentUploads) {
             this.bandwidth = bandwidth;
@@ -99,6 +142,8 @@ public abstract class CommonBackupArguments extends BaseArguments {
     public DataRate bandwidth;
 
     @Option(name = "-j", aliases = {"--jmx"}, usage = "JMX service url for Cassandra", metaVar = "jmx-url", handler = JMXUrlOptionHandler.class, forbids = "--offline")
+    @JsonSerialize(using = JMXServiceURLSerializer.class)
+    @JsonDeserialize(using = JMXServiceURLDeserializer.class)
     public JMXServiceURL jmxServiceURL;
 
     @Option(name = "--ju", usage = "JMX service user for Cassandra", metaVar = "jmx-user", forbids = "--offline")
