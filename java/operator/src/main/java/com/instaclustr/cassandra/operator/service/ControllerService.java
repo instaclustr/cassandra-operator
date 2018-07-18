@@ -153,16 +153,17 @@ public class ControllerService extends AbstractExecutionThreadService {
 
         // create configmap
         final V1ConfigMap configMap = createOrReplaceConfigMap(dataCenter);
-        
+        final V1ConfigMap cassandraConfigMap = createOrReplaceCassandraConfigMap(dataCenter);
+
         // create the statefulset for the DC nodes
-        createOrReplaceStateNodesStatefulSet(dataCenter, configMap);
+        createOrReplaceStateNodesStatefulSet(dataCenter, configMap, cassandraConfigMap);
     }
 
     private static Map<String, String> dataCenterLabels(final DataCenter dataCenter) {
         return ImmutableMap.of("cassandra-datacenter", dataCenter.getMetadata().getName());
     }
 
-    private void createOrReplaceStateNodesStatefulSet(final DataCenter dataCenter, final V1ConfigMap configMap) throws ApiException {
+    private void createOrReplaceStateNodesStatefulSet(final DataCenter dataCenter, final V1ConfigMap configMap, V1ConfigMap cassandraConfigMap) throws ApiException {
         final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
         final DataCenterSpec dataCenterSpec = dataCenter.getSpec();
 
@@ -187,6 +188,10 @@ public class ControllerService extends AbstractExecutionThreadService {
                         .addVolumeMountsItem(new V1VolumeMount()
                                 .name("config-volume")
                                 .mountPath("/etc/cassandra")
+                        )
+                        .addVolumeMountsItem(new V1VolumeMount()
+                                .name("cassandra-config-volume")
+                                .mountPath("/etc/cassandra.yaml.d")
                         )
                         .addVolumeMountsItem(new V1VolumeMount()
                                 .name("data-volume")
@@ -215,6 +220,10 @@ public class ControllerService extends AbstractExecutionThreadService {
                 .addVolumesItem(new V1Volume()
                         .name("config-volume")
                         .configMap(new V1ConfigMapVolumeSource().name(configMap.getMetadata().getName()))
+                )
+                .addVolumesItem(new V1Volume()
+                        .name("cassandra-config-volume")
+                        .configMap(new V1ConfigMapVolumeSource().name(cassandraConfigMap.getMetadata().getName()))
                 )
                 .addVolumesItem(new V1Volume()
                         .name("pod-info")
@@ -300,12 +309,21 @@ public class ControllerService extends AbstractExecutionThreadService {
         );
     }
 
-    private V1ConfigMap createOrReplaceConfigMap(final DataCenter dataCenter) throws IOException, ApiException {
+    private List<V1KeyToPath> generateMapItems(V1ConfigMap config) {
+        return config.getData().keySet().stream().map(k -> {
+            if(k.endsWith("yaml"))
+                return new V1KeyToPath().path("cassandra.yaml.d/" + k).key(k);
+            return new V1KeyToPath().path(".").key(k);
+        }).collect(Collectors.toList());
+
+    }
+
+    private V1ConfigMap createOrReplaceCassandraConfigMap(final DataCenter dataCenter) throws IOException, ApiException {
         final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
 
         final V1ConfigMap configMap = new V1ConfigMap()
                 .metadata(new V1ObjectMeta()
-                        .name(String.format("%s-config", dataCenterMetadata.getName()))
+                        .name(String.format("%s-cassandra-config", dataCenterMetadata.getName()))
                         .namespace(dataCenterMetadata.getNamespace())
                         .labels(dataCenterLabels(dataCenter)))
                 .putDataItem("cassandra.yaml", resourceAsString("/com/instaclustr/cassandra/config/cassandra.yaml") +
@@ -313,7 +331,22 @@ public class ControllerService extends AbstractExecutionThreadService {
                         "    - class_name: com.instaclustr.cassandra.k8s.SeedProvider\n" +
                         "      parameters:\n" +
                         String.format("          - service: %s-seeds", dataCenterMetadata.getName())
-                )
+                );
+
+        k8sResourceUtils.createOrReplaceNamespaceConfigMap(configMap);
+        return configMap;
+
+    }
+
+
+        private V1ConfigMap createOrReplaceConfigMap(final DataCenter dataCenter) throws IOException, ApiException {
+        final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
+
+        final V1ConfigMap configMap = new V1ConfigMap()
+                .metadata(new V1ObjectMeta()
+                        .name(String.format("%s-config", dataCenterMetadata.getName()))
+                        .namespace(dataCenterMetadata.getNamespace())
+                        .labels(dataCenterLabels(dataCenter)))
                 .putDataItem("logback.xml", resourceAsString("/com/instaclustr/cassandra/config/logback.xml"))
                 .putDataItem("cassandra-env.sh", resourceAsString("/com/instaclustr/cassandra/config/cassandra-env.sh"))
                 .putDataItem("jvm.options", resourceAsString("/com/instaclustr/cassandra/config/jvm.options"));

@@ -6,17 +6,17 @@ echoerr() { echo "$@" 1>&2; }
 
 JVM_OPTS=${JVM_OPTS:=}
 
-# sanity checks
-for conf in "${CASSANDRA_CONF}/cassandra.yaml" "${CASSANDRA_CONF}/cassandra-env.sh"; do
-    if [ ! -f "${conf}" ]; then
-        echoerr "${conf}: File not found. Required to start Cassandra.";
-        exit 1;
-    fi
-done
+## sanity checks
+#for conf in "${CASSANDRA_CONF}/cassandra.yaml" "${CASSANDRA_CONF}/cassandra-env.sh"; do
+#    if [ ! -f "${conf}" ]; then
+#        echoerr "${conf}: File not found. Required to start Cassandra.";
+#        exit 1;
+#    fi
+#done
 
 
 JVM_OPTS="${JVM_OPTS} -Dcassandra.config.loader=com.instaclustr.cassandra.k8s.ConcatenatedYamlConfigurationLoader"
-JVM_OPTS="${JVM_OPTS} -Dcassandra.config=${CASSANDRA_CONF}/cassandra.yaml:${CASSANDRA_CONF}/cassandra.yaml.d"
+JVM_OPTS="${JVM_OPTS} -Dcassandra.config=/etc/cassandra.yaml.d"
 JVM_OPTS="${JVM_OPTS} -Dcassandra.storagedir=/var/lib/cassandra" # set via YAML
 
 # provides hints to the JIT compiler

@@ -2,16 +2,33 @@ package com.instaclustr.cassandra.k8s;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.cassandra.config.Config;
 import org.apache.cassandra.config.ConfigurationLoader;
+import org.apache.cassandra.config.ParameterizedClass;
+import org.apache.cassandra.config.YamlConfigurationLoader;
 import org.apache.cassandra.exceptions.ConfigurationException;
+import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.TypeDescription;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.error.YAMLException;
+import org.yaml.snakeyaml.introspector.MissingProperty;
+import org.yaml.snakeyaml.introspector.Property;
+import org.yaml.snakeyaml.introspector.PropertyUtils;
 
+import java.beans.IntrospectionException;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.Reader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLStreamHandler;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -116,11 +133,112 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
 
 
         try (final Reader reader = new ConcatenatedReader(readers)) {
-            final Yaml yaml = new Yaml();
-            return yaml.loadAs(reader, Config.class);
+            //Largely copied from YamlConfigurationLoader in C*
+            Constructor constructor = new CustomConstructor(Config.class);
+            PropertiesChecker propertiesChecker = new PropertiesChecker();
+            constructor.setPropertyUtils(propertiesChecker);
+            Yaml yaml = new Yaml(constructor);
 
+            Config config = yaml.loadAs(reader, Config.class);
+            // If the configuration file is empty yaml will return null. In this case we should use the default
+            // configuration to avoid hitting a NPE at a later stage.
+            config = config == null ? new Config() : config;
+
+            propertiesChecker.check();
+            return config;
+
+        } catch (final YAMLException e) {
+            throw new ConfigurationException("Invalid yaml: " + SystemUtils.LINE_SEPARATOR
+                    +  " Error: " + e.getMessage(), false);
         } catch (final IOException e) {
             throw new ConfigurationException("Exception while loading configuration files.", e);
+        }
+    }
+
+
+    // Everything below here is copied from YamlConfigurationLoader due to stupid scopes
+    private static class PropertiesChecker extends PropertyUtils {
+        private final Set<String> missingProperties = new HashSet<>();
+
+        private final Set<String> nullProperties = new HashSet<>();
+
+        public PropertiesChecker() {
+            setSkipMissingProperties(true);
+        }
+
+        @Override
+        public Property getProperty(Class<? extends Object> type, String name) throws IntrospectionException {
+            final Property result = super.getProperty(type, name);
+
+            if (result instanceof MissingProperty) {
+                missingProperties.add(result.getName());
+            }
+
+            return new Property(result.getName(), result.getType()) {
+                @Override
+                public void set(Object object, Object value) throws Exception {
+                    if (value == null && get(object) != null) {
+                        nullProperties.add(getName());
+                    }
+                    result.set(object, value);
+                }
+
+                @Override
+                public Class<?>[] getActualTypeArguments() {
+                    return result.getActualTypeArguments();
+                }
+
+                @Override
+                public Object get(Object object) {
+                    return result.get(object);
+                }
+            };
+        }
+
+        public void check() throws ConfigurationException {
+            if (!nullProperties.isEmpty()) {
+                throw new ConfigurationException("Invalid yaml. Those properties " + nullProperties + " are not valid", false);
+            }
+
+            if (!missingProperties.isEmpty()) {
+                throw new ConfigurationException("Invalid yaml. Please remove properties " + missingProperties + " from your cassandra.yaml", false);
+            }
+        }
+    }
+
+    static class CustomConstructor extends Constructor
+    {
+        CustomConstructor(Class<?> theRoot)
+        {
+            super(theRoot);
+
+            TypeDescription seedDesc = new TypeDescription(ParameterizedClass.class);
+            seedDesc.putMapPropertyType("parameters", String.class, String.class);
+            addTypeDescription(seedDesc);
+        }
+
+        @Override
+        protected List<Object> createDefaultList(int initSize)
+        {
+            return Lists.newCopyOnWriteArrayList();
+        }
+
+        @Override
+        protected Map<Object, Object> createDefaultMap()
+        {
+            return Maps.newConcurrentMap();
+        }
+
+        @Override
+        protected Set<Object> createDefaultSet(int initSize)
+        {
+            return Sets.newConcurrentHashSet();
+        }
+
+        @Override
+        protected Set<Object> createDefaultSet()
+        {
+            return Sets.newConcurrentHashSet();
         }
     }
 }
