@@ -31,10 +31,12 @@ rules:
 - apiGroups:
   - stable.instaclustr.com
   resources:
-  - cluster
-  - clusters
-  - datacenter
-  - datacenters
+  - cassandra-cluster
+  - cassandra-clusters
+  - cassandra-datacenter
+  - cassandra-datacenters
+  - cassandra-backup
+  - cassandra-backups
   verbs:
   - '*'
 - apiGroups:
@@ -101,7 +103,4 @@ spec:
           requests:
             cpu: 100m
             memory: 50Mi
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
       serviceAccountName: cassandra-operator

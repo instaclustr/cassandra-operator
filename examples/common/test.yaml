@@ -6,3 +6,14 @@ spec:
   replicas: 3
   image: "gcr.io/cassandra-operator/cassandra:latest"
   imagePullPolicy: IfNotPresent
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      memory: 512Mi
+  dataVolumeClaim:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Mi
