@@ -11,7 +11,7 @@ minikube start --cpus 4 --memory 4096 --kubernetes-version v1.9.4
 eval $(minikube docker-env)
 
 #Build the operator
-mvn -f java clean package
+mvn -f java/pom.xml clean package
 
 #Build the required docker images
 ./buildenv/build-all
