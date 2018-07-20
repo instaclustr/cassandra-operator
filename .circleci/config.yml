@@ -144,9 +144,9 @@ workflows:
       - test-gcp:
           requires:
             - release-dev
-      - test-pivotal:
-          requires:
-            - release-dev
+      #- test-pivotal:
+      #    requires:
+      #      - release-dev
       - release-dev:
           filters:
             branches:
