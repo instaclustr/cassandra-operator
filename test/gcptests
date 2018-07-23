@@ -2,8 +2,9 @@
 
 #unit tests
 #TODO: gcp specific tests
+cd java
 mvn test -q -Dgroups=gcp
-
+cd ..
 
 #e2e operator tests
 #Deploy operator

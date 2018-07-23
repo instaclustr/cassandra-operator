@@ -2,8 +2,9 @@
 
 #unit tests
 #TODO: pivotal specific tests
+cd java
 mvn test -q -Dgroups=pivotal
-
+cd ..
 
 #e2e operator tests
 #Deploy operator
