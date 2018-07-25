@@ -1,0 +1,33 @@
+{
+  "info": {
+    "title": "Backup",
+    "version": "v1"
+  },
+  "type": "object",
+  "javaType": "com.instaclustr.cassandra.operator.model.Backup",
+  "description": "",
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "javaType": "io.kubernetes.client.models.V1ObjectMeta",
+      "type": "object"
+    },
+    "spec": {
+      "javaType": "com.instaclustr.cassandra.operator.model.BackupSpec",
+      "type": "object",
+      "properties": {
+        "backupType" : {
+          "type": "string"
+        },
+        "target" : {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

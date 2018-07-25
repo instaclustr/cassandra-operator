@@ -27,8 +27,12 @@ mkdir /usr/share/cassandra/agents
 mv /usr/share/cassandra/lib/jamm-0.3.0.jar /usr/share/cassandra/agents/jamm-0.3.0.jar
 cp /etc/cassandra/hotspot_compiler /usr/share/cassandra/
 
-# nuke /etc/cassandra and /var/lib/cassandra since they're injected by volume mounts
-rm -rf /etc/cassandra /var/lib/cassandra
+# nuke contents of /etc/cassandra and /var/lib/cassandra since they're injected by volume mounts
+rm -rf /etc/cassandra/* /var/lib/cassandra/*
+
+# add image config .d directories
+mkdir /etc/cassandra.yaml.d
+mkdir /etc/cassandra/cassandra.env.d
 
 # clean-up
 rm -rf "${pkg_dir}"

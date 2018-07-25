@@ -11,6 +11,7 @@
         <module>common</module>
         <module>model</module>
         <module>operator</module>
+        <module>sidecar</module>
         <module>k8s-addons</module>
         <module>backup</module>
     </modules>

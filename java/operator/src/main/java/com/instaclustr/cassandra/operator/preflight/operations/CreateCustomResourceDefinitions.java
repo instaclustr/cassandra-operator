@@ -27,6 +27,7 @@ public class CreateCustomResourceDefinitions implements Operation {
     public void run() throws Exception {
         createCrdFromResource("/com/instaclustr/datacenter-crd.yaml");
         createCrdFromResource("/com/instaclustr/cluster-crd.yaml");
+        createCrdFromResource("/com/instaclustr/backup-crd.yaml");
     }
 
     private void createCrdFromResource(final String resourceName) throws ApiException, IOException {

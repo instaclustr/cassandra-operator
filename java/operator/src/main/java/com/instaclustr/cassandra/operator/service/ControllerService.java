@@ -1,22 +1,23 @@
 package com.instaclustr.cassandra.operator.service;
 
-import com.google.common.cache.Cache;
 import com.google.common.collect.*;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.io.Resources;
-import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
+import com.google.gson.reflect.TypeToken;
 import com.instaclustr.cassandra.operator.event.*;
 import com.instaclustr.cassandra.operator.jmx.CassandraConnection;
 import com.instaclustr.cassandra.operator.jmx.CassandraConnectionFactory;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
+import com.instaclustr.cassandra.operator.model.Backup;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.DataCenterSpec;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
+import com.squareup.okhttp.Call;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.AppsV1beta2Api;
 import io.kubernetes.client.apis.CoreV1Api;
-import io.kubernetes.client.custom.Quantity;
+import io.kubernetes.client.apis.CustomObjectsApi;
 import io.kubernetes.client.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,7 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     private final CoreV1Api coreApi;
     private final AppsV1beta2Api appsApi;
+    private final CustomObjectsApi customObjectsApi;
     private final Map<DataCenterKey, DataCenter> dataCenterCache;
     private final CassandraConnectionFactory cassandraConnectionFactory;
     private final K8sResourceUtils k8sResourceUtils;
@@ -51,11 +53,13 @@ public class ControllerService extends AbstractExecutionThreadService {
     @Inject
     public ControllerService(final CoreV1Api coreApi,
                              final AppsV1beta2Api appsApi,
+                             final CustomObjectsApi customObjectsApi,
                              final Map<DataCenterKey, DataCenter> dataCenterCache,
                              final CassandraConnectionFactory cassandraConnectionFactory,
                              final K8sResourceUtils k8sResourceUtils) {
         this.coreApi = coreApi;
         this.appsApi = appsApi;
+        this.customObjectsApi = customObjectsApi;
         this.dataCenterCache = dataCenterCache;
         this.cassandraConnectionFactory = cassandraConnectionFactory;
         this.k8sResourceUtils = k8sResourceUtils;
@@ -149,20 +153,134 @@ public class ControllerService extends AbstractExecutionThreadService {
 
         // create configmap
         final V1ConfigMap configMap = createOrReplaceConfigMap(dataCenter);
-        
+        final V1ConfigMap cassandraConfigMap = createOrReplaceCassandraConfigMap(dataCenter);
+
         // create the statefulset for the DC nodes
-        createOrReplaceStateNodesStatefulSet(dataCenter, configMap);
+        createOrReplaceStateNodesStatefulSet(dataCenter, configMap, cassandraConfigMap);
     }
 
     private static Map<String, String> dataCenterLabels(final DataCenter dataCenter) {
         return ImmutableMap.of("cassandra-datacenter", dataCenter.getMetadata().getName());
     }
 
-    private void createOrReplaceStateNodesStatefulSet(final DataCenter dataCenter, final V1ConfigMap configMap) throws ApiException {
+    private void createOrReplaceStateNodesStatefulSet(final DataCenter dataCenter, final V1ConfigMap configMap, V1ConfigMap cassandraConfigMap) throws ApiException {
         final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
         final DataCenterSpec dataCenterSpec = dataCenter.getSpec();
 
         final Map<String, String> dataCenterLabels = dataCenterLabels(dataCenter);
+
+        final V1PodSpec podSpec = new V1PodSpec()
+                .addContainersItem(new V1Container()
+                        .name(dataCenterMetadata.getName() + "-cassandra")
+                        .image(dataCenterSpec.getImage())
+                        .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
+                        .ports(ImmutableList.of(
+                                new V1ContainerPort().name("internode").containerPort(7000),
+                                new V1ContainerPort().name("cql").containerPort(9042),
+                                new V1ContainerPort().name("jmx").containerPort(7199)
+                        ))
+                        .resources(dataCenterSpec.getResources())
+                        .readinessProbe(new V1Probe()
+                                .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
+                                .initialDelaySeconds(60)
+                                .timeoutSeconds(5)
+                        )
+                        .addVolumeMountsItem(new V1VolumeMount()
+                                .name("config-volume")
+                                .mountPath("/etc/cassandra")
+                        )
+                        .addVolumeMountsItem(new V1VolumeMount()
+                                .name("cassandra-config-volume")
+                                .mountPath("/etc/cassandra.yaml.d")
+                        )
+                        .addVolumeMountsItem(new V1VolumeMount()
+                                .name("data-volume")
+                                .mountPath("/var/lib/cassandra")
+                        )
+                        .addVolumeMountsItem(new V1VolumeMount()
+                                .name("pod-info")
+                                .mountPath("/etc/podinfo"))
+                )
+                .addContainersItem(new V1Container()
+                                .name(dataCenterMetadata.getName() + "-sidecar")
+                                .env(dataCenter.getSpec().getEnv())
+                                .image("gcr.io/cassandra-operator/cassandra-sidecar-dev")
+                                .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
+                                .ports(ImmutableList.of(
+                                        new V1ContainerPort().name("http").containerPort(4567)
+                                ))
+//                                                .readinessProbe(new V1Probe()
+//                                                        //.exec(new V1ExecAction().addCommandItem())
+//                                                )
+                                .addVolumeMountsItem(new V1VolumeMount()
+                                        .name("data-volume")
+                                        .mountPath("/var/lib/cassandra")
+                                )
+                )
+                .addVolumesItem(new V1Volume()
+                        .name("config-volume")
+                        .configMap(new V1ConfigMapVolumeSource().name(configMap.getMetadata().getName()))
+                )
+                .addVolumesItem(new V1Volume()
+                        .name("cassandra-config-volume")
+                        .configMap(new V1ConfigMapVolumeSource().name(cassandraConfigMap.getMetadata().getName()))
+                )
+                .addVolumesItem(new V1Volume()
+                        .name("pod-info")
+                        .downwardAPI(new V1DownwardAPIVolumeSource()
+                                .addItemsItem(new V1DownwardAPIVolumeFile()
+                                        .path("labels")
+                                        .fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.labels"))
+                                )
+                                .addItemsItem(new V1DownwardAPIVolumeFile()
+                                        .path("annotations")
+                                        .fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.annotations"))
+                                )
+                                .addItemsItem(new V1DownwardAPIVolumeFile()
+                                        .path("namespace")
+                                        .fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.namespace"))
+                                )
+                                .addItemsItem(new V1DownwardAPIVolumeFile()
+                                        .path("name")
+                                        .fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.name"))
+                                )
+                        ));
+
+        if (dataCenter.getSpec().getRestoreFromBackup() != null) {
+
+//            Custom objects api object doesn't give us a nice way to pass in the type we want so we do it manually
+            Call call = customObjectsApi.getNamespacedCustomObjectCall("stable.instaclustr.com", "v1", "default", "cassandra-backups", dataCenter.getSpec().getRestoreFromBackup(), null, null);
+
+            Backup backup = (Backup) customObjectsApi.getApiClient().execute(call, new TypeToken<Backup>(){}.getType()).getData();
+
+            podSpec.addInitContainersItem(new V1Container()
+                            .name(dataCenterMetadata.getName() + "-sidecar-restore")
+                            .env(dataCenter.getSpec().getEnv())
+                            .image("gcr.io/cassandra-operator/cassandra-sidecar-dev")
+                            .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
+                    .command(ImmutableList.of(
+                            "java", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap",
+                            "-cp", "/opt/lib/cassandra-sidecar/cassandra-sidecar.jar",
+                            "com.instaclustr.cassandra.sidecar.SidecarRestore",
+                            "-bb", backup.getSpec().getTarget(),
+                            "-c", backup.getMetadata().getLabels().get("cassandra-datacenter"), //note the ordinal needs to added here
+                            "-bi", backup.getMetadata().getLabels().get("cassandra-datacenter"), //note the ordinal needs to added here
+                            "-s", backup.getMetadata().getName(),
+                            "--bs", backup.getSpec().getBackupType(),
+                            "-rs"
+                    ))
+                    .addVolumeMountsItem(new V1VolumeMount()
+                            .name("pod-info")
+                            .mountPath("/etc/podinfo"))
+                    .addVolumeMountsItem(new V1VolumeMount()
+                            .name("config-volume")
+                            .mountPath("/etc/cassandra")
+                    ).addVolumeMountsItem(new V1VolumeMount()
+                            .name("data-volume")
+                            .mountPath("/var/lib/cassandra")
+                    )
+            );
+        }
 
         final V1beta2StatefulSet statefulSet = new V1beta2StatefulSet()
                 .metadata(new V1ObjectMeta()
@@ -176,36 +294,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                         .selector(new V1LabelSelector().matchLabels(dataCenterLabels))
                         .template(new V1PodTemplateSpec()
                                 .metadata(new V1ObjectMeta().labels(dataCenterLabels))
-                                .spec(new V1PodSpec()
-                                        .addContainersItem(new V1Container()
-                                                .name(dataCenterMetadata.getName() + "-cassandra")
-                                                .image(dataCenterSpec.getImage())
-                                                .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
-                                                .ports(ImmutableList.of(
-                                                        new V1ContainerPort().name("internode").containerPort(7000),
-                                                        new V1ContainerPort().name("cql").containerPort(9042),
-                                                        new V1ContainerPort().name("jmx").containerPort(7199)
-                                                ))
-                                                .resources(dataCenterSpec.getResources())
-                                                .readinessProbe(new V1Probe()
-                                                        .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
-                                                        .initialDelaySeconds(60)
-                                                        .timeoutSeconds(5)
-                                                )
-                                                .addVolumeMountsItem(new V1VolumeMount()
-                                                        .name("config-volume")
-                                                        .mountPath("/etc/cassandra")
-                                                )
-                                                .addVolumeMountsItem(new V1VolumeMount()
-                                                        .name("data-volume")
-                                                        .mountPath("/var/lib/cassandra")
-                                                )
-                                        )
-                                        .addVolumesItem(new V1Volume()
-                                                .name("config-volume")
-                                                .configMap(new V1ConfigMapVolumeSource().name(configMap.getMetadata().getName()))
-                                        )
-                                )
+                                .spec(podSpec)
                         )
                         .addVolumeClaimTemplatesItem(new V1PersistentVolumeClaim()
                                 .metadata(new V1ObjectMeta().name("data-volume"))
@@ -220,12 +309,21 @@ public class ControllerService extends AbstractExecutionThreadService {
         );
     }
 
-    private V1ConfigMap createOrReplaceConfigMap(final DataCenter dataCenter) throws IOException, ApiException {
+    private List<V1KeyToPath> generateMapItems(V1ConfigMap config) {
+        return config.getData().keySet().stream().map(k -> {
+            if(k.endsWith("yaml"))
+                return new V1KeyToPath().path("cassandra.yaml.d/" + k).key(k);
+            return new V1KeyToPath().path(".").key(k);
+        }).collect(Collectors.toList());
+
+    }
+
+    private V1ConfigMap createOrReplaceCassandraConfigMap(final DataCenter dataCenter) throws IOException, ApiException {
         final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
 
         final V1ConfigMap configMap = new V1ConfigMap()
                 .metadata(new V1ObjectMeta()
-                        .name(String.format("%s-config", dataCenterMetadata.getName()))
+                        .name(String.format("%s-cassandra-config", dataCenterMetadata.getName()))
                         .namespace(dataCenterMetadata.getNamespace())
                         .labels(dataCenterLabels(dataCenter)))
                 .putDataItem("cassandra.yaml", resourceAsString("/com/instaclustr/cassandra/config/cassandra.yaml") +
@@ -233,7 +331,22 @@ public class ControllerService extends AbstractExecutionThreadService {
                         "    - class_name: com.instaclustr.cassandra.k8s.SeedProvider\n" +
                         "      parameters:\n" +
                         String.format("          - service: %s-seeds", dataCenterMetadata.getName())
-                )
+                );
+
+        k8sResourceUtils.createOrReplaceNamespaceConfigMap(configMap);
+        return configMap;
+
+    }
+
+
+        private V1ConfigMap createOrReplaceConfigMap(final DataCenter dataCenter) throws IOException, ApiException {
+        final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
+
+        final V1ConfigMap configMap = new V1ConfigMap()
+                .metadata(new V1ObjectMeta()
+                        .name(String.format("%s-config", dataCenterMetadata.getName()))
+                        .namespace(dataCenterMetadata.getNamespace())
+                        .labels(dataCenterLabels(dataCenter)))
                 .putDataItem("logback.xml", resourceAsString("/com/instaclustr/cassandra/config/logback.xml"))
                 .putDataItem("cassandra-env.sh", resourceAsString("/com/instaclustr/cassandra/config/cassandra-env.sh"))
                 .putDataItem("jvm.options", resourceAsString("/com/instaclustr/cassandra/config/jvm.options"));
@@ -417,6 +530,7 @@ public class ControllerService extends AbstractExecutionThreadService {
 
     private void deleteStatefulSet(final V1beta2StatefulSet statefulSet) throws Exception {
         V1DeleteOptions deleteOptions = new V1DeleteOptions();
+        deleteOptions.setPropagationPolicy("Foreground");
 
         deleteOptions.setPropagationPolicy("Foreground");
 

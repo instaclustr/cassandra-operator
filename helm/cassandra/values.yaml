@@ -6,4 +6,35 @@ replicaCount: 3
 
 image:
   repository: gcr.io/cassandra-operator/cassandra-dev
-  tag: 06df6eb
+  tag: latest
+
+imagePullPolicy: Never
+
+resources:
+  limits:
+    memory: 512Mi
+  requests:
+    memory: 512Mi
+dataVolumeClaim:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+
+#Example restore from a back on AWS S3
+#env:
+#  - name: AWS_ACCESS_KEY_ID
+#    valueFrom:
+#      secretKeyRef:
+#        name: awsbackuptest
+#        key: access
+#  - name: AWS_SECRET_ACCESS_KEY
+#    valueFrom:
+#      secretKeyRef:
+#        name: awsbackuptest
+#        key: secret
+#  - name: AWS_REGION
+#    value: "us-west-2"
+#
+#restoreFromBackup: backup-hostname

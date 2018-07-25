@@ -9,6 +9,7 @@ import org.kohsuke.args4j.spi.PathOptionHandler;
 import javax.annotation.Nullable;
 import java.io.PrintStream;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public abstract class BaseArguments {
     final String appName;
@@ -20,6 +21,11 @@ public abstract class BaseArguments {
     BaseArguments(final String appName, final PrintStream stream) {
         this.appName = appName;
         this.stream = stream;
+    }
+
+    public BaseArguments() {
+        this.appName = "";
+        this.stream = null;
     }
 
     public void parseArguments(String[] args) {
@@ -74,10 +80,58 @@ public abstract class BaseArguments {
     @Option(name = "-c", aliases = {"--cluster"}, metaVar = "cluster ID", usage = "Parent cluster of node to restore from.", required = true)
     public String clusterId;
 
+    public void setParser(CmdLineParser parser) {
+        this.parser = parser;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
+    }
+
+    public void setConcurrentConnections(Integer concurrentConnections) {
+        this.concurrentConnections = concurrentConnections;
+    }
+
+    public void setWaitForLock(boolean waitForLock) {
+        this.waitForLock = waitForLock;
+    }
+
+    public void setShowHelp(boolean showHelp) {
+        this.showHelp = showHelp;
+    }
+
+    public void setStorageProvider(StorageProvider storageProvider) {
+        this.storageProvider = storageProvider;
+    }
+
+    public void setClusterId(String clusterId) {
+        this.clusterId = clusterId;
+    }
+
+    public void setCassandraDirectory(@Nullable Path cassandraDirectory) {
+        this.cassandraDirectory = cassandraDirectory;
+    }
+
+    public void setFileBackupDirectory(@Nullable Path fileBackupDirectory) {
+        this.fileBackupDirectory = fileBackupDirectory;
+    }
+
+    public void setCassandraConfigDirectory(@Nullable Path cassandraConfigDirectory) {
+        this.cassandraConfigDirectory = cassandraConfigDirectory;
+    }
+
+    public void setSharedContainerPath(@Nullable Path sharedContainerPath) {
+        this.sharedContainerPath = sharedContainerPath;
+    }
+
     //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
     @Option(name = "--dd", aliases = {"--data-directory"}, usage = "Base directory that contains the Cassandra data, cache and commitlog directories", metaVar = "/cassandra", handler = PathOptionHandler.class)
     @Nullable
-    public Path cassandraDirectory;
+    public Path cassandraDirectory = Paths.get("/var/lib/cassandra/");
 
 
     //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
@@ -88,11 +142,11 @@ public abstract class BaseArguments {
     //TODO: Allow user to override commitlog directory (some environments may allow different disks which better suit commitlog performance
     @Option(name = "--cd", aliases = {"--config-directory"}, usage = "Base directory that contains the Cassandra data, cache and commitlog directories", metaVar = "/cassandra", handler = PathOptionHandler.class)
     @Nullable
-    public Path cassandraConfigDirectory;
+    public Path cassandraConfigDirectory = Paths.get("/etc/cassandra/");
 
 
     @Option(name = "-p", aliases = {"--shared-path"}, usage = "Shared Container path for pod", metaVar = "/", handler = PathOptionHandler.class)
     @Nullable
-    public Path sharedContainerPath;
+    public Path sharedContainerPath = Paths.get("/");
 
 }

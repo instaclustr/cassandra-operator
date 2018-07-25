@@ -21,7 +21,7 @@ jobs:
     steps:
       - checkout
 
-      - run: cd java && mvn -q package
+      - run: cd java && mvn -q package -Dgroups=basic
 
       - store_test_results:
           path: operator/target/surefire-reports
@@ -51,7 +51,7 @@ jobs:
           name: Setup Google Cloud
           command: gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json && gcloud --quiet config set project ${GOOGLE_PROJECT_ID} && gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
 
-      - run: cd java && mvn -q package
+      - run: cd java && mvn -q package -Dgroups=basic
 
       - store_test_results:
           path: operator/target/surefire-reports
@@ -125,8 +125,16 @@ jobs:
           command: gcloud --quiet container clusters create ${K8S_CLUSTER_NAME} && gcloud --quiet container clusters get-credentials ${K8S_CLUSTER_NAME}
 
       - run:
+          name: Set up helm
+          command: ./test/configurehelm
+
+      - run:
+          name: Deploy Operator
+          command: ./test/deployoperator
+
+      - run:
           name: Run integration tests
-          command: ./test/gcptests
+          command: export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/gcp-key.json ./test/gcptests
 
       - run:
           name: Cleanup GCP resources
@@ -144,9 +152,9 @@ workflows:
       - test-gcp:
           requires:
             - release-dev
-      - test-pivotal:
-          requires:
-            - release-dev
+      #- test-pivotal:
+      #    requires:
+      #      - release-dev
       - release-dev:
           filters:
             branches:

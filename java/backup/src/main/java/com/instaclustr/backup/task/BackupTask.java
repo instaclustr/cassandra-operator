@@ -181,7 +181,13 @@ public class BackupTask implements Callable<Void> {
         if (arguments.offlineSnapshot) {
             doUpload(tokens);
         } else {
-            try (final JMXConnector jmxConnector = JMXConnectorFactory.connect(cassandraJMXServiceURL)) {
+            HashMap<String, String[]> environment = null; //we can pass nulls to the jmxconnectorFactory
+            if(arguments.jmxPassword != null && arguments.jmxUser != null) {
+                environment = new HashMap<>();
+                String[] credentials = new String[] {arguments.jmxUser, arguments.jmxPassword};
+                environment.put(JMXConnector.CREDENTIALS, credentials);
+            }
+            try (final JMXConnector jmxConnector = JMXConnectorFactory.connect(cassandraJMXServiceURL, environment)) {
 
                 final MBeanServerConnection cassandraMBeanServerConnection = jmxConnector.getMBeanServerConnection();
                 final StorageServiceMBean storageServiceMBean = JMX.newMBeanProxy(cassandraMBeanServerConnection, CassandraObjectNames.STORAGE_SERVICE, StorageServiceMBean.class);
@@ -318,6 +324,10 @@ public class BackupTask implements Callable<Void> {
         manifestFilePath.toFile().deleteOnExit();
 
         return ImmutableList.of(new ManifestEntry(backupManifestsRootKey.resolve(manifestFilePath.getFileName()), manifestFilePath, ManifestEntry.Type.MANIFEST_FILE));
+    }
+
+    public void stopBackupTask() {
+        filesUploader.executorService.shutdownNow();
     }
 
     private Iterable<ManifestEntry> saveTokenList(List<String> tokens) throws IOException {

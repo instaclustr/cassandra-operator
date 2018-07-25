@@ -24,10 +24,10 @@ rules:
 - apiGroups:
   - stable.instaclustr.com
   resources:
-  - cluster
-  - clusters
-  - datacenter
-  - datacenters
+  - cassandra-cluster
+  - cassandra-clusters
+  - cassandra-datacenter
+  - cassandra-datacenters
   verbs:
   - '*'
 - apiGroups:
