@@ -3,9 +3,9 @@
 #unit tests
 #TODO: gcp specific tests
 
-helm install -f testGCPCassandraValues.yaml -n cassandra-default --wait ../helm/cassandra
+helm install -f ~/cassandra-operator/test/testGCPCassandraValues.yaml -n cassandra-default --wait ~/cassandra-operator/helm/cassandra
 export CASSANDRA_CLUSTER=cassandra-default
 
-cd ../java
+cd ~/cassandra-operator/java
 mvn test -q -Dgroups=integration
-cd ../test
+cd ~/cassandra-operator/test
