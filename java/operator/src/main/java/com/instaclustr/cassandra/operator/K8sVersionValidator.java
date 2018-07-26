@@ -42,8 +42,8 @@ public class K8sVersionValidator implements Callable<Void> {
             return null;
         }
 
-        final int major = Integer.parseInt(versionInfo.getMajor());
-        final int minor = Integer.parseInt(versionInfo.getMinor());
+        final int major = Integer.parseInt(versionInfo.getMajor().replaceAll("\\D+", ""));
+        final int minor = Integer.parseInt(versionInfo.getMinor().replaceAll("\\D+", ""));
 
         if (major < 1) {
             // waaaay to old

@@ -64,7 +64,7 @@ public class IntegrationTests {
         client.deleteNamespacedPod(clusterName + "-0", "default", new V1DeleteOptions().propagationPolicy("Foreground"), null, null, null, null);
 
 
-        Thread.sleep(TimeUnit.MINUTES.toMillis(2));
+        Thread.sleep(TimeUnit.MINUTES.toMillis(3));
 
         executor.shutdown();
 
