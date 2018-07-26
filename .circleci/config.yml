@@ -130,7 +130,7 @@ jobs:
 
       - run:
           name: Deploy Operator
-          command: ./test/deployoperator
+          command: ./test/deployoperator && sleep 30
 
       - run:
           name: Run integration tests
