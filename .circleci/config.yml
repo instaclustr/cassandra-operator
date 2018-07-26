@@ -134,7 +134,7 @@ jobs:
 
       - run:
           name: Run integration tests
-          command: export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/gcp-key.json ./test/gcptests
+          command: export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/gcp-key.json; ./test/gcptests
 
       - run:
           name: Cleanup GCP resources
