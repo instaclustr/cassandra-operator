@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.concurrent.*;
 
 @Guice(modules = K8sModule.class)
-public class IntegrationTests {
+public class IntegrationTest {
     private final String clusterName = System.getenv("CASSANDRA_CLUSTER");
     private Session session;
 
