@@ -4,6 +4,10 @@
 #TODO: gcp specific tests
 
 helm install -f ~/cassandra-operator/test/testGCPCassandraValues.yaml -n cassandra-default --wait ~/cassandra-operator/helm/cassandra
+kubectl get pods
+sleep 180
+kubectl get pods
+
 export CASSANDRA_CLUSTER=cassandra-default
 
 cd ~/cassandra-operator/java
