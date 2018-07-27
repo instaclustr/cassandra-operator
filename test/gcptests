@@ -7,5 +7,5 @@ helm install -f ~/cassandra-operator/test/testGCPCassandraValues.yaml -n cassand
 export CASSANDRA_CLUSTER=cassandra-default
 
 cd ~/cassandra-operator/java
-mvn test -q -Dgroups=integration
+telepresence --method inject-tcp --run mvn test -q -Dgroups=integration -DcassandraCluster=cassandra-default-seeds
 cd ~/cassandra-operator/test

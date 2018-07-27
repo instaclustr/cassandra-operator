@@ -23,7 +23,7 @@ import java.util.concurrent.*;
 
 @Guice(modules = K8sModule.class)
 public class IntegrationTest {
-    private final String clusterName = System.getenv("CASSANDRA_CLUSTER");
+    private final String clusterName = System.getProperty("cassandraCluster");
     private Session session;
 
     @Inject

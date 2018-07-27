@@ -172,7 +172,7 @@ public class ControllerService extends AbstractExecutionThreadService {
         final V1PodSpec podSpec = new V1PodSpec()
                 .addContainersItem(new V1Container()
                         .name(dataCenterMetadata.getName() + "-cassandra")
-                        .image(dataCenterSpec.getImage())
+                        .image(dataCenterSpec.getCassandraImage())
                         .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                         .ports(ImmutableList.of(
                                 new V1ContainerPort().name("internode").containerPort(7000),
@@ -204,7 +204,7 @@ public class ControllerService extends AbstractExecutionThreadService {
                 .addContainersItem(new V1Container()
                                 .name(dataCenterMetadata.getName() + "-sidecar")
                                 .env(dataCenter.getSpec().getEnv())
-                                .image("gcr.io/cassandra-operator/cassandra-sidecar-dev")
+                                .image(dataCenterSpec.getSidecarImage())
                                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                                 .ports(ImmutableList.of(
                                         new V1ContainerPort().name("http").containerPort(4567)

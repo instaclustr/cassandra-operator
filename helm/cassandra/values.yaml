@@ -5,7 +5,8 @@
 replicaCount: 3
 
 image:
-  repository: gcr.io/cassandra-operator/cassandra-dev
+  cassandraRepository: gcr.io/cassandra-operator/cassandra-dev
+  sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar-dev
   tag: latest
 
 imagePullPolicy: Never
