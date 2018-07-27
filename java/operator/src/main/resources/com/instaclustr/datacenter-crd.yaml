@@ -39,7 +39,10 @@ spec:
               type: integer
               minimum: 1
               description: Number of nodes in the data center.
-            image:
+            cassandraImage:
+              type: string
+              description: Image to be used for data center.
+            sidecarImage:
               type: string
               description: Image to be used for data center.
             imagePullPolicy:
