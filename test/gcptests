@@ -5,8 +5,9 @@
 
 helm install -f ~/cassandra-operator/test/testGCPCassandraValues.yaml -n cassandra-default --wait ~/cassandra-operator/helm/cassandra
 kubectl get pods
-sleep 180
+sleep 400
 kubectl get pods
+kubectl get services
 
 export CASSANDRA_CLUSTER=cassandra-default
 
