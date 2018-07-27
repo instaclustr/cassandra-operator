@@ -31,6 +31,7 @@ public class IntegrationTest {
 
     @BeforeClass
     public void setup() throws UnknownHostException {
+        System.out.println(clusterName);
         Cluster cluster = Cluster.builder()
                 .withRetryPolicy(FallthroughRetryPolicy.INSTANCE)
                 .addContactPoints(InetAddress.getAllByName(clusterName)).build();
