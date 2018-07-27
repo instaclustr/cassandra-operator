@@ -10,12 +10,14 @@ import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.models.V1DeleteOptions;
+import io.kubernetes.client.util.ClientBuilder;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -23,15 +25,15 @@ import java.util.concurrent.*;
 
 @Guice(modules = K8sModule.class)
 public class IntegrationTest {
-    private final String clusterName = System.getProperty("cassandraCluster", "cassandra-default-seeds");
+    private final String clusterName = System.getProperty("cassandraCluster", "cassandra-default-nodes");
     private Session session;
 
-    @Inject
     CoreV1Api client;
 
     @BeforeClass
-    public void setup() throws UnknownHostException {
+    public void setup() throws IOException {
         System.out.println(clusterName);
+        client = new CoreV1Api(ClientBuilder.defaultClient());
         Cluster cluster = Cluster.builder()
                 .withRetryPolicy(FallthroughRetryPolicy.INSTANCE)
                 .addContactPoints(InetAddress.getAllByName(clusterName)).build();
