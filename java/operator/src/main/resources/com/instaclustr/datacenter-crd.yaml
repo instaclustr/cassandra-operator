@@ -26,7 +26,8 @@ spec:
         spec:
           required:
           - replicas
-          - image
+          - cassandraImage
+          - sidecarImage
           - imagePullPolicy
           properties:
             name:
