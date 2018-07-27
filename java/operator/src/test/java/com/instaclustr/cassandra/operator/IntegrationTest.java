@@ -30,9 +30,9 @@ public class IntegrationTest {
 
     CoreV1Api client;
 
-    @BeforeClass
-    public void setup() throws IOException {
-        System.out.println(clusterName);
+
+    @Test(groups = {"integration"})
+    public void testReplaceNode() throws ApiException, InterruptedException, IOException {
         client = new CoreV1Api(ClientBuilder.defaultClient());
         Cluster cluster = Cluster.builder()
                 .withRetryPolicy(FallthroughRetryPolicy.INSTANCE)
@@ -44,11 +44,8 @@ public class IntegrationTest {
                 "posted_month int, " +
                 "value int" +
                 "PRIMARY KEY (userid, posted_month)");
-    }
 
 
-    @Test(groups = {"integration"})
-    public void testReplaceNode() throws ApiException, InterruptedException {
         ExecutorService executor = Executors.newFixedThreadPool(1);
         ArrayList<DriverException> results = new ArrayList<>();
 
