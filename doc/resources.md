@@ -1,4 +1,4 @@
-##Resources and Labels
+## Resources and Labels
 ### TODO complete overview of the resources managed by the operator...
 Currently the operator creates the following k8s resources:
 - A stateful set that manages Cassandra nodes
