@@ -42,7 +42,7 @@ public class IntegrationTest {
         session.execute("CREATE TABLE IF NOT EXISTS test.foo (" +
                 "userid uuid, " +
                 "posted_month int, " +
-                "value int" +
+                "value int," +
                 "PRIMARY KEY (userid, posted_month)");
 
 
