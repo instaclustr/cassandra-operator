@@ -12,5 +12,5 @@ kubectl get services
 export CASSANDRA_CLUSTER=cassandra-default
 
 cd ~/cassandra-operator/java
-telepresence --method inject-tcp --run mvn test -q -Dgroups=integration -DcassandraCluster=cassandra-default-nodes
+telepresence --method inject-tcp --run mvn test -q -Dgroups=integration -DcassandraCluster=cassandra-default
 cd ~/cassandra-operator/test

@@ -25,7 +25,7 @@ import java.util.concurrent.*;
 
 @Guice(modules = K8sModule.class)
 public class IntegrationTest {
-    private final String clusterName = System.getProperty("cassandraCluster", "cassandra-default-nodes");
+    private final String clusterName = System.getProperty("cassandraCluster", "cassandra-default");
     private Session session;
 
     CoreV1Api client;
@@ -36,7 +36,7 @@ public class IntegrationTest {
         client = new CoreV1Api(ClientBuilder.defaultClient());
         Cluster cluster = Cluster.builder()
                 .withRetryPolicy(FallthroughRetryPolicy.INSTANCE)
-                .addContactPoints(InetAddress.getAllByName(clusterName)).build();
+                .addContactPoints(InetAddress.getAllByName(clusterName + "-nodes")).build();
         session = cluster.connect();
         session.execute("CREATE KEYSPACE IF NOT EXISTS test WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3}");
         session.execute("CREATE TABLE IF NOT EXISTS test.foo (" +
@@ -66,9 +66,11 @@ public class IntegrationTest {
 
         Thread.sleep(TimeUnit.MINUTES.toMillis(3));
 
-        executor.shutdown();
+        executor.shutdownNow();
 
         Assert.assertEquals(results.size(), 0);
+
+        System.exit(0);
 
 
     }
