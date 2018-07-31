@@ -43,7 +43,7 @@ public class IntegrationTest {
                 "userid uuid, " +
                 "posted_month int, " +
                 "value int," +
-                "PRIMARY KEY (userid, posted_month)");
+                "PRIMARY KEY (userid, posted_month))");
 
 
         ExecutorService executor = Executors.newFixedThreadPool(1);
