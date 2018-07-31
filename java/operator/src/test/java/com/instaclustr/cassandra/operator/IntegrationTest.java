@@ -32,7 +32,7 @@ public class IntegrationTest {
 
 
     @Test(groups = {"integration"})
-    public void testReplaceNode() throws ApiException, InterruptedException, IOException {
+    public void testWritesNode() throws ApiException, InterruptedException, IOException {
         client = new CoreV1Api(ClientBuilder.defaultClient());
         Cluster cluster = Cluster.builder()
                 .withRetryPolicy(FallthroughRetryPolicy.INSTANCE)
@@ -60,8 +60,6 @@ public class IntegrationTest {
                 }
             }
         });
-
-        client.deleteNamespacedPod(clusterName + "-0", "default", new V1DeleteOptions().propagationPolicy("Foreground"), null, null, null, null);
 
 
         Thread.sleep(TimeUnit.MINUTES.toMillis(3));
