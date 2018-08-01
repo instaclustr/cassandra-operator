@@ -15,3 +15,9 @@ RUN echo 'deb https://apt.dockerproject.org/repo debian-stretch main' >> /etc/ap
 RUN dagi google-cloud-sdk docker-engine
 
 RUN dagi kubectl
+
+RUN curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get | bash
+
+RUN curl -s https://packagecloud.io/install/repositories/datawireio/telepresence/script.deb.sh | bash
+
+RUN dagi telepresence sudo

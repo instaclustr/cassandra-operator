@@ -28,6 +28,8 @@ rules:
   - cassandra-clusters
   - cassandra-datacenter
   - cassandra-datacenters
+  - cassandra-backup
+  - cassandra-backups
   verbs:
   - '*'
 - apiGroups:

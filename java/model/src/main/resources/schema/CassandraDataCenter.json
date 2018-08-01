@@ -26,7 +26,10 @@
           "type": "number",
           "javaType": "int"
         },
-        "image" : {
+        "cassandraImage" : {
+          "type": "string"
+        },
+        "sidecarImage" : {
           "type": "string"
         },
         "imagePullPolicy" : {
