@@ -29,6 +29,8 @@ Read [RBAC docs](./doc/rbac.md) for how to setup RBAC rules for Cassandra operat
 
 Read [Developer Guide](./doc/developers.md) for setting up development environment if you want to contribute.
 
+Read [Backup and Restore Guide](./doc/backup_restore.md) for backing up and restoring Cassandra clusters managed by the operator.
+
 See the [Resources and Labels](./doc/resources.md) doc for an overview of the resources created by the Cassandra-operator.
 
 ## Requirements
