@@ -5,11 +5,11 @@
 replicaCount: 3
 
 image:
-  cassandraRepository: gcr.io/cassandra-operator/cassandra-dev
-  sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar-dev
+  cassandraRepository: gcr.io/cassandra-operator/cassandra
+  sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar
   tag: latest
 
-imagePullPolicy: Never
+imagePullPolicy: IfNotPresent
 
 resources:
   limits:
