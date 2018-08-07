@@ -16,8 +16,6 @@ The Cassandra operator manages Cassandra clusters deployed to [Kubernetes](http:
 - [Install](#deploy-cassandra-operator)
 - [Create and destroy](#create-and-destroy-an-Cassandra-cluster)
 - [Resize](#resize-an-Cassandra-cluster)
-- [Recover a node](#node-recovery) - _TODO_
-- [Backup and restore a cluster](#disaster-recovery) - _TODO_
 - [Rolling upgrade](#upgrade-an-Cassandra-cluster) - _TODO_
 - [Limitations](#limitations)
 
