@@ -87,6 +87,8 @@ The Cassandra-operator manages backups via a backup CRD object in Kubernetes, th
 It also allows you to reference a known backup when you restore. Backups will target all pods that match the labels specified on the backup CRD, you can backup multiple clusters via a single backup CRD. 
 Node identitiy is maintained via the backup path.
 
+The name field in metadata will be used as the snapshot name (e.g. via nodetool snapshot and when uploaded to the external storage provider).
+
 To backup the cluster we just created, create the following yaml file (called `backup.yaml` in this example):
 
 ```yaml
@@ -101,4 +103,58 @@ spec:
   target: kube-backup-test-cassandra
 ```
 
-In the spec field, backupType indicates what storage mechanism to use and target will be the location (e.g. the S3 bucket)
+In the spec field, `backupType` indicates what storage mechanism to use and `target` will be the undecorated location (e.g. the S3 bucket). To create the backup run `kubectl apply -f backup.yaml`
+
+The Cassandra operator will detect the new backup CRD and take snapshots of all nodes that match the same labels as the `CassandraBackup`. You can follow the progress of the backup by following the sidecar logs for each node included in the backup.
+The backup will include all user data as well as the system/schema tables. This means on restoration your schema will exist.
+
+## Restoring from a backup
+The Cassandra-operator allows you to create a new cluster from an existing backup. To do so, make sure you have already taken a backup from a previous/existing cluster. The add the property `restoreFromBackup: backup-name` to the CassandraDataCenter CRD `spec`. 
+This is the name of the backup (CRD) you wish to restore from. Your full yaml file will look like:
+
+The resulting full CRD yaml will look like this:
+```yaml
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraDataCenter
+metadata:
+  name: foo-cassandra
+  labels:
+    app: cassandra
+    chart: cassandra-0.1.0
+    release: foo
+    heritage: Tiller
+spec:
+  replicas: 3
+  cassandraImage: "gcr.io/cassandra-operator/cassandra:latest"
+  sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
+  imagePullPolicy: IfNotPresent
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      memory: 512Mi
+  dataVolumeClaim:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Mi
+  env:
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          key: access
+          name: awsbackuptest
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          key: secret
+          name: awsbackuptest
+    - name: AWS_REGION
+      value: us-west-2
+  restoreFromBackup: backup-name
+```
+
+The new cluster will download the sstables from the existing backup before starting Cassandra and restore the tokens associated with the node the backup was taken on. The schema will be restored along side the data as well. 
+The operator will match the new clusters nodes to backups from previous cluster based on the ordinal value of the pod assigned by its stateful set (e.g. old-cluster-0 will be restored to new-cluster-0). 
+You should always restore to a cluster with the same number of nodes as the original backup cluster. Restore currently works against just a single DC, if you backup using a broader set of lables, restore from that broader label group won't work.
