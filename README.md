@@ -1,7 +1,7 @@
 ## Cassandra operator
 Build [![CircleCI](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master.svg?style=svg)](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master)
 
-### Project status: pre-alpha
+### Project status: alpha
 
 Major planned features have yet to be completed and API changes are currently planned, we reserve the right to address bugs and API changes in a backwards incompatible way before the project is declared stable. See [upgrade guide](./doc/user/upgrade/upgrade_guide.md) for safe upgrade process.
 
@@ -120,5 +120,4 @@ $ kubectl apply -f example/common/test.yaml
 ## Limitations
 
 - This operator is currently a work in progress and breaking changes are landing in master all the time until we reach our initial release. Here be dragons!
-- The operator does not currently manage backups, a command line backup utility is included, tested and built, but not yet managed by the operator.
-- Do not use this in production.
+- Do not use this in production... yet
