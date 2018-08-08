@@ -202,7 +202,7 @@ public class ControllerService extends AbstractExecutionThreadService {
 
         if(dataCenterSpec.getUserConfigMap() != null) {
             cassandraContainer.addVolumeMountsItem(new V1VolumeMount()
-                    .name("cassandra--user-config-volume")
+                    .name("cassandra-user-config-volume")
                     .mountPath("/etc/cassandra.yaml.d/user")
             );
         }
@@ -254,13 +254,13 @@ public class ControllerService extends AbstractExecutionThreadService {
 
         if(dataCenterSpec.getUserConfigMap() != null) {
             podSpec.addVolumesItem(new V1Volume()
-                    .name("cassandra--user-config-volume")
+                    .name("cassandra-user-config-volume")
                     .configMap(new V1ConfigMapVolumeSource().name(dataCenterSpec.getUserConfigMap())));
         }
 
         if (dataCenter.getSpec().getRestoreFromBackup() != null) {
 
-//            Custom objects api object doesn't give us a nice way to pass in the type we want so we do it manually
+//            Custom objects api object doesn't give us a nice way to pass in the type we want so we do it manually TODO: Gracefully handle not finding the backup
             Call call = customObjectsApi.getNamespacedCustomObjectCall("stable.instaclustr.com", "v1", "default", "cassandra-backups", dataCenter.getSpec().getRestoreFromBackup(), null, null);
 
             Backup backup = (Backup) customObjectsApi.getApiClient().execute(call, new TypeToken<Backup>(){}.getType()).getData();
@@ -268,15 +268,15 @@ public class ControllerService extends AbstractExecutionThreadService {
             podSpec.addInitContainersItem(new V1Container()
                             .name(dataCenterMetadata.getName() + "-sidecar-restore")
                             .env(dataCenter.getSpec().getEnv())
-                            .image("gcr.io/cassandra-operator/cassandra-sidecar-dev")
+                            .image(dataCenterSpec.getSidecarImage())
                             .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                     .command(ImmutableList.of(
                             "java", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap",
                             "-cp", "/opt/lib/cassandra-sidecar/cassandra-sidecar.jar",
                             "com.instaclustr.cassandra.sidecar.SidecarRestore",
                             "-bb", backup.getSpec().getTarget(),
-                            "-c", backup.getMetadata().getLabels().get("cassandra-datacenter"), //note the ordinal needs to added here
-                            "-bi", backup.getMetadata().getLabels().get("cassandra-datacenter"), //note the ordinal needs to added here
+                            "-c", backup.getMetadata().getLabels().get("cassandra-datacenter"),
+                            "-bi", backup.getMetadata().getLabels().get("cassandra-datacenter"),
                             "-s", backup.getMetadata().getName(),
                             "--bs", backup.getSpec().getBackupType(),
                             "-rs"
@@ -319,15 +319,6 @@ public class ControllerService extends AbstractExecutionThreadService {
                 () -> appsApi.createNamespacedStatefulSet(statefulSet.getMetadata().getNamespace(), statefulSet, null),
                 () -> replaceStatefulSet(dataCenter, statefulSet)
         );
-    }
-
-    private List<V1KeyToPath> generateMapItems(V1ConfigMap config) {
-        return config.getData().keySet().stream().map(k -> {
-            if(k.endsWith("yaml"))
-                return new V1KeyToPath().path("cassandra.yaml.d/" + k).key(k);
-            return new V1KeyToPath().path(".").key(k);
-        }).collect(Collectors.toList());
-
     }
 
     private V1ConfigMap createOrReplaceCassandraConfigMap(final DataCenter dataCenter) throws IOException, ApiException {

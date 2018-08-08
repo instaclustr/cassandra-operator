@@ -87,6 +87,7 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
     @Override
     public Config loadConfig() throws ConfigurationException {
         final String configProperty = System.getProperty("cassandra.config");
+        logger.info("Loading config from {}", configProperty);
         final Iterable<String> configValues = Splitter.on(':').split(configProperty);
 
         final List<BufferedReader> readers = StreamSupport.stream(configValues.spliterator(), false)
@@ -112,15 +113,24 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
                     }
                 })
 
-                // only load files
+                // only load regular yaml files
                 .filter(path -> {
                     if (!Files.isRegularFile(path)) {
                         logger.warn("Configuration file \"{}\" is not a regular file and will not be loaded.", path);
                         return false;
                     }
-
                     return true;
                 })
+
+                .filter(path -> {
+                    if(!path.toFile().getName().contains(".yaml")) {
+                        logger.warn("Configuration file \"{}\" is not a yaml file and will not be loaded.", path);
+                        return false;
+                    }
+                    logger.info("Loading configuration file \"{}\"", path);
+                    return true;
+                })
+
                 .map(path -> {
                     try {
                         return Files.newBufferedReader(path, StandardCharsets.UTF_8);
