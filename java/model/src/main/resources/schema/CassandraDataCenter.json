@@ -55,6 +55,10 @@
         "restoreFromBackup": {
           "type" : "string",
           "description" : "Name of the CassandraBackup to restore from"
+        },
+        "userConfigMap": {
+          "type" : "string",
+          "description" : "Name of an optional config map that contains cassandra configuration in the form of yaml fragments"
         }
       }
     }

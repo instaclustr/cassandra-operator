@@ -169,54 +169,60 @@ public class ControllerService extends AbstractExecutionThreadService {
 
         final Map<String, String> dataCenterLabels = dataCenterLabels(dataCenter);
 
+        final V1Container cassandraContainer = new V1Container()
+                .name(dataCenterMetadata.getName() + "-cassandra")
+                .image(dataCenterSpec.getCassandraImage())
+                .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
+                .ports(ImmutableList.of(
+                        new V1ContainerPort().name("internode").containerPort(7000),
+                        new V1ContainerPort().name("cql").containerPort(9042),
+                        new V1ContainerPort().name("jmx").containerPort(7199)
+                ))
+                .resources(dataCenterSpec.getResources())
+                .readinessProbe(new V1Probe()
+                        .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
+                        .initialDelaySeconds(60)
+                        .timeoutSeconds(5)
+                )
+                .addVolumeMountsItem(new V1VolumeMount()
+                        .name("config-volume")
+                        .mountPath("/etc/cassandra")
+                )
+                .addVolumeMountsItem(new V1VolumeMount()
+                        .name("cassandra-config-volume")
+                        .mountPath("/etc/cassandra.yaml.d/operator")
+                )
+                .addVolumeMountsItem(new V1VolumeMount()
+                        .name("data-volume")
+                        .mountPath("/var/lib/cassandra")
+                )
+                .addVolumeMountsItem(new V1VolumeMount()
+                        .name("pod-info")
+                        .mountPath("/etc/podinfo"));
+
+        if(dataCenterSpec.getUserConfigMap() != null) {
+            cassandraContainer.addVolumeMountsItem(new V1VolumeMount()
+                    .name("cassandra--user-config-volume")
+                    .mountPath("/etc/cassandra.yaml.d/user")
+            );
+        }
+
+        final V1Container sidecarContainer = new V1Container()
+                .name(dataCenterMetadata.getName() + "-sidecar")
+                .env(dataCenter.getSpec().getEnv())
+                .image(dataCenterSpec.getSidecarImage())
+                .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
+                .ports(ImmutableList.of(
+                        new V1ContainerPort().name("http").containerPort(4567)))
+                .addVolumeMountsItem(new V1VolumeMount()
+                        .name("data-volume")
+                        .mountPath("/var/lib/cassandra")
+                );
+
+
         final V1PodSpec podSpec = new V1PodSpec()
-                .addContainersItem(new V1Container()
-                        .name(dataCenterMetadata.getName() + "-cassandra")
-                        .image(dataCenterSpec.getCassandraImage())
-                        .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
-                        .ports(ImmutableList.of(
-                                new V1ContainerPort().name("internode").containerPort(7000),
-                                new V1ContainerPort().name("cql").containerPort(9042),
-                                new V1ContainerPort().name("jmx").containerPort(7199)
-                        ))
-                        .resources(dataCenterSpec.getResources())
-                        .readinessProbe(new V1Probe()
-                                .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
-                                .initialDelaySeconds(60)
-                                .timeoutSeconds(5)
-                        )
-                        .addVolumeMountsItem(new V1VolumeMount()
-                                .name("config-volume")
-                                .mountPath("/etc/cassandra")
-                        )
-                        .addVolumeMountsItem(new V1VolumeMount()
-                                .name("cassandra-config-volume")
-                                .mountPath("/etc/cassandra.yaml.d")
-                        )
-                        .addVolumeMountsItem(new V1VolumeMount()
-                                .name("data-volume")
-                                .mountPath("/var/lib/cassandra")
-                        )
-                        .addVolumeMountsItem(new V1VolumeMount()
-                                .name("pod-info")
-                                .mountPath("/etc/podinfo"))
-                )
-                .addContainersItem(new V1Container()
-                                .name(dataCenterMetadata.getName() + "-sidecar")
-                                .env(dataCenter.getSpec().getEnv())
-                                .image(dataCenterSpec.getSidecarImage())
-                                .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
-                                .ports(ImmutableList.of(
-                                        new V1ContainerPort().name("http").containerPort(4567)
-                                ))
-//                                                .readinessProbe(new V1Probe()
-//                                                        //.exec(new V1ExecAction().addCommandItem())
-//                                                )
-                                .addVolumeMountsItem(new V1VolumeMount()
-                                        .name("data-volume")
-                                        .mountPath("/var/lib/cassandra")
-                                )
-                )
+                .addContainersItem(cassandraContainer)
+                .addContainersItem(sidecarContainer)
                 .addVolumesItem(new V1Volume()
                         .name("config-volume")
                         .configMap(new V1ConfigMapVolumeSource().name(configMap.getMetadata().getName()))
@@ -245,6 +251,12 @@ public class ControllerService extends AbstractExecutionThreadService {
                                         .fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.name"))
                                 )
                         ));
+
+        if(dataCenterSpec.getUserConfigMap() != null) {
+            podSpec.addVolumesItem(new V1Volume()
+                    .name("cassandra--user-config-volume")
+                    .configMap(new V1ConfigMapVolumeSource().name(dataCenterSpec.getUserConfigMap())));
+        }
 
         if (dataCenter.getSpec().getRestoreFromBackup() != null) {
 
