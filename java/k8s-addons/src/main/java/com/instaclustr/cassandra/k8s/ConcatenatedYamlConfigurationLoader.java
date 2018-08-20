@@ -30,9 +30,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLStreamHandler;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -90,6 +88,8 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
         logger.info("Loading config from {}", configProperty);
         final Iterable<String> configValues = Splitter.on(':').split(configProperty);
 
+        PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:**/*.{yaml,yml}");
+
         final List<BufferedReader> readers = StreamSupport.stream(configValues.spliterator(), false)
                 .map(Paths::get)
 
@@ -123,7 +123,7 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
                 })
 
                 .filter(path -> {
-                    if(!path.toFile().getName().contains(".yaml")) {
+                    if(!matcher.matches(path)) {
                         logger.warn("Configuration file \"{}\" is not a yaml file and will not be loaded.", path);
                         return false;
                     }

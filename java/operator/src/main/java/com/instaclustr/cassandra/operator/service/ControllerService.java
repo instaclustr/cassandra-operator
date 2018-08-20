@@ -260,7 +260,7 @@ public class ControllerService extends AbstractExecutionThreadService {
 
         if (dataCenter.getSpec().getRestoreFromBackup() != null) {
 
-//            Custom objects api object doesn't give us a nice way to pass in the type we want so we do it manually TODO: Gracefully handle not finding the backup
+//            Custom objects api object doesn't give us a nice way to pass in the type we want so we do it manually
             Call call = customObjectsApi.getNamespacedCustomObjectCall("stable.instaclustr.com", "v1", "default", "cassandra-backups", dataCenter.getSpec().getRestoreFromBackup(), null, null);
 
             Backup backup = (Backup) customObjectsApi.getApiClient().execute(call, new TypeToken<Backup>(){}.getType()).getData();
