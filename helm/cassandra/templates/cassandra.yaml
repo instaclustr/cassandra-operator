@@ -26,3 +26,6 @@ spec:
 {{- if .Values.restoreFromBackup }}
   restoreFromBackup: {{ .Values.restoreFromBackup }}
 {{- end }}
+{{- if .Values.userConfigMap }}
+  userConfigMap: {{ .Values.userConfigMap }}
+{{- end }}

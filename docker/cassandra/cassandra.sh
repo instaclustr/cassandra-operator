@@ -16,7 +16,7 @@ JVM_OPTS=${JVM_OPTS:=}
 
 
 JVM_OPTS="${JVM_OPTS} -Dcassandra.config.loader=com.instaclustr.cassandra.k8s.ConcatenatedYamlConfigurationLoader"
-JVM_OPTS="${JVM_OPTS} -Dcassandra.config=/etc/cassandra.yaml.d"
+JVM_OPTS="${JVM_OPTS} -Dcassandra.config=/etc/cassandra.yaml.d/operator:/etc/cassandra.yaml.d/user"
 JVM_OPTS="${JVM_OPTS} -Dcassandra.storagedir=/var/lib/cassandra" # set via YAML
 
 # provides hints to the JIT compiler
