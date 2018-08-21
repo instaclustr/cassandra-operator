@@ -2,11 +2,11 @@ package com.instaclustr.cassandra.sidecar;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.instaclustr.build.Info;
 import com.instaclustr.guava.Application;
 import com.instaclustr.guava.ServiceManagerModule;
 import com.instaclustr.jersey.JerseyServerModule;
 import com.instaclustr.picocli.ManifestVersionProvider;
-//import org.slf4j.bridge.SLF4JBridgeHandler;
 import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
@@ -24,8 +24,7 @@ public class Sidecar implements Callable<Void> {
 
     @Override
     public Void call() throws Exception {
-//        SLF4JBridgeHandler.removeHandlersForRootLogger();
-//        SLF4JBridgeHandler.install();
+        Info.logVersionInfo();
 
         final Injector injector = Guice.createInjector(
                 new ServiceManagerModule(),
