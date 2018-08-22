@@ -50,7 +50,8 @@ rules:
   resources:
   - services
   - endpoints
-  verbs: ['get', 'create', 'update']
+  - persistentvolumeclaims
+  verbs: ['get', 'create', 'update', 'delete']
 - nonResourceURLs: ["/version", "/version/*"]
   verbs: ['get']
 - apiGroups: ['']
