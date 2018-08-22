@@ -19,7 +19,7 @@ public class Info {
     }};
 
     public static String getInfoString() throws IOException {
-        return String.format("Version built from upstream repo [%s] on branch [%s] using commit: [%s]", Info.readGitProperties("git.remote.origin.url"), Info.readGitProperties("git.branch"), Info.readGitProperties("git.commit.id.describe"))
+        return String.format("Version built from upstream repo [%s] on branch [%s] using commit: [%s]", Info.readGitProperties("git.remote.origin.url"), Info.readGitProperties("git.branch"), Info.readGitProperties("git.commit.id.describe"));
     }
 
 
