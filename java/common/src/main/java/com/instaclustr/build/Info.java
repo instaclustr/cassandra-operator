@@ -18,14 +18,18 @@ public class Info {
         }
     }};
 
+    public static String getInfoString() throws IOException {
+        return String.format("Version built from upstream repo [%s] on branch [%s] using commit: [%s]", Info.readGitProperties("git.remote.origin.url"), Info.readGitProperties("git.branch"), Info.readGitProperties("git.commit.id.describe"))
+    }
 
-    public static String readGitProperties(String property) throws IOException {
+
+    private static String readGitProperties(String property) throws IOException {
         return properties.getProperty(property);
     }
 
     public static void logVersionInfo() {
         try {
-            logger.info("Version built from upstream repo [{}] on branch [{}] using commit: [{}]", Info.readGitProperties("git.remote.origin.url"), Info.readGitProperties("git.branch"), Info.readGitProperties("git.commit.id.describe"));
+            logger.info(getInfoString());
         } catch (IOException e) {
             logger.warn("Could not determine build version");
         }

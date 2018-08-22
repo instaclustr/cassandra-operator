@@ -6,7 +6,7 @@ import com.instaclustr.build.Info;
 import com.instaclustr.guava.Application;
 import com.instaclustr.guava.ServiceManagerModule;
 import com.instaclustr.jersey.JerseyServerModule;
-import com.instaclustr.picocli.ManifestVersionProvider;
+import com.instaclustr.picocli.GitPropertiesVersionProvider;
 import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
@@ -14,7 +14,7 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(name = "cassandra-sidecar",
         mixinStandardHelpOptions = true,
         description = "Sidecar management application for Apache Cassandra running on Kubernetes.",
-        versionProvider = ManifestVersionProvider.class,
+        versionProvider = GitPropertiesVersionProvider.class,
         sortOptions = false
 )
 public class Sidecar implements Callable<Void> {
