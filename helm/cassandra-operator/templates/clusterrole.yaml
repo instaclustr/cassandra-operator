@@ -51,6 +51,7 @@ rules:
   - services
   - endpoints
   - persistentvolumeclaims
+  - persistentvolumes
   verbs: ['get', 'create', 'update', 'delete']
 - nonResourceURLs: ["/version", "/version/*"]
   verbs: ['get']
