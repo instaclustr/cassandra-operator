@@ -1,13 +1,6 @@
-# Cassandra storage config YAML
+data_file_directories:
+  - /var/lib/cassandra/data
 
-# NOTE:
-#   See http://wiki.apache.org/cassandra/StorageConfiguration for
-#   full explanations of configuration directives
-# /NOTE
-
-# The name of the cluster. This is mainly used to prevent machines in
-# one logical cluster from joining another.
-cluster_name: 'Test Cluster'
 
 # This defines the number of tokens randomly assigned to this node on the ring
 # The more tokens, relative to other nodes, the larger the proportion of data
@@ -20,7 +13,7 @@ cluster_name: 'Test Cluster'
 # Specifying initial_token will override this setting on the node's initial start,
 # on subsequent starts, this setting will apply even if initial token is set.
 #
-# If you already have a cluster with 1 token per node, and wish to migrate to 
+# If you already have a cluster with 1 token per node, and wish to migrate to
 # multiple tokens per node, see http://wiki.apache.org/cassandra/Operations
 num_tokens: 256
 
@@ -36,8 +29,8 @@ num_tokens: 256
 # allocate_tokens_for_keyspace: KEYSPACE
 
 # initial_token allows you to specify tokens manually.  While you can use it with
-# vnodes (num_tokens > 1, above) -- in which case you should provide a 
-# comma-separated list -- it's primarily used when adding nodes to legacy clusters 
+# vnodes (num_tokens > 1, above) -- in which case you should provide a
+# comma-separated list -- it's primarily used when adding nodes to legacy clusters
 # that do not have vnodes enabled.
 # initial_token:
 
@@ -367,8 +360,8 @@ counter_cache_save_period: 7200
 # If not set, the default directory is $CASSANDRA_HOME/data/saved_caches.
 # saved_caches_directory: /var/lib/cassandra/saved_caches
 
-# commitlog_sync may be either "periodic" or "batch." 
-# 
+# commitlog_sync may be either "periodic" or "batch."
+#
 # When in batch mode, Cassandra won't ack writes until the commit log
 # has been fsynced to disk.  It will wait
 # commitlog_sync_batch_window_in_ms milliseconds between fsyncs.
@@ -762,7 +755,7 @@ incremental_backups: false
 snapshot_before_compaction: false
 
 # Whether or not a snapshot is taken of the data before keyspace truncation
-# or dropping of column families. The STRONGLY advised default of true 
+# or dropping of column families. The STRONGLY advised default of true
 # should be used to provide data safety. If you set this flag to false, you will
 # lose data on truncation or drop.
 auto_snapshot: true
@@ -799,7 +792,7 @@ column_index_cache_size_in_kb: 2
 #
 # concurrent_compactors defaults to the smaller of (number of disks,
 # number of cores), with a minimum of 2 and a maximum of 8.
-# 
+#
 # If your data directories are backed by SSD, you should increase this
 # to the number of cores.
 #concurrent_compactors: 1
@@ -814,7 +807,7 @@ compaction_throughput_mb_per_sec: 16
 
 # When compacting, the replacement sstable(s) can be opened before they
 # are completely written, and used in place of the prior sstables for
-# any range that has been written. This helps to smoothly transfer reads 
+# any range that has been written. This helps to smoothly transfer reads
 # between the sstables, reducing page cache churn and keeping hot rows hot
 sstable_preemptive_open_interval_in_mb: 50
 
@@ -858,7 +851,7 @@ slow_query_log_timeout_in_ms: 500
 # Enable operation timeout information exchange between nodes to accurately
 # measure request timeouts.  If disabled, replicas will assume that requests
 # were forwarded to them instantly by the coordinator, which means that
-# under overload conditions we will waste that much extra time processing 
+# under overload conditions we will waste that much extra time processing
 # already-timed-out requests.
 #
 # Warning: before enabling this property make sure to ntp is installed
@@ -944,7 +937,7 @@ endpoint_snitch: SimpleSnitch
 
 # controls how often to perform the more expensive part of host score
 # calculation
-dynamic_snitch_update_interval_in_ms: 100 
+dynamic_snitch_update_interval_in_ms: 100
 # controls how often to reset all host scores, allowing a bad host to
 # possibly recover
 dynamic_snitch_reset_interval_in_ms: 600000
@@ -957,101 +950,6 @@ dynamic_snitch_reset_interval_in_ms: 600000
 # until the pinned host was 20% worse than the fastest.
 dynamic_snitch_badness_threshold: 0.1
 
-# request_scheduler -- Set this to a class that implements
-# RequestScheduler, which will schedule incoming client requests
-# according to the specific policy. This is useful for multi-tenancy
-# with a single Cassandra cluster.
-# NOTE: This is specifically for requests from the client and does
-# not affect inter node communication.
-# org.apache.cassandra.scheduler.NoScheduler - No scheduling takes place
-# org.apache.cassandra.scheduler.RoundRobinScheduler - Round robin of
-# client requests to a node with a separate queue for each
-# request_scheduler_id. The scheduler is further customized by
-# request_scheduler_options as described below.
-request_scheduler: org.apache.cassandra.scheduler.NoScheduler
-
-# Scheduler Options vary based on the type of scheduler
-#
-# NoScheduler
-#   Has no options
-#
-# RoundRobin
-#   throttle_limit
-#     The throttle_limit is the number of in-flight
-#     requests per client.  Requests beyond 
-#     that limit are queued up until
-#     running requests can complete.
-#     The value of 80 here is twice the number of
-#     concurrent_reads + concurrent_writes.
-#   default_weight
-#     default_weight is optional and allows for
-#     overriding the default which is 1.
-#   weights
-#     Weights are optional and will default to 1 or the
-#     overridden default_weight. The weight translates into how
-#     many requests are handled during each turn of the
-#     RoundRobin, based on the scheduler id.
-#
-# request_scheduler_options:
-#    throttle_limit: 80
-#    default_weight: 5
-#    weights:
-#      Keyspace1: 1
-#      Keyspace2: 5
-
-# request_scheduler_id -- An identifier based on which to perform
-# the request scheduling. Currently the only valid option is keyspace.
-# request_scheduler_id: keyspace
-
-# Enable or disable inter-node encryption
-# JVM defaults for supported SSL socket protocols and cipher suites can
-# be replaced using custom encryption options. This is not recommended
-# unless you have policies in place that dictate certain settings, or
-# need to disable vulnerable ciphers or protocols in case the JVM cannot
-# be updated.
-# FIPS compliant settings can be configured at JVM level and should not
-# involve changing encryption settings here:
-# https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/FIPS.html
-# *NOTE* No custom encryption options are enabled at the moment
-# The available internode options are : all, none, dc, rack
-#
-# If set to dc cassandra will encrypt the traffic between the DCs
-# If set to rack cassandra will encrypt the traffic between the racks
-#
-# The passwords used in these options must match the passwords used when generating
-# the keystore and truststore.  For instructions on generating these files, see:
-# http://download.oracle.com/javase/6/docs/technotes/guides/security/jsse/JSSERefGuide.html#CreateKeystore
-#
-server_encryption_options:
-    internode_encryption: none
-    keystore: conf/.keystore
-    keystore_password: cassandra
-    truststore: conf/.truststore
-    truststore_password: cassandra
-    # More advanced defaults below:
-    # protocol: TLS
-    # algorithm: SunX509
-    # store_type: JKS
-    # cipher_suites: [TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_DHE_RSA_WITH_AES_128_CBC_SHA,TLS_DHE_RSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA]
-    # require_client_auth: false
-    # require_endpoint_verification: false
-
-# enable or disable client/server encryption.
-client_encryption_options:
-    enabled: false
-    # If enabled and optional is set to true encrypted and unencrypted connections are handled.
-    optional: false
-    keystore: conf/.keystore
-    keystore_password: cassandra
-    # require_client_auth: false
-    # Set trustore and truststore_password if require_client_auth is true
-    # truststore: conf/.truststore
-    # truststore_password: cassandra
-    # More advanced defaults below:
-    # protocol: TLS
-    # algorithm: SunX509
-    # store_type: JKS
-    # cipher_suites: [TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_DHE_RSA_WITH_AES_128_CBC_SHA,TLS_DHE_RSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA]
 
 # internode_compression controls whether traffic between nodes is
 # compressed.
@@ -1097,40 +995,6 @@ enable_scripted_user_defined_functions: false
 # Materialized views are considered experimental and are not recommended for production use.
 enable_materialized_views: true
 
-# The default Windows kernel timer and scheduling resolution is 15.6ms for power conservation.
-# Lowering this value on Windows can provide much tighter latency and better throughput, however
-# some virtualized environments may see a negative performance impact from changing this setting
-# below their system default. The sysinternals 'clockres' tool can confirm your system's default
-# setting.
-windows_timer_interval: 1
-
-
-# Enables encrypting data at-rest (on disk). Different key providers can be plugged in, but the default reads from
-# a JCE-style keystore. A single keystore can hold multiple keys, but the one referenced by
-# the "key_alias" is the only key that will be used for encrypt opertaions; previously used keys
-# can still (and should!) be in the keystore and will be used on decrypt operations
-# (to handle the case of key rotation).
-#
-# It is strongly recommended to download and install Java Cryptography Extension (JCE)
-# Unlimited Strength Jurisdiction Policy Files for your version of the JDK.
-# (current link: http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html)
-#
-# Currently, only the following file types are supported for transparent data encryption, although
-# more are coming in future cassandra releases: commitlog, hints
-transparent_data_encryption_options:
-    enabled: false
-    chunk_length_kb: 64
-    cipher: AES/CBC/PKCS5Padding
-    key_alias: testing:1
-    # CBC IV length for AES needs to be 16 bytes (which is also the default size)
-    # iv_length: 16
-    key_provider: 
-      - class_name: org.apache.cassandra.security.JKSKeyProvider
-        parameters: 
-          - keystore: conf/.keystore
-            keystore_password: cassandra
-            store_type: JCEKS
-            key_password: cassandra
 
 
 #####################
@@ -1167,65 +1031,3 @@ compaction_large_partition_warning_threshold_mb: 100
 # By default, Cassandra logs GC Pauses greater than 200 ms at INFO level
 gc_warn_threshold_in_ms: 1000
 
-# Maximum size of any value in SSTables. Safety measure to detect SSTable corruption
-# early. Any value size larger than this threshold will result into marking an SSTable
-# as corrupted. This should be positive and less than 2048.
-# max_value_size_in_mb: 256
-
-# Back-pressure settings #
-# If enabled, the coordinator will apply the back-pressure strategy specified below to each mutation
-# sent to replicas, with the aim of reducing pressure on overloaded replicas.
-back_pressure_enabled: false
-# The back-pressure strategy applied.
-# The default implementation, RateBasedBackPressure, takes three arguments:
-# high ratio, factor, and flow type, and uses the ratio between incoming mutation responses and outgoing mutation requests.
-# If below high ratio, outgoing mutations are rate limited according to the incoming rate decreased by the given factor;
-# if above high ratio, the rate limiting is increased by the given factor;
-# such factor is usually best configured between 1 and 10, use larger values for a faster recovery
-# at the expense of potentially more dropped mutations;
-# the rate limiting is applied according to the flow type: if FAST, it's rate limited at the speed of the fastest replica,
-# if SLOW at the speed of the slowest one.
-# New strategies can be added. Implementors need to implement org.apache.cassandra.net.BackpressureStrategy and
-# provide a public constructor accepting a Map<String, Object>.
-back_pressure_strategy:
-    - class_name: org.apache.cassandra.net.RateBasedBackPressure
-      parameters:
-        - high_ratio: 0.90
-          factor: 5
-          flow: FAST
-
-# Coalescing Strategies #
-# Coalescing multiples messages turns out to significantly boost message processing throughput (think doubling or more).
-# On bare metal, the floor for packet processing throughput is high enough that many applications won't notice, but in
-# virtualized environments, the point at which an application can be bound by network packet processing can be
-# surprisingly low compared to the throughput of task processing that is possible inside a VM. It's not that bare metal
-# doesn't benefit from coalescing messages, it's that the number of packets a bare metal network interface can process
-# is sufficient for many applications such that no load starvation is experienced even without coalescing.
-# There are other benefits to coalescing network messages that are harder to isolate with a simple metric like messages
-# per second. By coalescing multiple tasks together, a network thread can process multiple messages for the cost of one
-# trip to read from a socket, and all the task submission work can be done at the same time reducing context switching
-# and increasing cache friendliness of network message processing.
-# See CASSANDRA-8692 for details.
-
-# Strategy to use for coalescing messages in OutboundTcpConnection.
-# Can be fixed, movingaverage, timehorizon, disabled (default).
-# You can also specify a subclass of CoalescingStrategies.CoalescingStrategy by name.
-# otc_coalescing_strategy: DISABLED
-
-# How many microseconds to wait for coalescing. For fixed strategy this is the amount of time after the first
-# message is received before it will be sent with any accompanying messages. For moving average this is the
-# maximum amount of time that will be waited as well as the interval at which messages must arrive on average
-# for coalescing to be enabled.
-# otc_coalescing_window_us: 200
-
-# Do not try to coalesce messages if we already got that many messages. This should be more than 2 and less than 128.
-# otc_coalescing_enough_coalesced_messages: 8
-
-# How many milliseconds to wait between two expiration runs on the backlog (queue) of the OutboundTcpConnection.
-# Expiration is done if messages are piling up in the backlog. Droppable messages are expired to free the memory
-# taken by expired messages. The interval should be between 0 and 1000, and in most installations the default value
-# will be appropriate. A smaller value could potentially expire messages slightly sooner at the expense of more CPU
-# time and queue contention while iterating the backlog of messages.
-# An interval of 0 disables any wait time, which is the behavior of former Cassandra versions.
-#
-# otc_backlog_expiration_interval_ms: 200

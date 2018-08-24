@@ -6,12 +6,18 @@ COPY install-cassandra /tmp/install-cassandra
 
 RUN /tmp/install-cassandra ${cassandra_version}
 
+ADD https://github.com/zegelin/cassandra-exporter/releases/download/v0.9.0/cassandra-exporter-agent-0.9.0.jar /usr/share/cassandra/agents
+
+COPY entry-point.sh /usr/bin/entry-point
+
 COPY cassandra.sh /usr/sbin/cassandra
 COPY nodetool.sh /usr/bin/nodetool
 COPY cassandra.in.sh /usr/share/cassandra/
 COPY readiness-probe.sh /usr/bin/readiness-probe
 
 COPY k8s-addons-1.0-SNAPSHOT.jar /usr/share/cassandra/lib
+
+ADD default-config /etc/cassandra
 
 VOLUME /var/lib/cassandra
 VOLUME /etc/cassandra
@@ -25,4 +31,4 @@ VOLUME /etc/cassandra
 # 9300: elasticsearch transport
 EXPOSE 7000 7001 7199 9042 9160 9200 9300
 
-CMD ["/usr/sbin/cassandra"]
+ENTRYPOINT ["/usr/bin/entry-point"]
