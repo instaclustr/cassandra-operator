@@ -39,8 +39,8 @@ mkdir /etc/cassandra/logback.xml.d
 
 # install cassandra-exporter (Prometheus monitoring support)
 (cd "/usr/share/cassandra/agents" &&
-    curl -SLO "https://github.com/zegelin/cassandra-exporter/releases/download/v0.9.0/cassandra-exporter-agent-0.9.0.jar" &&
-    ln -s cassandra-exporter-agent-0.9.0.jar cassandra-exporter-agent.jar)
+    curl -SLO "https://github.com/zegelin/cassandra-exporter/releases/download/v0.9.2/cassandra-exporter-agent-0.9.2.jar" &&
+    ln -s cassandra-exporter-agent-0.9.2.jar cassandra-exporter-agent.jar)
 
 # clean-up
 rm -rf "${pkg_dir}"
