@@ -134,6 +134,10 @@ public class DataCenterReconciliationController {
                         .mountPath("/etc/podinfo")
                 );
 
+        if (dataCenterSpec.getPrometheusSupport()) {
+            cassandraContainer.addPortsItem(new V1ContainerPort().name("prometheus").containerPort(9500));
+        }
+
 
         final V1Container sidecarContainer = new V1Container()
                 .name(dataCenterChildObjectName("%s-sidecar"))
@@ -308,6 +312,12 @@ public class DataCenterReconciliationController {
             configMapVolumeAddFile(configMap, volumeSource, "cassandra-rackdc.properties", writer.toString());
         }
 
+        // prometheus support
+        if (dataCenterSpec.getPrometheusSupport()) {
+            configMapVolumeAddFile(configMap, volumeSource, "cassandra-env.sh.d/001-cassandra-exporter.sh",
+                    "JVM_OPTS=\"${JVM_OPTS} -javaagent:${CASSANDRA_HOME}/agents/cassandra-exporter-agent.jar=@${CASSANDRA_CONF}/cassandra-exporter.conf\"");
+        }
+
         // heap size and GC settings
         // TODO: tune
         {
@@ -401,6 +411,10 @@ public class DataCenterReconciliationController {
                         .addPortsItem(new V1ServicePort().name("jmx").port(7199))
                         .selector(dataCenterLabels)
                 );
+
+        if (dataCenterSpec.getPrometheusSupport()) {
+            service.getSpec().addPortsItem(new V1ServicePort().name("prometheus").port(9500));
+        }
 
         k8sResourceUtils.createOrReplaceNamespaceService(service);
     }
