@@ -1,9 +1,6 @@
 package com.instaclustr.cassandra.operator.controller;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimaps;
+import com.google.common.collect.*;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
@@ -21,12 +18,11 @@ import io.kubernetes.client.apis.CustomObjectsApi;
 import io.kubernetes.client.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
+import java.io.StringWriter;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -69,14 +65,14 @@ public class DataCenterReconciliationController {
         createOrReplaceNodesService();
 
         // create the seed-node service (what C* nodes use to discover the DC seeds)
-        createOrReplaceSeedNodesService();
+        final V1Service seedNodesService = createOrReplaceSeedNodesService();
 
         // create configmaps and their volume mounts (operator-defined config, and user overrides)
         final List<ConfigMapVolumeMount> configMapVolumeMounts;
         {
             final ImmutableList.Builder<ConfigMapVolumeMount> builder = ImmutableList.builder();
 
-            builder.add(createOrReplaceOperatorConfigMap());
+            builder.add(createOrReplaceOperatorConfigMap(seedNodesService));
 
             if (dataCenterSpec.getUserConfigMapVolumeSource() != null) {
                 builder.add(new ConfigMapVolumeMount("user-config-volume", "/tmp/user-config", dataCenterSpec.getUserConfigMapVolumeSource()));
@@ -255,52 +251,76 @@ public class DataCenterReconciliationController {
         );
     }
 
-//    private V1ConfigMap createOrReplaceCassandraConfigMap(final DataCenter dataCenter) throws IOException, ApiException {
-//        final V1ObjectMeta dataCenterMetadata = dataCenter.getMetadata();
-//
-//        final V1ConfigMap configMap = new V1ConfigMap()
-//                .metadata(new V1ObjectMeta()
-//                        .name(String.format("%s-cassandra-config", dataCenterMetadata.getName()))
-//                        .namespace(dataCenterMetadata.getNamespace())
-//                        .labels(dataCenterLabels(dataCenter)))
-//                .putDataItem("cassandra.yaml", resourceAsString("/com/instaclustr/cassandra/config/cassandra.yaml") +
-//                        "\n\nseed_provider:\n" +
-//                        "    - class_name: com.instaclustr.cassandra.k8s.SeedProvider\n" +
-//                        "      parameters:\n" +
-//                        String.format("          - service: %s-seeds", dataCenterMetadata.getName())
-//                );
-//
-//        k8sResourceUtils.createOrReplaceNamespaceConfigMap(configMap);
-//        return configMap;
-//    }
+
+    private static void configMapVolumeAddFile(final V1ConfigMap configMap, final V1ConfigMapVolumeSource volumeSource, final String path, final String content) {
+        final String encodedKey = path.replaceAll("\\W", "_");
+
+        configMap.putDataItem(encodedKey, content);
+        volumeSource.addItemsItem(new V1KeyToPath().key(encodedKey).path(path));
+    }
 
 
+    private static String toYamlString(final Object object) {
+        return new Yaml().dump(object);
+    }
 
-//    private static void configMapVolumeAddFile(final V1ConfigMap configMap, final V1ConfigMapVolumeSource volumeSource, final Path path, final String content) {
-//
-//
-//        path.toString().
-//    }
-
-
-
-    private ConfigMapVolumeMount createOrReplaceOperatorConfigMap() throws IOException, ApiException {
+    private ConfigMapVolumeMount createOrReplaceOperatorConfigMap(final V1Service seedNodesService) throws IOException, ApiException {
         final V1ConfigMap configMap = new V1ConfigMap()
                 .metadata(dataCenterChildObjectMetadata("%s-operator-config"));
 
-        final V1ConfigMapVolumeSource configMapVolumeSource = new V1ConfigMapVolumeSource().name(configMap.getMetadata().getName());
+        final V1ConfigMapVolumeSource volumeSource = new V1ConfigMapVolumeSource().name(configMap.getMetadata().getName());
 
-        configMap.putDataItem("001-seed-provider.yaml", "#hello world");
-        configMapVolumeSource.addItemsItem(new V1KeyToPath().key("001-seed-provider.yaml").path("cassandra.yaml.d/001-seed-provider.yaml"));
+        // cassandra.yaml overrides
+        {
+            final Map<String, Object> config = new HashMap<>(); // can't use ImmutableMap as some values are null
+
+            config.put("cluster_name", dataCenterMetadata.getName()); // TODO: support multi-DC & cluster names
+
+            config.put("listen_address", null); // let C* discover the listen address
+            config.put("rpc_address", null); // let C* discover the rpc address
+
+            // messy -- constructs via org.apache.cassandra.config.ParameterizedClass.ParameterizedClass(java.util.Map<java.lang.String,?>)
+            config.put("seed_provider", ImmutableList.of(ImmutableMap.of(
+                            "class_name", "com.instaclustr.cassandra.k8s.SeedProvider",
+                            "parameters", ImmutableList.of(ImmutableMap.of("service", seedNodesService.getMetadata().getName()))
+                    )));
+
+
+//            config.put("endpoint_snitch", "com.instaclustr.cassandra.k8s.Snitch") // TODO: custom snitch, so that we don't need to write the config for GPFS
+            config.put("endpoint_snitch", "org.apache.cassandra.locator.GossipingPropertyFileSnitch");
+
+
+            configMapVolumeAddFile(configMap, volumeSource, "cassandra.yaml.d/001-operator-overrides.yaml", toYamlString(config));
+        }
+
+        // GossipingPropertyFileSnitch config
+        {
+            final Properties rackDcProperties = new Properties();
+
+            rackDcProperties.setProperty("dc", dataCenterMetadata.getName());
+            rackDcProperties.setProperty("rack", "the-rack"); // TODO: support multiple racks
+            rackDcProperties.setProperty("prefer_local", "true"); // TODO: support multiple racks
+
+            final StringWriter writer = new StringWriter();
+            rackDcProperties.store(writer, "generated by cassandra-operator");
+
+            configMapVolumeAddFile(configMap, volumeSource, "cassandra-rackdc.properties", writer.toString());
+        }
+
+        // heap size and GC settings
+        {
+            dataCenterSpec.getResources().getLimits();
+        }
 
         k8sResourceUtils.createOrReplaceNamespaceConfigMap(configMap);
 
-        return new ConfigMapVolumeMount("operator-config-volume", "/tmp/operator-config", configMapVolumeSource);
+        return new ConfigMapVolumeMount("operator-config-volume", "/tmp/operator-config", volumeSource);
     }
 
-    private void createOrReplaceSeedNodesService() throws ApiException {
+    private V1Service createOrReplaceSeedNodesService() throws ApiException {
         final V1Service service = new V1Service()
                 .metadata(dataCenterChildObjectMetadata("%s-seeds")
+                        // tolerate-unready-endpoints - allow the seed provider can discover the other seeds (and itself) before the readiness-probe gives the green light
                         .putAnnotationsItem("service.alpha.kubernetes.io/tolerate-unready-endpoints", "true")
                 )
                 .spec(new V1ServiceSpec()
@@ -312,6 +332,8 @@ public class DataCenterReconciliationController {
                 );
 
         k8sResourceUtils.createOrReplaceNamespaceService(service);
+
+        return service;
     }
 
     private void createOrReplaceNodesService() throws ApiException {

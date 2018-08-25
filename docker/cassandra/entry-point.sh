@@ -8,7 +8,7 @@ do
 
     cd "${config_directory}"
     find -L . -name "..*" -prune -o \( -type f -print0 \) |
-        cpio -pmdv0 /etc/cassandra
+        cpio -pmdLv0 /etc/cassandra
 done
 )
 

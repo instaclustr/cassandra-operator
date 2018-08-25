@@ -6,8 +6,6 @@ COPY install-cassandra /tmp/install-cassandra
 
 RUN /tmp/install-cassandra ${cassandra_version}
 
-ADD https://github.com/zegelin/cassandra-exporter/releases/download/v0.9.0/cassandra-exporter-agent-0.9.0.jar /usr/share/cassandra/agents
-
 COPY entry-point.sh /usr/bin/entry-point
 
 COPY cassandra.sh /usr/sbin/cassandra

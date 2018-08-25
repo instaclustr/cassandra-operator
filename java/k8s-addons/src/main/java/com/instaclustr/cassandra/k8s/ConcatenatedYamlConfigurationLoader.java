@@ -4,6 +4,8 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
+import com.google.common.io.CharSource;
+import com.google.common.io.CharStreams;
 import org.apache.cassandra.config.Config;
 import org.apache.cassandra.config.ConfigurationLoader;
 import org.apache.cassandra.exceptions.ConfigurationException;
@@ -87,7 +89,8 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
                     // recurse into any specified directories and load any config files within
                     .flatMap(path -> {
                         if (!Files.exists(path)) {
-                            throw new ConfigurationException(String.format("Specified configuration file/directory \"%s\" does not exist.", path));
+                            logger.warn("Specified configuration file/directory {} does not exist.", path);
+                            return Stream.empty();
                         }
 
                         if (Files.isDirectory(path)) {
@@ -137,6 +140,10 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
                 final Yaml yaml = new Yaml();
 
                 final Config config = yaml.loadAs(reader, Config.class);
+
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Active configuration: {}", yaml.dump(config));
+                }
 
                 return config == null ? new Config() : config;
 
