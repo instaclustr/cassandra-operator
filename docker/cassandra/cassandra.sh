@@ -36,6 +36,7 @@ done
 
 exec -a cassandra /usr/bin/java \
     -cp "${CASSANDRA_CLASSPATH}" \
+    -ea \   # beacuse turing this off is a bad, bad idea
     ${JVM_OPTS} \
     -Dcassandra-foreground=yes \
     org.apache.cassandra.service.CassandraDaemon

@@ -15,6 +15,7 @@
 
 -XX:+UseTLAB
 -XX:+ResizeTLAB
+-XX:+UseNUMA
 
 -XX:+PerfDisableSharedMem
 

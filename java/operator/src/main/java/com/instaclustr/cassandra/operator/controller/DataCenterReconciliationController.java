@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -264,6 +265,9 @@ public class DataCenterReconciliationController {
         return new Yaml().dump(object);
     }
 
+    private static final long MB = 1024 * 1024;
+    private static final long GB = MB * 1024;
+
     private ConfigMapVolumeMount createOrReplaceOperatorConfigMap(final V1Service seedNodesService) throws IOException, ApiException {
         final V1ConfigMap configMap = new V1ConfigMap()
                 .metadata(dataCenterChildObjectMetadata("%s-operator-config"));
@@ -308,9 +312,64 @@ public class DataCenterReconciliationController {
         }
 
         // heap size and GC settings
+        // TODO: tune
         {
-            dataCenterSpec.getResources().getLimits();
+            final long coreCount = 4; // TODO: not hard-coded
+            final long memoryLimit = dataCenterSpec.getResources().getLimits().get("memory").getNumber().longValue();
+
+            // same as stock cassandra-env.sh
+            final long jvmHeapSize = Math.max(
+                    Math.min(memoryLimit / 2, 1 * GB),
+                    Math.min(memoryLimit / 4, 8 * GB)
+            );
+
+            final long youngGenSize = Math.min(
+                    MB * coreCount,
+                    jvmHeapSize / 4
+            );
+
+            final boolean useG1GC = (jvmHeapSize > 8 * GB);
+
+            final StringWriter writer = new StringWriter();
+            try (final PrintWriter printer = new PrintWriter(writer)) {
+                printer.format("-Xms%d%n", jvmHeapSize); // min heap size
+                printer.format("-Xmx%d%n", jvmHeapSize); // max heap size
+
+                // copied from stock jvm.options
+                if (!useG1GC) {
+                    printer.format("-Xmn%d%n", youngGenSize); // young gen size
+
+                    printer.println("-XX:+UseParNewGC");
+                    printer.println("-XX:+UseConcMarkSweepGC");
+                    printer.println("-XX:+CMSParallelRemarkEnabled");
+                    printer.println("-XX:SurvivorRatio=8");
+                    printer.println("-XX:MaxTenuringThreshold=1");
+                    printer.println("-XX:CMSInitiatingOccupancyFraction=75");
+                    printer.println("-XX:+UseCMSInitiatingOccupancyOnly");
+                    printer.println("-XX:CMSWaitDuration=10000");
+                    printer.println("-XX:+CMSParallelInitialMarkEnabled");
+                    printer.println("-XX:+CMSEdenChunksRecordAlways");
+                    printer.println("-XX:+CMSClassUnloadingEnabled");
+
+                } else {
+                    printer.println("-XX:+UseG1GC");
+                    printer.println("-XX:G1RSetUpdatingPauseTimePercent=5");
+                    printer.println("-XX:MaxGCPauseMillis=500");
+
+                    if (jvmHeapSize > 16 * GB) {
+                        printer.println("-XX:InitiatingHeapOccupancyPercent=70");
+                    }
+
+                    // TODO: tune -XX:ParallelGCThreads, -XX:ConcGCThreads
+                }
+            }
+
+            configMapVolumeAddFile(configMap, volumeSource, "jvm.options.d/001-jvm-memory-gc.options", writer.toString());
         }
+
+        // TODO: maybe tune -Dcassandra.available_processors=number_of_processors
+        // not sure if k8s exposes the right number of CPU cores inside the container
+
 
         k8sResourceUtils.createOrReplaceNamespaceConfigMap(configMap);
 
