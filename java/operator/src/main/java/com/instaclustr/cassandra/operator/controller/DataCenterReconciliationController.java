@@ -89,7 +89,7 @@ public class DataCenterReconciliationController {
 
 
     private String dataCenterChildObjectName(final String nameFormat) {
-        return String.format(nameFormat, dataCenterMetadata.getName());
+        return String.format("cassandra-" + nameFormat, dataCenterMetadata.getName());
     }
 
     private V1ObjectMeta dataCenterChildObjectMetadata(final String nameFormat) {
@@ -116,11 +116,9 @@ public class DataCenterReconciliationController {
                 .name(dataCenterChildObjectName("%s-cassandra"))
                 .image(dataCenterSpec.getCassandraImage())
                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
-                .ports(ImmutableList.of(
-                        new V1ContainerPort().name("internode").containerPort(7000),
-                        new V1ContainerPort().name("cql").containerPort(9042),
-                        new V1ContainerPort().name("jmx").containerPort(7199)
-                ))
+                .addPortsItem(new V1ContainerPort().name("internode").containerPort(7000))
+                .addPortsItem(new V1ContainerPort().name("cql").containerPort(9042))
+                .addPortsItem(new V1ContainerPort().name("jmx").containerPort(7199))
                 .resources(dataCenterSpec.getResources())
                 .readinessProbe(new V1Probe()
                         .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
@@ -142,8 +140,7 @@ public class DataCenterReconciliationController {
                 .env(dataCenterSpec.getEnv())
                 .image(dataCenterSpec.getSidecarImage())
                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
-                .ports(ImmutableList.of(
-                        new V1ContainerPort().name("http").containerPort(4567)))
+                .addPortsItem(new V1ContainerPort().name("http").containerPort(4567))
                 .addVolumeMountsItem(new V1VolumeMount()
                         .name("data-volume")
                         .mountPath("/var/lib/cassandra")
@@ -230,7 +227,7 @@ public class DataCenterReconciliationController {
         }
 
         final V1beta2StatefulSet statefulSet = new V1beta2StatefulSet()
-                .metadata(dataCenterChildObjectMetadata("%s-statefulset"))
+                .metadata(dataCenterChildObjectMetadata("%s"))
                 .spec(new V1beta2StatefulSetSpec()
                         .serviceName("cassandra")
                         .replicas(dataCenterSpec.getReplicas())
@@ -400,10 +397,8 @@ public class DataCenterReconciliationController {
                 .metadata(dataCenterChildObjectMetadata("%s-nodes"))
                 .spec(new V1ServiceSpec()
                         .clusterIP("None")
-                        .ports(ImmutableList.of(
-                                new V1ServicePort().name("cql").port(9042),
-                                new V1ServicePort().name("jmx").port(7199)
-                        ))
+                        .addPortsItem(new V1ServicePort().name("cql").port(9042))
+                        .addPortsItem(new V1ServicePort().name("jmx").port(7199))
                         .selector(dataCenterLabels)
                 );
 

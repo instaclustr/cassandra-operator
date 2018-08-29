@@ -12,6 +12,4 @@ do
 done
 )
 
-/usr/sbin/cassandra || true
-
-sleep 10000
+exec /usr/sbin/cassandra
