@@ -53,16 +53,76 @@ helm install helm/cassandra -n test-cluster
 The Helm templates are relatively independent and can also be used to generate the deployments yaml file offline:
 ```bash
 helm template helm/cassandra-operator -n cassandra-operator
-
 ```
 
-## Changing Cassandra configuration
-You can change and override the default Cassandra and Operator configuration using your own config maps and YAML fragments.
-The operator uses a custom configuration loader for Cassandra that will find multiple yaml files in a set of
-specified folders, concatenate them together then set as the Cassandra config. This allows you to override or change existing Cassandra config.
-You can also use the user config map to inject files like keystores into the pod for encryption purposes.
+## Cassandra Configuration
 
-Let's say you want to modify the number of threads available for certain operations in Cassandra. You can create a yaml file (concurrent.yaml) that just defines those properties:
+The bundled Cassandra docker image includes a slightly customised Cassandra configuration that better suited for running inside a container,
+but leaves the bulk of the configuration up to cassandra-operator.
+
+cassandra-operator automatically configures Cassandra and the JVM with (what we consider) sane defaults for the deployment,
+such as adjusting JVM heap sizes and GC strategies to values appropriate for the container resource limits.
+
+That said, different workloads require tuning the configuration to achieve best performance, and this tuning cannot be achieved automatically by the operator.
+Hence custom user configuration overrides are also supported.
+
+
+### Basics
+
+cassandra-operator supports mounting a custom [ConfigMap](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#configmap-v1-core)
+(via a [ConfigMapVolumeSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#configmapvolumesource-v1-core)) into the Cassandra container.
+The contents of this ConfigMap will be overlaid on top the images' out-of-box defaults and operator-generated configuration.
+
+More specifically, all Cassandra and JVM configuration exists under `/etc/cassandra` inside the container.
+The specified ConfigMap volume will have its contents extracted into `/etc/cassandra` on container start allowing customisation
+to the Cassandra configuration by either adding file fragments to specific directories (preferred, see below)
+or by overwriting existing files entirely.
+
+To customize the Cassandra configuration first create a ConfigMap object in the same K8s namespace as the Cassandra
+deployment, and fill it with the required configuration, where the `data` keys are arbitrary (they are referenced by the
+ConfigMapVolumeSource) and the values are the configuration files or file fragments.
+
+Then set/update the CassandraDataCenter attribute `userConfigMapVolumeSource` to a ConfigMapVolumeSource object that
+defines the ConfigMap key -> path mappings.
+
+
+### Fragment Files
+
+#### `cassandra.yaml.d/`
+Contains YAML fragment files (`.yaml`) that will be loaded by Cassandra on startup in lexicographical order.
+These fragments are loaded after the main `cassandra.yaml` file.
+
+These fragments may override existing settings set in the main `cassandra.yaml` file, or settings defined in any previous fragments.
+
+Use cases include:
+
+* Setting default compaction throughput
+* Enabling authentication/authorization
+* Tuning thread pool sizes
+
+#### `cassandra-env.sh.d/`
+Contains bash shell script fragment files (`.sh`) that will be sourced (in lexicographical order) during Cassandra
+startup from the main `cassandra.sh` startup script.
+
+These scripts may perform a number of operations, including modifying variables such as `CASSANDRA_CLASSPATH` or
+`JVM_OPTS`, though for the latter prefer to use `.options` fragments (see below) unless shell evaluation/expansion is required.
+
+#### `jvm.options.d/`
+Contains text fragment files (`.options`) that will be parsed (in lexicographical order) during Cassandra startup
+from the main `cassandra.sh` startup script file to construct the JVM command line parameters.
+
+These fragment files are parsed identically to the main `jvm.options` file -- lines not staring with a `-` are ignored.
+All other lines are assumed to define command line arguments for the JVM.
+
+Use cases include:
+* Tuning JVM CG settings
+* Configuring GC logging
+
+
+### Examples
+
+Let's say you want to modify the number of threads available for certain operations in Cassandra.
+Create a YAML file (`100-concurrent.yaml`) that just defines those properties:
 
 ```yaml
 concurrent_reads: 12
@@ -70,39 +130,29 @@ concurrent_writes: 12
 concurrent_counter_writes: 12
 ``` 
 
-Create a config map from that yaml file `kubectl create configmap concurrent-data --from-file concurrent.yaml`.
+Create a config map from that YAML file:
 
-Modify the CassandraDataCenter CRD to reference the newly created config map:
+```$ kubectl create configmap concurrent-data --from-file 100-concurrent.yaml```.
+
+
+Modify the CassandraDataCenter CRD to reference the newly created ConfigMap:
 
 ```yaml
 apiVersion: stable.instaclustr.com/v1
 kind: CassandraDataCenter
 metadata:
-  name: config-test4-cassandra
-  labels:
-    app: cassandra
-    chart: cassandra-0.1.0
-    release: config-test4
-    heritage: Tiller
+  name: example-cdc
+  ...
 spec:
-  replicas: 3
-  cassandraImage: "gcr.io/cassandra-operator/cassandra-dev:latest"
-  sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar-dev:latest"
-  imagePullPolicy: IfNotPresent
-  resources:
-    limits:
-      memory: 512Mi
-    requests:
-      memory: 512Mi
+  ...
 
-  dataVolumeClaim:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: 100Mi
-
-  userConfigMap: concurrent-data
+  userConfigMapVolumeSource:
+    # the name of the ConfigMap
+    name: concurrent-data
+    # ConfigMap keys -> file paths (relative to /etc/cassandra)
+    items:
+      - key: 100-concurrent-yaml
+        path: cassandra.yaml.d/100-concurrent.yaml
 ```
 
-Cassandra will load the concurrent.yaml file as well as its default settings managed by the operator!
+Cassandra will load the `cassandra.yaml.d/100-concurrent.yaml` file as well as the default settings managed by the operator!
