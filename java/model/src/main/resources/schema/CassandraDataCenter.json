@@ -38,8 +38,8 @@
         "env" : {
           "description": "List of environment variables to inject in the Cassandra & Sidecar container.",
           "type": "array",
-          "items" : {
-            "type" : "object",
+          "items": {
+            "type": "object",
             "javaType": "io.kubernetes.client.models.V1EnvVar"
           }
         },
@@ -53,11 +53,12 @@
           "javaType": "io.kubernetes.client.models.V1PersistentVolumeClaimSpec"
         },
         "restoreFromBackup": {
-          "type" : "string",
+          "type": "string",
           "description" : "Name of the CassandraBackup to restore from"
         },
-        "userConfigMap": {
-          "type" : "string",
+        "userConfigMapVolumeSource": {
+          "type": "object",
+          "javaType": "io.kubernetes.client.models.V1ConfigMapVolumeSource",
           "description" : "Name of an optional config map that contains cassandra configuration in the form of yaml fragments"
         }
       }

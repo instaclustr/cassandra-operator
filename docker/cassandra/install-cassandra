@@ -13,7 +13,7 @@ arch_pkg_dir="${pkg_dir}/${arch}" && mkdir "${arch_pkg_dir}"
     curl -SLO "https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra/cassandra_${cassandra_version}_all.deb" &&
     curl -SLO "https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra/cassandra-tools_${cassandra_version}_all.deb")
 
-dagi dpkg-dev
+dagi dpkg-dev cpio
 
 # build a local repository
 (cd "${pkg_dir}" && dpkg-scanpackages ${arch} | gzip -9c > "${arch_pkg_dir}/Packages.gz")
@@ -26,15 +26,16 @@ APT_GET_OPTS="--allow-unauthenticated" dagi cassandra cassandra-tools
 mkdir /usr/share/cassandra/agents
 mv /usr/share/cassandra/lib/jamm-0.3.0.jar /usr/share/cassandra/agents/jamm-0.3.0.jar
 cp /etc/cassandra/hotspot_compiler /usr/share/cassandra/
+cp /etc/cassandra/cassandra.yaml /usr/share/cassandra/
 
 # nuke contents of /etc/cassandra and /var/lib/cassandra since they're injected by volume mounts
 rm -rf /etc/cassandra/* /var/lib/cassandra/*
 
 # add image config .d directories
-mkdir -p /etc/cassandra.yaml.d
-mkdir /etc/cassandra.yaml.d/user
-mkdir /etc/cassandra.yaml.d/operator
-mkdir /etc/cassandra/cassandra.env.d
+mkdir /etc/cassandra/cassandra.yaml.d
+mkdir /etc/cassandra/cassandra-env.sh.d
+mkdir /etc/cassandra/jvm.options.d
+mkdir /etc/cassandra/logback.xml.d
 
 # clean-up
 rm -rf "${pkg_dir}"
