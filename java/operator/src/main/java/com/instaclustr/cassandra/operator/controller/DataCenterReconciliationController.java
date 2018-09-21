@@ -84,9 +84,11 @@ public class DataCenterReconciliationController {
 
         // create the statefulset for the DC nodes
         createOrReplaceStateNodesStatefulSet(configMapVolumeMounts);
+
+        if (dataCenterSpec.getPrometheusSupport()) {
+            createOrReplacePrometheusServiceMonitor();
+        }
     }
-
-
 
     private String dataCenterChildObjectName(final String nameFormat) {
         return String.format("cassandra-" + nameFormat, dataCenterMetadata.getName());
@@ -133,6 +135,10 @@ public class DataCenterReconciliationController {
                         .name("pod-info")
                         .mountPath("/etc/podinfo")
                 );
+
+        if (dataCenterSpec.getPrometheusSupport()) {
+            cassandraContainer.addPortsItem(new V1ContainerPort().name("prometheus").containerPort(9500));
+        }
 
 
         final V1Container sidecarContainer = new V1Container()
@@ -308,6 +314,12 @@ public class DataCenterReconciliationController {
             configMapVolumeAddFile(configMap, volumeSource, "cassandra-rackdc.properties", writer.toString());
         }
 
+        // prometheus support
+        if (dataCenterSpec.getPrometheusSupport()) {
+            configMapVolumeAddFile(configMap, volumeSource, "cassandra-env.sh.d/001-cassandra-exporter.sh",
+                    "JVM_OPTS=\"${JVM_OPTS} -javaagent:${CASSANDRA_HOME}/agents/cassandra-exporter-agent.jar=@${CASSANDRA_CONF}/cassandra-exporter.conf\"");
+        }
+
         // heap size and GC settings
         // TODO: tune
         {
@@ -402,6 +414,10 @@ public class DataCenterReconciliationController {
                         .selector(dataCenterLabels)
                 );
 
+        if (dataCenterSpec.getPrometheusSupport()) {
+            service.getSpec().addPortsItem(new V1ServicePort().name("prometheus").port(9500));
+        }
+
         k8sResourceUtils.createOrReplaceNamespaceService(service);
     }
 
@@ -486,5 +502,45 @@ public class DataCenterReconciliationController {
             // decommission the newest pod
             cassandraConnectionFactory.connectionForPod(pods.get(0)).decommission();
         }
+    }
+
+    private void createOrReplacePrometheusServiceMonitor() throws ApiException {
+        final String name = dataCenterChildObjectName("%s");
+
+        final ImmutableMap<String, Object> prometheusServiceMonitor = ImmutableMap.<String, Object>builder()
+                .put("apiVersion", "monitoring.coreos.com/v1")
+                .put("kind", "ServiceMonitor")
+                .put("metadata", ImmutableMap.<String, Object>builder()
+                        .put("name", name)
+                        .put("labels", ImmutableMap.<String, Object>builder()
+                                .putAll(dataCenterLabels)
+                                .putAll(Optional.ofNullable(dataCenterSpec.getPrometheusServiceMonitorLabels()).orElse(ImmutableMap.of()))
+                                .build()
+                        )
+                        .build()
+                )
+                .put("spec", ImmutableMap.<String, Object>builder()
+                        .put("selector", ImmutableMap.<String, Object>builder()
+                                .put("matchLabels", ImmutableMap.<String, Object>builder()
+                                        .putAll(dataCenterLabels)
+                                        .build()
+                                )
+                                .build()
+                        )
+                        .put("endpoints", ImmutableList.<Map<String, Object>>builder()
+                                .add(ImmutableMap.<String, Object>builder()
+                                        .put("port", "prometheus")
+                                        .build()
+                                )
+                                .build()
+                        )
+                        .build()
+                )
+                .build();
+
+        k8sResourceUtils.createOrReplaceResource(
+                customObjectsApi.createNamespacedCustomObjectCall("monitoring.coreos.com", "v1", dataCenterMetadata.getNamespace(), "servicemonitors", prometheusServiceMonitor, null, null, null),
+                customObjectsApi.replaceNamespacedCustomObjectCall("monitoring.coreos.com", "v1", dataCenterMetadata.getNamespace(), "servicemonitors", name, prometheusServiceMonitor, null, null)
+        );
     }
 }

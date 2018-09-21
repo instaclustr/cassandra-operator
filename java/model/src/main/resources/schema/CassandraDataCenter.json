@@ -60,6 +60,15 @@
           "type": "object",
           "javaType": "io.kubernetes.client.models.V1ConfigMapVolumeSource",
           "description" : "Name of an optional config map that contains cassandra configuration in the form of yaml fragments"
+        },
+        "prometheusSupport": {
+          "type": "boolean",
+          "description": "Enable Prometheus support."
+        },
+        "prometheusServiceMonitorLabels": {
+          "type": "object",
+          "javaType": "java.util.Map<String, String>",
+          "description": "Labels to attach to the Prometheus ServiceMonitor for this data center."
         }
       }
     }
