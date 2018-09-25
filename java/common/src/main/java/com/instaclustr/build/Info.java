@@ -10,11 +10,11 @@ import java.util.Properties;
 public class Info {
     static final Logger logger = LoggerFactory.getLogger(Info.class);
 
-    private static Properties properties = new Properties() {{
+    private final static Properties properties = new Properties() {{
         try {
             load(Info.class.getClassLoader().getResourceAsStream("git.properties"));
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.warn("Could not load git.properties");
         }
     }};
 
