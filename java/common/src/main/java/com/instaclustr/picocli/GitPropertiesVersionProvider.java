@@ -17,7 +17,7 @@ public class GitPropertiesVersionProvider implements CommandLine.IVersionProvide
         try {
             version = Info.getInfoString();
         } catch (IOException e) {
-            logger.warn("Could not detect version");
+            logger.warn("Could not detect version", e);
         }
         return new String[]{version};
     }
