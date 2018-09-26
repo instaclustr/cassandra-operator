@@ -1,15 +1,15 @@
 package com.instaclustr.cassandra.operator;
 
 import ch.qos.logback.classic.Level;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.*;
+import com.instaclustr.build.Info;
 import com.instaclustr.cassandra.operator.preflight.Preflight;
 import com.instaclustr.cassandra.operator.preflight.PreflightModule;
 import com.instaclustr.guava.Application;
 import com.instaclustr.guava.EventBusModule;
 import com.instaclustr.guava.ServiceManagerModule;
 import com.instaclustr.k8s.K8sModule;
-import com.instaclustr.picocli.ManifestVersionProvider;
+import com.instaclustr.picocli.GitPropertiesVersionProvider;
 import com.instaclustr.picocli.typeconverter.ExistingFilePathTypeConverter;
 import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.KubeConfig;
@@ -29,7 +29,7 @@ import java.util.concurrent.Callable;
 @Command(name = "cassandra-operator",
         mixinStandardHelpOptions = true,
         description = "A Kubernetes operator for Apache Cassandra.",
-        versionProvider = ManifestVersionProvider.class,
+        versionProvider = GitPropertiesVersionProvider.class,
         sortOptions = false
 )
 public class Operator implements Callable<Void> {
@@ -92,12 +92,7 @@ public class Operator implements Callable<Void> {
             packageLogger.setLevel(Level.TRACE);
         }
 
-
-//        final KubeConfig kubeConfig;
-//        try (var bufferedReader = Files.newBufferedReader(k8sClientOptions.kubeConfig)) {
-//            kubeConfig = KubeConfig.loadKubeConfig(bufferedReader);
-//        }
-
+        Info.logVersionInfo();
 
         final Injector injector = Guice.createInjector(
                 new AbstractModule() {
