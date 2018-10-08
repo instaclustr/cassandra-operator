@@ -371,6 +371,10 @@ public class DataCenterReconciliationController {
 
                     // TODO: tune -XX:ParallelGCThreads, -XX:ConcGCThreads
                 }
+
+                // OOM Error handling
+                printer.println("-XX:+HeapDumpOnOutOfMemoryError");
+                printer.println("-XX:+CrashOnOutOfMemoryError");
             }
 
             configMapVolumeAddFile(configMap, volumeSource, "jvm.options.d/001-jvm-memory-gc.options", writer.toString());
