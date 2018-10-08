@@ -122,6 +122,10 @@ public class DataCenterReconciliationController {
                 .addPortsItem(new V1ContainerPort().name("cql").containerPort(9042))
                 .addPortsItem(new V1ContainerPort().name("jmx").containerPort(7199))
                 .resources(dataCenterSpec.getResources())
+                .securityContext(new V1SecurityContext().capabilities(new V1Capabilities().add(ImmutableList.of(
+                        "IPC_LOCK",
+                        "SYS_RESOURCE"
+                ))))
                 .readinessProbe(new V1Probe()
                         .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
                         .initialDelaySeconds(60)
@@ -154,6 +158,7 @@ public class DataCenterReconciliationController {
 
 
         final V1PodSpec podSpec = new V1PodSpec()
+                .addInitContainersItem(fileLimiteInit())
                 .addContainersItem(cassandraContainer)
                 .addContainersItem(sidecarContainer)
                 .addVolumesItem(new V1Volume()
@@ -203,7 +208,8 @@ public class DataCenterReconciliationController {
 
             Backup backup = (Backup) customObjectsApi.getApiClient().execute(call, new TypeToken<Backup>(){}.getType()).getData();
 
-            podSpec.addInitContainersItem(new V1Container()
+            podSpec.addInitContainersItem(fileLimiteInit())
+                    .addInitContainersItem(new V1Container()
                     .name(dataCenterChildObjectName("*-sidecar-restore"))
                     .env(dataCenterSpec.getEnv())
                     .image(dataCenterSpec.getSidecarImage())
@@ -253,6 +259,15 @@ public class DataCenterReconciliationController {
                 () -> appsApi.createNamespacedStatefulSet(statefulSet.getMetadata().getNamespace(), statefulSet, null),
                 () -> replaceStatefulSet(statefulSet)
         );
+    }
+
+    private V1Container fileLimiteInit() {
+        return new V1Container()
+                .securityContext(new V1SecurityContext().privileged(true))
+                .name(dataCenterChildObjectName("sidecar-file-limits"))
+                .image(dataCenterSpec.getSidecarImage())
+                .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
+                .command(ImmutableList.of("sysctl", "-w", "vm.max_map_count=1048575"));
     }
 
 
@@ -319,6 +334,10 @@ public class DataCenterReconciliationController {
             configMapVolumeAddFile(configMap, volumeSource, "cassandra-env.sh.d/001-cassandra-exporter.sh",
                     "JVM_OPTS=\"${JVM_OPTS} -javaagent:${CASSANDRA_HOME}/agents/cassandra-exporter-agent.jar=@${CASSANDRA_CONF}/cassandra-exporter.conf\"");
         }
+
+        //Tune limits
+        configMapVolumeAddFile(configMap, volumeSource,  "cassandra-env.sh.d/002-cassandra-limits.sh",
+                "ulimit -l unlimited\n");
 
         // heap size and GC settings
         // TODO: tune
