@@ -158,7 +158,7 @@ public class DataCenterReconciliationController {
 
 
         final V1PodSpec podSpec = new V1PodSpec()
-                .addInitContainersItem(fileLimiteInit())
+                .addInitContainersItem(fileLimitInit())
                 .addContainersItem(cassandraContainer)
                 .addContainersItem(sidecarContainer)
                 .addVolumesItem(new V1Volume()
@@ -208,7 +208,7 @@ public class DataCenterReconciliationController {
 
             Backup backup = (Backup) customObjectsApi.getApiClient().execute(call, new TypeToken<Backup>(){}.getType()).getData();
 
-            podSpec.addInitContainersItem(fileLimiteInit())
+            podSpec.addInitContainersItem(fileLimitInit())
                     .addInitContainersItem(new V1Container()
                     .name(dataCenterChildObjectName("*-sidecar-restore"))
                     .env(dataCenterSpec.getEnv())
@@ -261,7 +261,7 @@ public class DataCenterReconciliationController {
         );
     }
 
-    private V1Container fileLimiteInit() {
+    private V1Container fileLimitInit() {
         return new V1Container()
                 .securityContext(new V1SecurityContext().privileged(true))
                 .name(dataCenterChildObjectName("sidecar-file-limits"))
