@@ -71,8 +71,8 @@ public class CassandraConnectionFactory {
         try {
             return connectionCache.get(address);
         } catch (final ExecutionException e) {
-            // TODO: potentially unwrap
-            throw new RuntimeException(e);
+            logger.warn("Unable to connect to address {}", address, e);
+            throw new RuntimeException(e); //TODO: handle better
         }
     }
 

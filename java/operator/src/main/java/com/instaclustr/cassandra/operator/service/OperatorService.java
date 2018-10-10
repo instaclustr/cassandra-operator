@@ -36,7 +36,7 @@ public class OperatorService extends AbstractExecutionThreadService {
     @Subscribe
     void clusterEvent(final ClusterWatchEvent event) {
         logger.trace("Received ClusterWatchEvent {}.", event);
-        // TODO: map the Cluster object to one or more DC objects, then post a message on the queue for them
+        // TODO: map the Cluster object to one or more DC objects, then post a message on the queue for them - When we support cluster objects
     }
 
     @Subscribe
@@ -48,7 +48,7 @@ public class OperatorService extends AbstractExecutionThreadService {
     @Subscribe
     void handleSecretEvent(final SecretWatchEvent event) {
         logger.trace("Received SecretWatchEvent {}.", event);
-        // TODO: handle updated/deleted secrets
+        // TODO: handle updated/deleted secrets - currently we don't care about this
     }
 
     @Subscribe
@@ -61,7 +61,6 @@ public class OperatorService extends AbstractExecutionThreadService {
             if(datacenterName != null)
                 dataCenterQueue.add(new DataCenterKey(event.statefulSet.getMetadata().getNamespace(), datacenterName));
         }
-        // TODO
     }
 
     private static final EnumSet<CassandraConnection.Status.OperationMode> RECONCILE_OPERATION_MODES = EnumSet.of(

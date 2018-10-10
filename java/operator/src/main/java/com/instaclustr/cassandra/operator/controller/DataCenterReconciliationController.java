@@ -59,7 +59,7 @@ public class DataCenterReconciliationController {
         this.dataCenterMetadata = dataCenter.getMetadata();
         this.dataCenterSpec = dataCenter.getSpec();
 
-        this.dataCenterLabels = ImmutableMap.of("cassandra-datacenter", dataCenterMetadata.getName());
+        this.dataCenterLabels = ImmutableMap.of("cassandra-datacenter", dataCenterMetadata.getName(), "operator", "instaclustr-cassandra-operator"); //hard code an indentifier for DCs created by this operator
     }
 
     public void reconcileDataCenter() throws Exception {
@@ -320,7 +320,7 @@ public class DataCenterReconciliationController {
             final Properties rackDcProperties = new Properties();
 
             rackDcProperties.setProperty("dc", dataCenterMetadata.getName());
-            rackDcProperties.setProperty("rack", "the-rack"); // TODO: support multiple racks
+            rackDcProperties.setProperty("rack", "the-rack"); // TODO: support multiple racks - Can't proceed until https://github.com/kubernetes/kubernetes/issues/41598 is fixed
             rackDcProperties.setProperty("prefer_local", "true"); // TODO: support multiple racks
 
             final StringWriter writer = new StringWriter();
@@ -399,7 +399,7 @@ public class DataCenterReconciliationController {
             configMapVolumeAddFile(configMap, volumeSource, "jvm.options.d/001-jvm-memory-gc.options", writer.toString());
         }
 
-        // TODO: maybe tune -Dcassandra.available_processors=number_of_processors
+        // TODO: maybe tune -Dcassandra.available_processors=number_of_processors - Wait till we build C* for Java 11
         // not sure if k8s exposes the right number of CPU cores inside the container
 
 
