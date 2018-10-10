@@ -75,7 +75,7 @@ public class OperatorService extends AbstractExecutionThreadService {
 
     @Subscribe
     void handleCassandraNodeOperationModeChangedEvent(final CassandraNodeStatusChangedEvent event) {
-        logger.trace("Received CassandraNodeStatusChangedEvent {}.", event);
+        logger.trace("Received CassandraNodeStatusChangedEvent from {} to {}.", event.previousStatus, event.currentStatus);
 
         if (event.previousStatus.operationMode == event.currentStatus.operationMode)
             return;

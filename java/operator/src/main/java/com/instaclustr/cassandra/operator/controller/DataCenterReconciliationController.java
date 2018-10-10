@@ -487,7 +487,7 @@ public class DataCenterReconciliationController {
         final List<V1Pod> pods = ImmutableList.sortedCopyOf(STATEFUL_SET_POD_COMPARATOR, podsUnsorted);
 
 
-        if (!pods.isEmpty() && cassandraConnectionFactory.connectionForPod(Iterables.getLast(pods)).status().operationMode.equals(CassandraConnection.Status.OperationMode.DECOMMISSIONED)) {
+        if (!pods.isEmpty() && cassandraConnectionFactory.connectionForPod(Iterables.getFirst(pods, null)).status().operationMode.equals(CassandraConnection.Status.OperationMode.DECOMMISSIONED)) {
             statefulSet.getSpec().setReplicas(currentReplicas - 1); // todo: modify a copy
             appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), statefulSet, null);
 
