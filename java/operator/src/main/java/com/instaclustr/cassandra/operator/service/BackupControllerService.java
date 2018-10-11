@@ -1,5 +1,6 @@
 package com.instaclustr.cassandra.operator.service;
 
+import com.google.common.base.Strings;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.instaclustr.backup.BackupArguments;
@@ -9,13 +10,13 @@ import com.instaclustr.cassandra.operator.configuration.BackupConfiguration;
 import com.instaclustr.cassandra.operator.event.BackupWatchEvent;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
 import com.instaclustr.cassandra.operator.model.Backup;
+import com.instaclustr.cassandra.operator.model.BackupSpec;
 import com.instaclustr.cassandra.operator.model.key.BackupKey;
 import com.instaclustr.cassandra.sidecar.model.BackupResponse;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.CoreV1Api;
+import io.kubernetes.client.apis.CustomObjectsApi;
 import io.kubernetes.client.models.V1Pod;
-import io.kubernetes.client.models.V1PodSpec;
-import io.kubernetes.client.models.V1PodStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -27,7 +28,6 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.UriBuilder;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -41,6 +41,8 @@ public class BackupControllerService extends AbstractExecutionThreadService {
     private final CoreV1Api coreApi;
     private final Map<BackupKey, Backup> backupCache;
     private Client client;
+    private final CustomObjectsApi customObjectsApi;
+
 
 
     private final BlockingQueue<BackupKey> backupQueue = new LinkedBlockingQueue<>();
@@ -48,11 +50,12 @@ public class BackupControllerService extends AbstractExecutionThreadService {
     @Inject
     public BackupControllerService(final K8sResourceUtils k8sResourceUtils,
                                    final CoreV1Api coreApi,
-                                   final Map<BackupKey, Backup> backupCache) {
+                                   final Map<BackupKey, Backup> backupCache, CustomObjectsApi customObjectsApi) {
 
         this.k8sResourceUtils = k8sResourceUtils;
         this.coreApi = coreApi;
         this.backupCache = backupCache;
+        this.customObjectsApi = customObjectsApi;
         client = ClientBuilder.newClient();
 
     }
@@ -60,7 +63,13 @@ public class BackupControllerService extends AbstractExecutionThreadService {
     @Subscribe
     void handleBackupEvent(final BackupWatchEvent event) {
         logger.info("Received BackupWatchEvent {}.", event);
-        backupQueue.add(BackupKey.forBackup(event.backup));
+        if(Strings.isNullOrEmpty(event.backup.getSpec().getStatus()) && !event.backup.getSpec().getStatus().equals("PROCESSED")) {
+            backupQueue.add(BackupKey.forBackup(event.backup));
+        } else {
+            logger.debug("Skipping already processed backup {}", event.backup.getMetadata().getName());
+        }
+
+
     }
 
     @Override
@@ -128,8 +137,13 @@ public class BackupControllerService extends AbstractExecutionThreadService {
                 .parallelStream()
                 .map(x -> callBackupApi(x, backup))
                 .anyMatch(e -> !e)) {
-            //TODO: Set backup status to PROCESSED
+            BackupSpec backupSpec = backup.getSpec();
+            backupSpec.setStatus("PROCESSED");
+            backup.setSpec(backupSpec);
+            customObjectsApi.patchNamespacedCustomObject("monitoring.coreos.com", "v1", backup.getMetadata().getNamespace(), "cassandra-backups", backup.getMetadata().getName(), backup);
         }
+
+
 
     }
 
