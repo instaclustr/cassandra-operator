@@ -63,7 +63,7 @@ public class BackupControllerService extends AbstractExecutionThreadService {
     @Subscribe
     void handleBackupEvent(final BackupWatchEvent event) {
         logger.info("Received BackupWatchEvent {}.", event);
-        if(Strings.isNullOrEmpty(event.backup.getSpec().getStatus()) && !event.backup.getSpec().getStatus().equals("PROCESSED")) {
+        if(!Strings.isNullOrEmpty(event.backup.getSpec().getStatus()) && !event.backup.getSpec().getStatus().equals("PROCESSED")) {
             backupQueue.add(BackupKey.forBackup(event.backup));
         } else {
             logger.debug("Skipping already processed backup {}", event.backup.getMetadata().getName());
@@ -138,13 +138,15 @@ public class BackupControllerService extends AbstractExecutionThreadService {
                 .map(x -> callBackupApi(x, backup))
                 .anyMatch(e -> !e)) {
             BackupSpec backupSpec = backup.getSpec();
+            backupSpec.setStatus("ERROR");
+            backup.setSpec(backupSpec);
+            customObjectsApi.patchNamespacedCustomObject("monitoring.coreos.com", "v1", backup.getMetadata().getNamespace(), "cassandra-backups", backup.getMetadata().getName(), backup);
+        } else {
+            BackupSpec backupSpec = backup.getSpec();
             backupSpec.setStatus("PROCESSED");
             backup.setSpec(backupSpec);
             customObjectsApi.patchNamespacedCustomObject("monitoring.coreos.com", "v1", backup.getMetadata().getNamespace(), "cassandra-backups", backup.getMetadata().getName(), backup);
         }
-
-
-
     }
 
     private void deleteBackup(BackupKey backupKey) {
