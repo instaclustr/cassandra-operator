@@ -115,7 +115,7 @@ public class DataCenterReconciliationController {
 
     private void createOrReplaceStateNodesStatefulSet(final Iterable<ConfigMapVolumeMount> configMapVolumeMounts) throws ApiException {
         final V1Container cassandraContainer = new V1Container()
-                .name(dataCenterChildObjectName("%s-cassandra"))
+                .name("cassandra")
                 .image(dataCenterSpec.getCassandraImage())
                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                 .addPortsItem(new V1ContainerPort().name("internode").containerPort(7000))
@@ -146,7 +146,7 @@ public class DataCenterReconciliationController {
 
 
         final V1Container sidecarContainer = new V1Container()
-                .name(dataCenterChildObjectName("%s-sidecar"))
+                .name("sidecar")
                 .env(dataCenterSpec.getEnv())
                 .image(dataCenterSpec.getSidecarImage())
                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
@@ -210,7 +210,7 @@ public class DataCenterReconciliationController {
 
             podSpec.addInitContainersItem(fileLimitInit())
                     .addInitContainersItem(new V1Container()
-                    .name(dataCenterChildObjectName("*-sidecar-restore"))
+                    .name("sidecar-restore")
                     .env(dataCenterSpec.getEnv())
                     .image(dataCenterSpec.getSidecarImage())
                     .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
@@ -264,7 +264,7 @@ public class DataCenterReconciliationController {
     private V1Container fileLimitInit() {
         return new V1Container()
                 .securityContext(new V1SecurityContext().privileged(true))
-                .name(dataCenterChildObjectName("sidecar-file-limits"))
+                .name("sidecar-file-limits")
                 .image(dataCenterSpec.getSidecarImage())
                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                 .command(ImmutableList.of("sysctl", "-w", "vm.max_map_count=1048575"));
