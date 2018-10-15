@@ -56,9 +56,9 @@ public class OperatorService extends AbstractExecutionThreadService {
         logger.trace("Received StatefulSetWatchEvent {}.", event);
 
         // Trigger a dc reconciliation event if changes to the stateful set has finished.
-        if(event.statefulSet.getStatus().getReplicas().equals(event.statefulSet.getStatus().getReadyReplicas()) && event.statefulSet.getStatus().getCurrentReplicas().equals(event.statefulSet.getStatus().getReplicas())) {
+        if (event.statefulSet.getStatus().getReplicas().equals(event.statefulSet.getStatus().getReadyReplicas()) && event.statefulSet.getStatus().getCurrentReplicas().equals(event.statefulSet.getStatus().getReplicas())) {
             String datacenterName = event.statefulSet.getMetadata().getLabels().get("cassandra-datacenter");
-            if(datacenterName != null)
+            if (datacenterName != null)
                 dataCenterQueue.add(new DataCenterKey(event.statefulSet.getMetadata().getNamespace(), datacenterName));
         }
     }
