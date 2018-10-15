@@ -131,22 +131,22 @@ public class BackupControllerService extends AbstractExecutionThreadService {
                 .map(x -> x.getKey() + "=" + x.getValue())
                 .collect(Collectors.joining(","));
 
+        BackupSpec backupSpec = backup.getSpec();
+
         if(coreApi.listNamespacedPod(backup.getMetadata().getNamespace(), null, null,
                 null, null, labels, null, null, null, null)
                 .getItems()
                 .parallelStream()
                 .map(x -> callBackupApi(x, backup))
                 .anyMatch(e -> !e)) {
-            BackupSpec backupSpec = backup.getSpec();
             backupSpec.setStatus("ERROR");
-            backup.setSpec(backupSpec);
-            customObjectsApi.patchNamespacedCustomObject("monitoring.coreos.com", "v1", backup.getMetadata().getNamespace(), "cassandra-backups", backup.getMetadata().getName(), backup);
         } else {
-            BackupSpec backupSpec = backup.getSpec();
             backupSpec.setStatus("PROCESSED");
-            backup.setSpec(backupSpec);
-            customObjectsApi.patchNamespacedCustomObject("monitoring.coreos.com", "v1", backup.getMetadata().getNamespace(), "cassandra-backups", backup.getMetadata().getName(), backup);
         }
+
+        backup.setSpec(backupSpec);
+        customObjectsApi.patchNamespacedCustomObject("stable.instaclustr.com", "v1", backup.getMetadata().getNamespace(), "cassandra-backups", backup.getMetadata().getName(), backup);
+
     }
 
     private void deleteBackup(BackupKey backupKey) {
