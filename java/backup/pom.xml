@@ -32,6 +32,7 @@
             <version>24.1-jre</version>
         </dependency>
 
+        <!--TODO: change to BOM style to only include s3 deps -->
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk</artifactId>
