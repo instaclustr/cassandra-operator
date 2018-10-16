@@ -82,8 +82,10 @@ public class DataCenterReconciliationController {
             configMapVolumeMounts = builder.build();
         }
 
+
+
         // create the statefulset for the DC nodes
-        createOrReplaceStateNodesStatefulSet(configMapVolumeMounts);
+        createOrReplaceStateNodesStatefulSet(configMapVolumeMounts, dataCenterSpec.getUserSecretVolumeSource());
 
         if (dataCenterSpec.getPrometheusSupport()) {
             createOrReplacePrometheusServiceMonitor();
@@ -113,7 +115,7 @@ public class DataCenterReconciliationController {
         }
     }
 
-    private void createOrReplaceStateNodesStatefulSet(final Iterable<ConfigMapVolumeMount> configMapVolumeMounts) throws ApiException {
+    private void createOrReplaceStateNodesStatefulSet(final Iterable<ConfigMapVolumeMount> configMapVolumeMounts, final V1SecretVolumeSource secretVolumeSource) throws ApiException {
         final V1Container cassandraContainer = new V1Container()
                 .name("cassandra")
                 .image(dataCenterSpec.getCassandraImage())
@@ -184,6 +186,7 @@ public class DataCenterReconciliationController {
                 );
 
 
+
         // add configmap volumes
         for (final ConfigMapVolumeMount configMapVolumeMount : configMapVolumeMounts) {
             cassandraContainer.addVolumeMountsItem(new V1VolumeMount()
@@ -199,6 +202,18 @@ public class DataCenterReconciliationController {
                     .configMap(configMapVolumeMount.volumeSource)
             );
         }
+
+        if (secretVolumeSource != null) {
+            cassandraContainer.addVolumeMountsItem(new V1VolumeMount()
+                    .name("user-secret-volume")
+                    .mountPath("/tmp/user-config"));
+
+            podSpec.addVolumesItem(new V1Volume()
+                    .name("user-secret-volume")
+                    .secret(secretVolumeSource)
+            );
+        }
+
 
 
         if (dataCenterSpec.getRestoreFromBackup() != null) {
