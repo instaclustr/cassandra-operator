@@ -118,7 +118,7 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
                 })
 
                 .filter(path -> {
-                    if(!YAML_PATH_MATCHER.matches(path)) {
+                    if (!YAML_PATH_MATCHER.matches(path)) {
                         logger.warn("Configuration file \"{}\" is not a YAML file and will not be loaded.", path);
                         return false;
                     }

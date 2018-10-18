@@ -3,8 +3,10 @@ package com.instaclustr.cassandra.operator.service;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
 import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.AbstractScheduledService;
+import com.instaclustr.cassandra.operator.controller.DataCenterControllerFactory;
 import com.instaclustr.cassandra.operator.event.CassandraNodeStatusChangedEvent;
 import com.instaclustr.cassandra.operator.jmx.CassandraConnection;
 import com.instaclustr.cassandra.operator.jmx.CassandraConnectionFactory;
@@ -27,6 +29,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
     private final CoreV1Api coreApi;
     private final Map<DataCenterKey, DataCenter> dataCenterCache;
     private final CassandraConnectionFactory cassandraConnectionFactory;
+
     private final EventBus eventBus;
 
     private Cache<InetAddress, CassandraConnection.Status> cassandraNodeStatuses = CacheBuilder.newBuilder()
@@ -75,7 +78,8 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
 
                     logger.debug("{}", status);
 
-                    if (previousStatus != null && !previousStatus.equals(status)) {
+                    //Notify of decommissioned status
+                    if ((previousStatus != null && !previousStatus.equals(status)) || status.operationMode.equals(CassandraConnection.Status.OperationMode.DECOMMISSIONED)) {
                         eventBus.post(new CassandraNodeStatusChangedEvent(pod, dataCenterKey, previousStatus, status));
                     }
 

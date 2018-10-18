@@ -6,6 +6,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.ProvidesIntoSet;
+import com.instaclustr.cassandra.operator.configuration.Namespace;
 import com.instaclustr.cassandra.operator.event.StatefulSetWatchEvent;
 import com.instaclustr.cassandra.operator.model.key.StatefulSetKey;
 import com.instaclustr.k8s.watch.ListCallProvider;
@@ -29,11 +30,10 @@ public class StatefulSetWatchModule extends AbstractModule {
     @ProvidesIntoSet
     Service provideStatefulSetWatchService(final ApiClient apiClient, final AppsV1beta2Api appsApi,
                                            final EventBus eventBus, final StatefulSetWatchEvent.Factory statefulSetWatchEventFactory,
-                                           final Map<StatefulSetKey, V1beta2StatefulSet> cache) {
-
-        // TODO: paramaterise namespace & add a label selector only caring about statefulsets that represent C* clusters
+                                           final Map<StatefulSetKey, V1beta2StatefulSet> cache,
+                                           @Namespace final String namespace) {
         final ListCallProvider listCallProvider = (resourceVersion, watch) ->
-                appsApi.listNamespacedStatefulSetCall("default", null, null, null, null, null, null, resourceVersion, null, watch, null, null);
+                appsApi.listNamespacedStatefulSetCall(namespace, null, null, null, null, "operator=instaclustr-cassandra-operator", null, resourceVersion, null, watch, null, null);
 
         return new WatchService<V1beta2StatefulSet, V1beta2StatefulSetList, StatefulSetKey>(apiClient, eventBus,
                 listCallProvider, statefulSetWatchEventFactory,

@@ -100,11 +100,11 @@ public abstract class CommonBackupArguments extends BaseArguments {
             this.concurrentConnections = this.speed.concurrentUploads;
         }
 
-        if(this.sharedContainerPath == null) {
+        if (this.sharedContainerPath == null) {
             this.sharedContainerPath = Paths.get("/");
         }
 
-        if(this.cassandraDirectory == null) {
+        if (this.cassandraDirectory == null) {
             this.cassandraDirectory = cassandraDirectory.resolve(Paths.get("var/lib/cassandra"));
         }
     }

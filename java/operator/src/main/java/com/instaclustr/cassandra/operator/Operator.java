@@ -3,6 +3,7 @@ package com.instaclustr.cassandra.operator;
 import ch.qos.logback.classic.Level;
 import com.google.inject.*;
 import com.instaclustr.build.Info;
+import com.instaclustr.cassandra.operator.configuration.Namespace;
 import com.instaclustr.cassandra.operator.preflight.Preflight;
 import com.instaclustr.cassandra.operator.preflight.PreflightModule;
 import com.instaclustr.guava.Application;
@@ -44,7 +45,7 @@ public class Operator implements Callable<Void> {
 
     static class OperatorOptions {
         @Option(names = {"-n", "--namespace"}, description = "")
-        String namespace;
+        String namespace = "default";
     }
 
     public static class K8sClientOptions {
@@ -100,6 +101,7 @@ public class Operator implements Callable<Void> {
                     protected void configure() {
 
                         bind(K8sVersionValidator.Options.class).toInstance(versionValidatorOptions);
+                        bindConstant().annotatedWith(Namespace.class).to(operatorOptions.namespace);
 
 //                        bind(KubeConfig.class).toInstance(kubeConfig);
                         try {

@@ -4,7 +4,7 @@ metadata:
   name: test-dc
 spec:
   replicas: 6
-  image: gcr.io/cassandra-operator/cassandra:latest # todo: build images with C* version as tags
+  image: gcr.io/cassandra-operator/cassandra:latest
   imagePullPolicy: Never
   resources:
     limits:

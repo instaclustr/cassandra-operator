@@ -6,6 +6,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.ProvidesIntoSet;
+import com.instaclustr.cassandra.operator.configuration.Namespace;
 import com.instaclustr.cassandra.operator.event.ClusterWatchEvent;
 import com.instaclustr.cassandra.operator.event.DataCenterWatchEvent;
 import com.instaclustr.cassandra.operator.model.Cluster;
@@ -18,6 +19,8 @@ import com.instaclustr.k8s.watch.ListCallProvider;
 import com.instaclustr.k8s.watch.WatchService;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.apis.CustomObjectsApi;
+import io.kubernetes.client.models.V1LabelSelector;
+import io.kubernetes.client.models.V1LabelSelectorRequirement;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,11 +36,11 @@ public class ClusterWatchModule extends AbstractModule {
     @ProvidesIntoSet
     Service provideClusterWatchService(final ApiClient apiClient, final CustomObjectsApi customObjectsApi,
                                        final EventBus eventBus, final ClusterWatchEvent.Factory clusterWatchEventFactory,
-                                       final Map<ClusterKey, Cluster> cache) {
+                                       final Map<ClusterKey, Cluster> cache,
+                                       @Namespace final String namespace) {
 
-        // TODO: parameterise namespace
         final ListCallProvider listCallProvider = (resourceVersion, watch) ->
-                customObjectsApi.listNamespacedCustomObjectCall("stable.instaclustr.com", "v1", "default", "cassandra-clusters", null, null, resourceVersion, watch, null, null);
+                customObjectsApi.listNamespacedCustomObjectCall("stable.instaclustr.com", "v1", namespace, "cassandra-clusters", null, null, resourceVersion, watch, null, null);
 
         return new WatchService<Cluster, ClusterList, ClusterKey>(
                 apiClient, eventBus,
