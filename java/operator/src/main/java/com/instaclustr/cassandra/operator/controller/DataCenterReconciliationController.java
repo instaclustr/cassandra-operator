@@ -12,6 +12,7 @@ import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.DataCenterSpec;
 import com.squareup.okhttp.Call;
 import io.kubernetes.client.ApiException;
+import io.kubernetes.client.ApiResponse;
 import io.kubernetes.client.apis.AppsV1beta2Api;
 import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.apis.CustomObjectsApi;
@@ -58,7 +59,7 @@ public class DataCenterReconciliationController {
         this.dataCenterMetadata = dataCenter.getMetadata();
         this.dataCenterSpec = dataCenter.getSpec();
 
-        this.dataCenterLabels = ImmutableMap.of("cassandra-datacenter", dataCenterMetadata.getName());
+        this.dataCenterLabels = ImmutableMap.of("cassandra-datacenter", dataCenterMetadata.getName(), "operator", "instaclustr-cassandra-operator"); //hard code an indentifier for DCs created by this operator
     }
 
     public void reconcileDataCenter() throws Exception {
@@ -115,7 +116,7 @@ public class DataCenterReconciliationController {
 
     private void createOrReplaceStateNodesStatefulSet(final Iterable<ConfigMapVolumeMount> configMapVolumeMounts) throws ApiException {
         final V1Container cassandraContainer = new V1Container()
-                .name(dataCenterChildObjectName("%s-cassandra"))
+                .name("cassandra")
                 .image(dataCenterSpec.getCassandraImage())
                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                 .addPortsItem(new V1ContainerPort().name("internode").containerPort(7000))
@@ -146,7 +147,7 @@ public class DataCenterReconciliationController {
 
 
         final V1Container sidecarContainer = new V1Container()
-                .name(dataCenterChildObjectName("%s-sidecar"))
+                .name("sidecar")
                 .env(dataCenterSpec.getEnv())
                 .image(dataCenterSpec.getSidecarImage())
                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
@@ -215,7 +216,7 @@ public class DataCenterReconciliationController {
 
             podSpec.addInitContainersItem(fileLimitInit())
                     .addInitContainersItem(new V1Container()
-                    .name(dataCenterChildObjectName("*-sidecar-restore"))
+                    .name("sidecar-restore")
                     .env(dataCenterSpec.getEnv())
                     .image(dataCenterSpec.getSidecarImage())
                     .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
@@ -269,7 +270,7 @@ public class DataCenterReconciliationController {
     private V1Container fileLimitInit() {
         return new V1Container()
                 .securityContext(new V1SecurityContext().privileged(true))
-                .name(dataCenterChildObjectName("sidecar-file-limits"))
+                .name("sidecar-file-limits")
                 .image(dataCenterSpec.getSidecarImage())
                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                 .command(ImmutableList.of("sysctl", "-w", "vm.max_map_count=1048575"));
@@ -313,7 +314,6 @@ public class DataCenterReconciliationController {
                     )));
 
 
-//            config.put("endpoint_snitch", "com.instaclustr.cassandra.k8s.Snitch") // TODO: custom snitch, so that we don't need to write the config for GPFS
             config.put("endpoint_snitch", "org.apache.cassandra.locator.GossipingPropertyFileSnitch");
 
 
@@ -325,7 +325,7 @@ public class DataCenterReconciliationController {
             final Properties rackDcProperties = new Properties();
 
             rackDcProperties.setProperty("dc", dataCenterMetadata.getName());
-            rackDcProperties.setProperty("rack", "the-rack"); // TODO: support multiple racks
+            rackDcProperties.setProperty("rack", "the-rack"); // TODO: support multiple racks - Can't proceed until https://github.com/kubernetes/kubernetes/issues/41598 is fixed
             rackDcProperties.setProperty("prefer_local", "true"); // TODO: support multiple racks
 
             final StringWriter writer = new StringWriter();
@@ -404,7 +404,7 @@ public class DataCenterReconciliationController {
             configMapVolumeAddFile(configMap, volumeSource, "jvm.options.d/001-jvm-memory-gc.options", writer.toString());
         }
 
-        // TODO: maybe tune -Dcassandra.available_processors=number_of_processors
+        // TODO: maybe tune -Dcassandra.available_processors=number_of_processors - Wait till we build C* for Java 11
         // not sure if k8s exposes the right number of CPU cores inside the container
 
 
@@ -478,27 +478,21 @@ public class DataCenterReconciliationController {
         // why does listNamespacedPod take a string for the selector when V1LabelSelector exists?
         final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterMetadata.getName());
 
-        // TODO: handle lists larger than the max returned (via continue attribute)
-        final List<V1Pod> pods = ImmutableList.sortedCopyOf(STATEFUL_SET_POD_COMPARATOR,
-                coreApi.listNamespacedPod(dataCenterMetadata.getNamespace(), null, null, null, null, labelSelector, null, null, null, null).getItems()
-        );
+
+        ArrayList<V1Pod> podsUnsorted = new ArrayList<>();
+        String shouldContinue = null;
+
+        do {
+            ApiResponse<V1PodList> response = coreApi.listNamespacedPodWithHttpInfo(dataCenterMetadata.getNamespace(), null, shouldContinue, null, null, labelSelector, null, null, null, null);
+            podsUnsorted.addAll(response.getData().getItems());
+            shouldContinue = response.getData().getMetadata().getContinue();
+        } while(shouldContinue != null);
 
 
-        // TODO: this will be slow for a large number of nodes -- introduce some parallelism
-        final ImmutableListMultimap<CassandraConnection.Status.OperationMode, V1Pod> podCassandraOperationModes = Multimaps.index(
-                pods.stream().filter(p -> p.getStatus().getPhase().equals("Running")).collect(Collectors.toList()),
-                p -> {
-                    final CassandraConnection cassandraConnection = cassandraConnectionFactory.connectionForPod(p);
-
-                    return cassandraConnection.status().operationMode;
-                });
+        final List<V1Pod> pods = ImmutableList.sortedCopyOf(STATEFUL_SET_POD_COMPARATOR, podsUnsorted);
 
 
-        if (EnumSet.of(CassandraConnection.Status.OperationMode.NORMAL, CassandraConnection.Status.OperationMode.DECOMMISSIONED).equals(podCassandraOperationModes.keySet())) {
-            // change statefulset size
-
-            // TODO: handle/assert that the newest pod is the one that was decommissioned
-
+        if (!pods.isEmpty() && cassandraConnectionFactory.connectionForPod(Iterables.getFirst(pods, null)).status().operationMode.equals(CassandraConnection.Status.OperationMode.DECOMMISSIONED)) {
             statefulSet.getSpec().setReplicas(currentReplicas - 1); // todo: modify a copy
             appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), statefulSet, null);
 
@@ -510,6 +504,14 @@ public class DataCenterReconciliationController {
 
             return;
         }
+
+        final ImmutableListMultimap<CassandraConnection.Status.OperationMode, V1Pod> podCassandraOperationModes = Multimaps.index(
+                pods.parallelStream().filter(p -> p.getStatus().getPhase().equals("Running")).collect(Collectors.toList()),
+                p -> {
+                    final CassandraConnection cassandraConnection = cassandraConnectionFactory.connectionForPod(p);
+
+                    return cassandraConnection.status().operationMode;
+                });
 
         if (!EnumSet.of(CassandraConnection.Status.OperationMode.NORMAL).equals(podCassandraOperationModes.keySet())) {
             logger.warn("Skipping StatefulSet reconciliation as some Cassandra nodes are not in the NORMAL state: {}",
@@ -524,9 +526,8 @@ public class DataCenterReconciliationController {
             // scale up or modify
             appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), statefulSet, null);
 
-        } else  {
+        } else {
             // scale down
-
             // decommission the newest pod
             cassandraConnectionFactory.connectionForPod(pods.get(0)).decommission();
         }

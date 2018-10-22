@@ -6,6 +6,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.ProvidesIntoSet;
+import com.instaclustr.cassandra.operator.configuration.Namespace;
 import com.instaclustr.cassandra.operator.event.ConfigMapWatchEvent;
 import com.instaclustr.cassandra.operator.event.StatefulSetWatchEvent;
 import com.instaclustr.cassandra.operator.model.key.ConfigMapKey;
@@ -35,11 +36,11 @@ public class ConfigMapWatchModule extends AbstractModule {
     @ProvidesIntoSet
     Service provideConfigMapWatchService(final ApiClient apiClient, final CoreV1Api coreApi,
                                          final EventBus eventBus, final ConfigMapWatchEvent.Factory configMapWatchEventFactory,
-                                         final Map<ConfigMapKey, V1ConfigMap> cache) {
+                                         final Map<ConfigMapKey, V1ConfigMap> cache,
+                                         @Namespace final String namespace) {
 
-        // TODO: paramaterise namespace & add a label selector only caring about statefulsets that represent C* clusters
         final ListCallProvider listCallProvider = (resourceVersion, watch) ->
-                coreApi.listNamespacedConfigMapCall("default", null, null, null, null, null, null, resourceVersion, null, watch, null, null);
+                coreApi.listNamespacedConfigMapCall(namespace, null, null, null, null, "operator=instaclustr-cassandra-operator", null, resourceVersion, null, watch, null, null);
 
         return new WatchService<V1ConfigMap, V1ConfigMapList, ConfigMapKey>(apiClient, eventBus,
                 listCallProvider, configMapWatchEventFactory,

@@ -76,7 +76,7 @@ public class BackupControllerService extends AbstractExecutionThreadService {
     protected void run() throws Exception {
         while(isRunning()) {
             final BackupKey backupKey = backupQueue.take();
-            if(backupKey == POISON)
+            if (backupKey == POISON)
                 return;
 
             try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterName = MDC.putCloseable("Backup", backupKey.name);

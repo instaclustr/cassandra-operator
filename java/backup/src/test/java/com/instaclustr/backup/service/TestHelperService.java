@@ -57,7 +57,7 @@ public class TestHelperService {
             try (final Writer writer = Files.newBufferedWriter(digest)) {
                 writer.write(testFileConfig.getChecksum(keyspace, table));
             }
-            if(tag != null)
+            if (tag != null)
                 Files.copy(digest, ssTableSnapshotPath.resolve(digest.getFileName()));
         }
 
@@ -65,7 +65,7 @@ public class TestHelperService {
             final Path path = ssTablePath.resolve(String.format("%s-%s-big-%s", testFileConfig.getSstablePrefix(keyspace, table), sequence, name));
             Files.createFile(path);
             Files.write(path, testData);
-            if(tag != null)
+            if (tag != null)
                 Files.copy(path, ssTableSnapshotPath.resolve(path.getFileName()));
         }
 
