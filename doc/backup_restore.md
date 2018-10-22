@@ -78,9 +78,61 @@ spec:
           name: awsbackuptest
     - name: AWS_REGION
       value: us-west-2
+      
+  prometheusEnabled: false
 ```
 
 To create a cluster using this yaml file use `kubectl apply -f myBackupCluster.yaml`
+
+## Configuring GCP Object Storage via environment variables
+First create a secret in kubernetes to hold a Google service account token/file (assuming they are stored in files named access and secret respectively).
+
+`kubectl create secret generic gcp-auth-reference --from-file=my_service_key.json`
+
+You can inspect the secret created via `kubectl describe secrets/reference`
+
+Create a `CassandraDataCenter` CRD that injects the secret as a file. Configure the environment variables that matches the GCP client JAVA SDKs expected env variables for controlling bucket name, region and service account key file location:
+
+```yaml
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraDataCenter
+metadata:
+  name: foo-cassandra
+  labels:
+    app: cassandra
+    chart: cassandra-0.1.0
+    release: foo
+spec:
+  replicas: 3
+  cassandraImage: "gcr.io/cassandra-operator/cassandra:latest"
+  sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
+  imagePullPolicy: IfNotPresent
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      memory: 512Mi
+  dataVolumeClaim:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Mi
+  userSecretSource:
+    name: gcp-auth-reference
+    items:
+      - key: my_service_key.json
+        path:  my_service_key.json
+  env:
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: "/tmp/user-secret/my_service_key.json"
+    - name: GOOGLE_CLOUD_PROJECT
+      value: "cassandra-operator"
+    - name: BUCKET_NAME
+      value: "my-cassandra-operator"
+      
+  prometheusEnabled: false
+```
 
 ## Taking a backup
 The Cassandra-operator manages backups via a backup CRD object in Kubernetes, this makes it easy to track and audit backups, you can schedule backups via a cron mechanism that creates new CRDs etc.
@@ -91,6 +143,7 @@ The name field in metadata will be used as the snapshot name (e.g. via nodetool 
 
 To backup the cluster we just created, create the following yaml file (called `backup.yaml` in this example):
 
+### AWS
 ```yaml
 apiVersion: stable.instaclustr.com/v1
 kind: CassandraBackup
@@ -101,6 +154,21 @@ metadata:
 spec:
   backupType: AWS_S3
   target: kube-backup-test-cassandra
+  status: "PENDING"
+```
+
+### GCP
+```yaml
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraBackup
+metadata:
+  name: backup-hostname
+  labels:
+    cassandra-datacenter: foo-cassandra
+spec:
+  backupType: GCP_BLOB
+  target: ben-cassandra-operator
+  status: "PENDING"
 ```
 
 In the spec field, `backupType` indicates what storage mechanism to use and `target` will be the undecorated location (e.g. the S3 bucket). To create the backup run `kubectl apply -f backup.yaml`

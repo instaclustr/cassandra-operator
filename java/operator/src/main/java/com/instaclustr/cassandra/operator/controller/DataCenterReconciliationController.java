@@ -192,6 +192,11 @@ public class DataCenterReconciliationController {
                     .mountPath(configMapVolumeMount.mountPath)
             );
 
+            //provide access to config map volumes in the sidecar, these reside in /tmp though and are not overlayed into /etc/cassandra
+            sidecarContainer.addVolumeMountsItem(new V1VolumeMount()
+                    .name(configMapVolumeMount.name)
+                    .mountPath(configMapVolumeMount.mountPath));
+
             // the Cassandra container entrypoint overlays configmap volumes
             cassandraContainer.addArgsItem(configMapVolumeMount.mountPath);
 

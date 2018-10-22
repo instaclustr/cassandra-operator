@@ -33,3 +33,5 @@ spec:
             target:
               type: string
               description: The uri for the backup target location e.g. s3 bucket, filepath
+            status:
+              type: string
