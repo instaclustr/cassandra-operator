@@ -6,6 +6,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.ProvidesIntoSet;
+import com.instaclustr.cassandra.operator.configuration.Namespace;
 import com.instaclustr.cassandra.operator.event.DataCenterWatchEvent;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.DataCenterList;
@@ -29,11 +30,11 @@ public class DataCenterWatchModule extends AbstractModule {
     @ProvidesIntoSet
     Service provideDataCenterWatchService(final ApiClient apiClient, final CustomObjectsApi customObjectsApi,
                                           final EventBus eventBus, final DataCenterWatchEvent.Factory dataCenterWatchEventFactory,
-                                          final Map<DataCenterKey, DataCenter> cache) {
+                                          final Map<DataCenterKey, DataCenter> cache,
+                                          @Namespace final String namespace) {
 
-        // TODO: parameterise namespace
         final ListCallProvider listCallProvider = (resourceVersion, watch) ->
-                customObjectsApi.listNamespacedCustomObjectCall("stable.instaclustr.com", "v1", "default", "cassandra-datacenters", null, null, resourceVersion, watch, null, null);
+                customObjectsApi.listNamespacedCustomObjectCall("stable.instaclustr.com", "v1", namespace, "cassandra-datacenters", null, null, resourceVersion, watch, null, null);
 
         return new WatchService<DataCenter, DataCenterList, DataCenterKey>(
                 apiClient, eventBus,

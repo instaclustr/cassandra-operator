@@ -26,7 +26,8 @@ spec:
 {{- if .Values.restoreFromBackup }}
   restoreFromBackup: {{ .Values.restoreFromBackup }}
 {{- end }}
-{{- if .Values.userConfigMap }}
-  userConfigMap: {{ .Values.userConfigMap }}
+{{- if .Values.userConfigMapVolumeSource }}
+  userConfigMapVolumeSource:
+  {{ toYaml .Values.userConfigMapVolumeSource | indent 4 }}
 {{- end }}
   prometheusSupport: {{ .Values.prometheusEnabled }}

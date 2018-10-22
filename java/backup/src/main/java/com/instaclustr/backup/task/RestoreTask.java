@@ -195,7 +195,7 @@ public class RestoreTask implements Callable<Void> {
         // 7. Download files in the manifest
         downloader.downloadFiles(downloadManifest, "snapshot-download", arguments.concurrentConnections);
 
-        if(enableCommitLogRestore) {
+        if (enableCommitLogRestore) {
             // 8. Download commitlogs
             downloadCommitLogs(downloader, arguments.timestampStart, arguments.timestampEnd);
 
@@ -288,7 +288,7 @@ public class RestoreTask implements Callable<Void> {
     private void writeConfigOptions(final Downloader downloader, final boolean isTableSubsetOnly) throws Exception {
         final StringBuilder cassandraEnvStringBuilder = new StringBuilder();
 
-        if(enableCommitLogRestore) {
+        if (enableCommitLogRestore) {
             if (isTableSubsetOnly) {
                 cassandraEnvStringBuilder
                         .append("JVM_OPTS=\"$JVM_OPTS -Dcassandra.replayList=")

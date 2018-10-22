@@ -43,7 +43,7 @@ public class BackupService extends AbstractExecutionThreadService {
 
     @Override
     protected void shutDown() throws Exception {
-        if(activeTask!=null)
+        if (activeTask!=null)
             activeTask.stopBackupTask();
     }
 }

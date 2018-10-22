@@ -6,6 +6,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.ProvidesIntoSet;
+import com.instaclustr.cassandra.operator.configuration.Namespace;
 import com.instaclustr.cassandra.operator.event.BackupWatchEvent;
 import com.instaclustr.cassandra.operator.model.Backup;
 import com.instaclustr.cassandra.operator.model.BackupList;
@@ -27,13 +28,13 @@ public class BackupWatchModule extends AbstractModule {
 
     @ProvidesIntoSet
     Service provideBackupWatchService(final ApiClient apiClient, final CustomObjectsApi customObjectsApi,
-                                          final EventBus eventBus, final BackupWatchEvent.Factory backupWatchEventFactory,
-                                          final Map<BackupKey, Backup> cache) {
+                                      final EventBus eventBus, final BackupWatchEvent.Factory backupWatchEventFactory,
+                                      final Map<BackupKey, Backup> cache,
+                                      @Namespace final String namespace) {
 
-        // TODO: parameterise namespace
         final ListCallProvider listCallProvider = (resourceVersion, watch) ->
                 customObjectsApi.listNamespacedCustomObjectCall(
-                        "stable.instaclustr.com", "v1", "default", "cassandra-backups", null, null, resourceVersion, watch, null, null);
+                        "stable.instaclustr.com", "v1", namespace, "cassandra-backups", null, null, resourceVersion, watch, null, null);
 
         return new WatchService<Backup, BackupList, BackupKey>(
                 apiClient, eventBus,
