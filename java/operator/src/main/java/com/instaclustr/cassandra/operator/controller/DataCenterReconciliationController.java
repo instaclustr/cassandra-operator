@@ -212,7 +212,7 @@ public class DataCenterReconciliationController {
         if (secretVolumeSource != null) {
             cassandraContainer.addVolumeMountsItem(new V1VolumeMount()
                     .name("user-secret-volume")
-                    .mountPath("/tmp/user-config"));
+                    .mountPath("/tmp/user-secret-config"));
 
             podSpec.addVolumesItem(new V1Volume()
                     .name("user-secret-volume")
