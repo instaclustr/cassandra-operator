@@ -12,8 +12,8 @@ metadata:
 {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
-  cassandraImage: "{{ .Values.image.cassandraRepository }}:{{ .Values.image.tag }}"
-  sidecarImage: "{{ .Values.image.sidecarRepository }}:{{ .Values.image.tag }}"
+  cassandraImage: "{{ .Values.image.cassandraRepository }}:{{ .Values.image.cassandraTag }}"
+  sidecarImage: "{{ .Values.image.sidecarRepository }}:{{ .Values.image.sidecarTag }}"
   imagePullPolicy: {{ .Values.imagePullPolicy }}
   resources:
 {{ toYaml .Values.resources | indent 4 }}
