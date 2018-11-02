@@ -61,6 +61,11 @@
           "javaType": "io.kubernetes.client.models.V1ConfigMapVolumeSource",
           "description" : "Name of an optional config map that contains cassandra configuration in the form of yaml fragments"
         },
+        "userSecretVolumeSource": {
+          "type": "object",
+          "javaType": "io.kubernetes.client.models.V1SecretVolumeSource",
+          "description" : "Name of an optional secret that contains cassandra related secrets"
+        },
         "prometheusSupport": {
           "type": "boolean",
           "description": "Enable Prometheus support."
