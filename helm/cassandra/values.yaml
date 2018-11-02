@@ -5,9 +5,10 @@
 replicaCount: 3
 
 image:
-  cassandraRepository: gcr.io/cassandra-operator/cassandra
-  sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar
-  tag: latest
+  cassandraRepository: gcr.io/cassandra-operator/cassandra-dev
+  sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar-dev
+  cassandraTag: 3.11.3
+  sidecarTag: latest
 
 imagePullPolicy: IfNotPresent
 

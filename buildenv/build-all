@@ -4,6 +4,6 @@
 cd `dirname "$BASH_SOURCE"`/..
 
 ./buildenv/build base-openjre
-./buildenv/build cassandra
+./buildenv/build-cassandra cassandra
 ./buildenv/build cassandra-operator
 ./buildenv/build cassandra-sidecar
