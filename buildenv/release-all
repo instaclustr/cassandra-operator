@@ -18,6 +18,6 @@ gcloud docker -a
 export DONT_LOGIN="true"
 
 ./buildenv/release base-openjre
-./buildenv/release cassandra
+./buildenv/release-cassandra cassandra
 ./buildenv/release cassandra-sidecar
 ./buildenv/release cassandra-operator
