@@ -31,3 +31,4 @@ spec:
   {{ toYaml .Values.userConfigMapVolumeSource | indent 4 }}
 {{- end }}
   prometheusSupport: {{ .Values.prometheusEnabled }}
+  privilegedSupported: {{ .Values.privilegedSupported }}
