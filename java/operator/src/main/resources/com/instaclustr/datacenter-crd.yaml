@@ -67,4 +67,7 @@ spec:
             userSecretVolumeSource:
               type: object
               description: Name of an optional secret to project into container.
+            privilegedSupported:
+              type: boolean
+              description: Attempt to run privileged configuration options for better performance
             
