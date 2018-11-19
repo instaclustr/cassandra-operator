@@ -29,6 +29,8 @@ spec:
           - cassandraImage
           - sidecarImage
           - imagePullPolicy
+          - prometheusSupport
+          - privilegedSupported
           properties:
             name:
               type: string
@@ -57,14 +59,20 @@ spec:
               description: the disk storage to construct pod.
             env:
               type: array
-              description: list of env vars to insert into the sidecar
+              description: list of env vars to insert into the sidecar.
             restoreFromBackup:
               type: string
               description: Name of an optional backup to restore from.
             userConfigMapVolumeSource:
               type: object
-              description: Name of an optional config map to project into container
+              description: Name of an optional config map to project into container.
             userSecretVolumeSource:
               type: object
               description: Name of an optional secret to project into container.
+            prometheusSupport:
+              type: boolean
+              description: Enable Prometheus support.
+            privilegedSupported:
+              type: boolean
+              description: Attempt to run privileged configuration options for better performance.
             

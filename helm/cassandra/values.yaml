@@ -12,6 +12,8 @@ image:
 
 imagePullPolicy: IfNotPresent
 
+privilegedSupported: true
+
 resources:
   limits:
     memory: 512Mi

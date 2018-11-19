@@ -284,11 +284,11 @@ public class DataCenterReconciliationController {
 
     private V1Container fileLimitInit() {
         return new V1Container()
-                .securityContext(new V1SecurityContext().privileged(true))
+                .securityContext(new V1SecurityContext().privileged(dataCenterSpec.getPrivilegedSupported()))
                 .name("sidecar-file-limits")
                 .image(dataCenterSpec.getSidecarImage())
                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
-                .command(ImmutableList.of("sysctl", "-w", "vm.max_map_count=1048575"));
+                .command(ImmutableList.of("bash", "-c", "sysctl -w vm.max_map_count=1048575 || true"));
     }
 
 

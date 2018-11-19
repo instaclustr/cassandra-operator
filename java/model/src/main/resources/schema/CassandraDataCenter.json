@@ -74,6 +74,10 @@
           "type": "object",
           "javaType": "java.util.Map<String, String>",
           "description": "Labels to attach to the Prometheus ServiceMonitor for this data center."
+        },
+        "privilegedSupported": {
+          "type": "boolean",
+          "description": "Attempt to run privileged configuration options for better performance"
         }
       }
     }
