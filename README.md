@@ -121,4 +121,4 @@ $ kubectl apply -f example/common/test.yaml
 
 - This operator is currently a work in progress and breaking changes are landing in master all the time until we reach our initial release. Here be dragons!
 - Do not use this in production... yet
-- Please see https://www.instaclustr.com/support/documentation/announcements/instaclustr-open-source-project-status/ for Instaclustr support status of this project
+- Please see the [Instaclustr supported projects page](https://www.instaclustr.com/support/documentation/announcements/instaclustr-open-source-project-status/) for the Enterprise support status.
