@@ -19,4 +19,4 @@ spec:
       requests:
         storage: 100Mi
   privilegedSupported: true
-  prometheusEnabled: false
+  prometheusSupport: false
