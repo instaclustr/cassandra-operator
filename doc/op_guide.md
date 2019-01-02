@@ -55,6 +55,66 @@ The Helm templates are relatively independent and can also be used to generate t
 helm template helm/cassandra-operator -n cassandra-operator
 ```
 
+## Custom Namespace support
+Custom namespace support is somewhat limited at the moment primarily due to laziness. You can have the operator watch a different namespace (other than "defaul") by changing the namepsace it watches on startup. This is not an optimal way to do so (we should watch all namespaces... maybe), but it's the implementation as it stands.
+
+To changes the namespace the operator watches (it can be deployed in a different namespace if you want), you will need to modify the deployment the operator gets deployed by (either the helm package or the example yaml) to include the following in the containers spec:
+
+```yaml
+command: ["java"]
+args: ["-jar", "/opt/cassandra-operator/operator-1.0.jar", "--namespace=NAMESPACE"]
+```
+
+The modified helm package (helm/cassandra-operator/templates/deployment.yaml) would look like:
+
+```yaml
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ template "cassandra-operator.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    heritage: {{ .Release.Service }}
+    operator: cassandra
+    release: {{ .Release.Name }}
+  name: {{ template "cassandra-operator.fullname" . }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ template "cassandra-operator.name" . }}
+        operator: cassandra
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ template "cassandra-operator.name" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          command: ["java"]
+          args: ["-jar", "/opt/cassandra-operator/operator-1.0.jar", "--namespace=NAMESPACE"]
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+    {{- end }}
+    {{- if .Values.rbacEnable }}
+      serviceAccountName: {{ template "cassandra-operator.fullname" . }}
+    {{- end }}
+    {{- if .Values.tolerations }}
+      tolerations:
+{{ toYaml .Values.tolerations | indent 8 }}
+      securityContext:
+{{ toYaml .Values.securityContext | indent 8 }}
+{{- end }}
+
+```
+ 
+
 ## Cassandra Configuration
 
 The bundled Cassandra docker image includes a slightly customised Cassandra configuration that better suited for running inside a container,
