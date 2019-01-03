@@ -62,7 +62,7 @@ To changes the namespace the operator watches (it can be deployed in a different
 
 ```yaml
 command: ["java"]
-args: ["-jar", "/opt/cassandra-operator/operator-1.0.jar", "--namespace=NAMESPACE"]
+args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--namespace=NAMESPACE"]
 ```
 
 The modified helm package (helm/cassandra-operator/templates/deployment.yaml) would look like:
@@ -92,7 +92,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           command: ["java"]
-          args: ["-jar", "/opt/cassandra-operator/operator-1.0.jar", "--namespace=NAMESPACE"]
+          args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--namespace=NAMESPACE"]
           ports:
             - containerPort: 8080
               name: http
