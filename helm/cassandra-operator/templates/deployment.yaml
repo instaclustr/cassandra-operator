@@ -21,8 +21,9 @@ spec:
         - name: {{ template "cassandra-operator.name" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+#          Uncomment and modify to change operator behaviour via start up flags
 #          command: ["java"]
-#          args: ["-jar", "/opt/cassandra-operator/operator-1.0.jar", "--no-version-check=false"]
+#          args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--no-version-check=false"]
           ports:
             - containerPort: 8080
               name: http
