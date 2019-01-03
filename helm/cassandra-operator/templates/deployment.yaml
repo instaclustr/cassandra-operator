@@ -22,7 +22,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
 #          command: ["java"]
-#          args: ["-jar", "/opt/cassandra-operator/operator-1.0.jar", "--no-version-check=false"]
+#          args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--no-version-check=false"]
           ports:
             - containerPort: 8080
               name: http
