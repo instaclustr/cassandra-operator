@@ -17,6 +17,10 @@ spec:
         operator: cassandra
         release: {{ .Release.Name }}
     spec:
+      {{- with .Values.pullSecret }}
+      imagePullSecrets:
+        - name: {{ . }}
+      {{- end }}
       containers:
         - name: {{ template "cassandra-operator.name" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

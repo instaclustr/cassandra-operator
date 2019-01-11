@@ -116,6 +116,17 @@ public class DataCenterReconciliationController {
         }
     }
 
+    private V1PodSpec createPodSpec() {
+        V1PodSpec podSpec = new V1PodSpec();
+        String secret = dataCenterSpec.getImagePullSecret();
+        if (secret != null && secret.length() > 0) {
+            V1LocalObjectReference pullSecret = new V1LocalObjectReference();
+            pullSecret.setName(dataCenterSpec.getImagePullSecret());
+            podSpec.addImagePullSecretsItem(pullSecret);
+        }
+        return podSpec;
+    }
+
     private void createOrReplaceStateNodesStatefulSet(final Iterable<ConfigMapVolumeMount> configMapVolumeMounts, final V1SecretVolumeSource secretVolumeSource) throws ApiException {
         final V1Container cassandraContainer = new V1Container()
                 .name("cassandra")
@@ -160,7 +171,7 @@ public class DataCenterReconciliationController {
                 );
 
 
-        final V1PodSpec podSpec = new V1PodSpec()
+        final V1PodSpec podSpec = createPodSpec()
                 .addInitContainersItem(fileLimitInit())
                 .addContainersItem(cassandraContainer)
                 .addContainersItem(sidecarContainer)

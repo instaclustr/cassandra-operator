@@ -6,7 +6,9 @@ set -o nounset
 set -o pipefail
 
 function defer {
-	docker logout gcr.io
+	if [[ $REPO == gcr.io/* ]]; then
+		docker logout gcr.io
+	fi
 }
 
 if [[ "${DONT_LOGIN}" != "true" ]]; then
