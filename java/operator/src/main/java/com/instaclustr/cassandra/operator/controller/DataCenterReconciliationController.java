@@ -1,5 +1,6 @@
 package com.instaclustr.cassandra.operator.controller;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.*;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
@@ -117,13 +118,6 @@ public class DataCenterReconciliationController {
     }
 
     private V1PodSpec createPodSpec() {
-        V1PodSpec podSpec = new V1PodSpec();
-        String secret = dataCenterSpec.getImagePullSecret();
-        if (secret != null && secret.length() > 0) {
-            V1LocalObjectReference pullSecret = new V1LocalObjectReference();
-            pullSecret.setName(dataCenterSpec.getImagePullSecret());
-            podSpec.addImagePullSecretsItem(pullSecret);
-        }
         return podSpec;
     }
 
@@ -170,8 +164,7 @@ public class DataCenterReconciliationController {
                         .mountPath("/var/lib/cassandra")
                 );
 
-
-        final V1PodSpec podSpec = createPodSpec()
+        final V1PodSpec podSpec = new V1PodSpec()
                 .addInitContainersItem(fileLimitInit())
                 .addContainersItem(cassandraContainer)
                 .addContainersItem(sidecarContainer)
@@ -197,7 +190,12 @@ public class DataCenterReconciliationController {
                         )
                 );
 
-
+        final String secret = dataCenterSpec.getImagePullSecret();
+        if (!Strings.isNullOrEmpty(secret)) {
+            final V1LocalObjectReference pullSecret = new V1LocalObjectReference();
+            pullSecret.setName(dataCenterSpec.getImagePullSecret());
+            podSpec.addImagePullSecretsItem(pullSecret);
+        }
 
         // add configmap volumes
         for (final ConfigMapVolumeMount configMapVolumeMount : configMapVolumeMounts) {
