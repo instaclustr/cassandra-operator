@@ -117,10 +117,6 @@ public class DataCenterReconciliationController {
         }
     }
 
-    private V1PodSpec createPodSpec() {
-        return podSpec;
-    }
-
     private void createOrReplaceStateNodesStatefulSet(final Iterable<ConfigMapVolumeMount> configMapVolumeMounts, final V1SecretVolumeSource secretVolumeSource) throws ApiException {
         final V1Container cassandraContainer = new V1Container()
                 .name("cassandra")
