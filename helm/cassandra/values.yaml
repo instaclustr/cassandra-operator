@@ -11,15 +11,14 @@ image:
   sidecarTag: latest
 
 imagePullPolicy: IfNotPresent
-imagePullSecret: ""
 
 privilegedSupported: true
 
 resources:
   limits:
-    memory: 512Mi
+    memory: 1024Mi
   requests:
-    memory: 512Mi
+    memory: 1024Mi
 dataVolumeClaim:
   accessModes:
     - ReadWriteOnce

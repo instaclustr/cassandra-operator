@@ -29,7 +29,6 @@ spec:
           - cassandraImage
           - sidecarImage
           - imagePullPolicy
-          - imagePullSecret
           - prometheusSupport
           - privilegedSupported
           properties:
