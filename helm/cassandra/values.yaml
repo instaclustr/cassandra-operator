@@ -16,9 +16,9 @@ privilegedSupported: true
 
 resources:
   limits:
-    memory: 1024Mi
+    memory: 512Mi
   requests:
-    memory: 1024Mi
+    memory: 512Mi
 dataVolumeClaim:
   accessModes:
     - ReadWriteOnce
