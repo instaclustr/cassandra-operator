@@ -29,6 +29,7 @@ spec:
           - cassandraImage
           - sidecarImage
           - imagePullPolicy
+          - imagePullSecret
           - prometheusSupport
           - privilegedSupported
           properties:
@@ -53,7 +54,7 @@ spec:
               description: Valid values are "Never" "Always" "IfNotPresent".
             imagePullSecret:
               type: string
-              description: Container registry pull secret.
+              description: Container registry pull secret. Can be "".
             resources:
               type: object
               description: the cpu & memory to construct pod.
