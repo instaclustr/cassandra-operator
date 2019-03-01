@@ -27,7 +27,7 @@ spec:
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
 #          Uncomment and modify to change operator behaviour via start up flags
           command: ["java"]
-          args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--namespace=craig"]
+          args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--no-version-check=false"]
           ports:
             - containerPort: 8080
               name: http
