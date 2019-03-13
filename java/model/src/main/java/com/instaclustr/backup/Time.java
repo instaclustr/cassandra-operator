@@ -1,4 +1,4 @@
-package com.instaclustr.backup.util;
+package com.instaclustr.backup;
 
 import java.util.concurrent.TimeUnit;
 

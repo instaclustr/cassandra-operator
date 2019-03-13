@@ -1,4 +1,4 @@
-package com.instaclustr.backup.util;
+package com.instaclustr.backup;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;

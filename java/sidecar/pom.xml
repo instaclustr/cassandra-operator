@@ -8,7 +8,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>sidecar</artifactId>
+    <artifactId>cassandra-sidecar</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -95,7 +95,6 @@
             <version>2.5.0-b42</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
@@ -103,8 +102,6 @@
         </dependency>
 
 
-
-        <!-- https://mvnrepository.com/artifact/org.testng/testng -->
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -143,10 +140,6 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
-                        <configuration>
-                            <finalName>${project.artifactId}-${project.version}-final</finalName>
-                            <outputDirectory>../../docker/cassandra-sidecar</outputDirectory>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

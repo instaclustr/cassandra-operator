@@ -2,7 +2,6 @@ package com.instaclustr.backup;
 
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
-import com.instaclustr.backup.util.MultimapOptionHandler;
 import org.kohsuke.args4j.Option;
 
 import javax.annotation.Nullable;

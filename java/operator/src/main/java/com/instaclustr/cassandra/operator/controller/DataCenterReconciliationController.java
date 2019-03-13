@@ -59,7 +59,10 @@ public class DataCenterReconciliationController {
         this.dataCenterMetadata = dataCenter.getMetadata();
         this.dataCenterSpec = dataCenter.getSpec();
 
-        this.dataCenterLabels = ImmutableMap.of("cassandra-datacenter", dataCenterMetadata.getName(), "operator", "instaclustr-cassandra-operator"); //hard code an indentifier for DCs created by this operator
+        this.dataCenterLabels = ImmutableMap.of(
+                "cassandra-datacenter", dataCenterMetadata.getName(),
+                "operator", "instaclustr-cassandra-operator" // hard code an identifier for DCs created by this operator
+        );
     }
 
     public void reconcileDataCenter() throws Exception {
@@ -277,7 +280,7 @@ public class DataCenterReconciliationController {
 
         // if the StatefulSet doesn't exist, create it. Otherwise scale it safely
         K8sResourceUtils.createOrReplaceResource(
-                () -> appsApi.createNamespacedStatefulSet(statefulSet.getMetadata().getNamespace(), statefulSet, null),
+                () -> appsApi.createNamespacedStatefulSet(statefulSet.getMetadata().getNamespace(), statefulSet, null, null, null),
                 () -> replaceStatefulSet(statefulSet)
         );
     }
@@ -509,7 +512,7 @@ public class DataCenterReconciliationController {
 
         if (!pods.isEmpty() && cassandraConnectionFactory.connectionForPod(Iterables.getFirst(pods, null)).status().operationMode.equals(CassandraConnection.Status.OperationMode.DECOMMISSIONED)) {
             statefulSet.getSpec().setReplicas(currentReplicas - 1); // todo: modify a copy
-            appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), statefulSet, null);
+            appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), statefulSet, null, null);
 
             try {
                 k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(pods.get(0));
@@ -539,7 +542,7 @@ public class DataCenterReconciliationController {
 
         if (desiredReplicas >= currentReplicas) {
             // scale up or modify
-            appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), statefulSet, null);
+            appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), statefulSet, null, null);
 
         } else {
             // scale down

@@ -12,12 +12,6 @@ import javax.inject.Singleton;
 public class K8sModule extends AbstractModule {
     @Provides
     @Singleton
-    public ApiClient provideApiClient(final ClientBuilder clientBuilder) {
-        return clientBuilder.build();
-    }
-
-    @Provides
-    @Singleton
     public CoreV1Api provideCoreV1Api(final ApiClient apiClient) {
         return new CoreV1Api(apiClient);
     }

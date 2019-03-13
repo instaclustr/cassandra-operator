@@ -1,4 +1,4 @@
-package com.instaclustr.backup.util;
+package com.instaclustr.backup;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;

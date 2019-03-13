@@ -1,4 +1,4 @@
-package com.instaclustr.backup.util;
+package com.instaclustr.backup;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;

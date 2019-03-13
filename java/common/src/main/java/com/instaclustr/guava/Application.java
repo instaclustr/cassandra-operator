@@ -16,8 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class Application implements Callable<Void> {
     private static final Logger logger = LoggerFactory.getLogger(Application.class);
-    public volatile boolean started = false; //Visible for testing
-    public volatile ServiceManager serviceManager;
+    private final ServiceManager serviceManager;
 
     @Inject
     public Application(final ServiceManager serviceManager) {
@@ -34,7 +33,7 @@ public class Application implements Callable<Void> {
 
             while (true) {
                 try {
-                    serviceManager.awaitStopped(1, TimeUnit.MINUTES);
+                    serviceManager.awaitStopped(10, TimeUnit.SECONDS);
                     break;
 
                 } catch (final TimeoutException e) {
@@ -49,7 +48,7 @@ public class Application implements Callable<Void> {
         serviceManager.addListener(new ServiceManager.Listener() {
             @Override
             public void failure(final Service service) {
-                logger.error("Service {} failed. Shutting down.", service); // don't print the cause here -- ServiceManager already logs it.
+                logger.error("Service {} failed. Shutting down.", service, service.failureCause());
                 System.exit(1);
             }
         });
@@ -58,7 +57,6 @@ public class Application implements Callable<Void> {
             logger.info("Starting services.");
             serviceManager.startAsync().awaitHealthy(1, TimeUnit.MINUTES);
             logger.info("Successfully started all services.");
-            started = true;
 
         } catch (final TimeoutException e) {
             logger.error("Timeout waiting for {} to start.", serviceManager.servicesByState().get(Service.State.STARTING));

@@ -62,7 +62,7 @@ public class K8sResourceUtils {
 
     public void createOrReplaceNamespaceService(final V1Service service) throws ApiException {
         createOrReplaceResource(
-                coreApi.createNamespacedServiceCall(service.getMetadata().getNamespace(), service, null, null, null),
+                coreApi.createNamespacedServiceCall(service.getMetadata().getNamespace(), service, null, null, null, null, null),
                 //coreApi.replaceNamespacedServiceCall(service.getMetadata().getName(), service.getMetadata().getNamespace(), service, null, null, null)
                 // temporarily disable service replace call to fix issue #41 since service can't be customized right now
                 coreApi.readNamespacedServiceCall(service.getMetadata().getName(), service.getMetadata().getNamespace(), null, null, null, null, null)
@@ -73,8 +73,8 @@ public class K8sResourceUtils {
         final String namespace = configMap.getMetadata().getNamespace();
 
         createOrReplaceResource(
-                coreApi.createNamespacedConfigMapCall(namespace, configMap, null, null, null),
-                coreApi.replaceNamespacedConfigMapCall(configMap.getMetadata().getName(), namespace, configMap, null, null, null)
+                coreApi.createNamespacedConfigMapCall(namespace, configMap, null, null, null, null, null),
+                coreApi.replaceNamespacedConfigMapCall(configMap.getMetadata().getName(), namespace, configMap, null, null, null, null)
         );
     }
 
@@ -82,7 +82,7 @@ public class K8sResourceUtils {
         final V1ObjectMeta metadata = service.getMetadata();
 
         deleteResource(
-                coreApi.deleteNamespacedServiceCall(metadata.getName(), metadata.getNamespace(), null, null, null)
+                coreApi.deleteNamespacedServiceCall(metadata.getName(), metadata.getNamespace(), null, null, null, null, null, null, null, null)
         );
     }
 
@@ -90,7 +90,7 @@ public class K8sResourceUtils {
         final V1ObjectMeta configMapMetadata = configMap.getMetadata();
 
         deleteResource(
-                coreApi.deleteNamespacedConfigMapCall(configMapMetadata.getName(), configMapMetadata.getNamespace(), deleteOptions, null, null, null, null, null, null)
+                coreApi.deleteNamespacedConfigMapCall(configMapMetadata.getName(), configMapMetadata.getNamespace(), deleteOptions, null, null, null, null, null, null, null)
         );
     }
 
@@ -102,10 +102,10 @@ public class K8sResourceUtils {
         //Scale the statefulset down to zero (https://github.com/kubernetes/client-go/issues/91)
         statefulSet.getSpec().setReplicas(0);
 
-        appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), statefulSet, null);
+        appsApi.replaceNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), statefulSet, null, null);
 
         while (true) {
-            Integer currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), null, null, null).getStatus().getReplicas();
+            int currentReplicas = appsApi.readNamespacedStatefulSet(statefulSet.getMetadata().getName(), statefulSet.getMetadata().getNamespace(), null, null, null).getStatus().getReplicas();
             if (currentReplicas == 0)
                 break;
 
@@ -116,7 +116,7 @@ public class K8sResourceUtils {
 
         final V1ObjectMeta statefulSetMetadata = statefulSet.getMetadata();
 
-        deleteResource(appsApi.deleteNamespacedStatefulSetCall(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), deleteOptions, null, null, null, "Foreground", null, null));
+        deleteResource(appsApi.deleteNamespacedStatefulSetCall(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), deleteOptions, null, null, null, false, "Foreground", null, null));
     }
 
     public void deletePersistentVolumeAndPersistentVolumeClaim(final V1Pod pod) throws Exception {
@@ -126,7 +126,7 @@ public class K8sResourceUtils {
         final String pvcName = pod.getSpec().getVolumes().get(0).getPersistentVolumeClaim().getClaimName();
         final V1PersistentVolumeClaim pvc = coreApi.readNamespacedPersistentVolumeClaim(pvcName, pod.getMetadata().getNamespace(), null, null, null);
 
-        deleteResource(coreApi.deleteNamespacedPersistentVolumeClaimCall(pvcName, pod.getMetadata().getNamespace(), deleteOptions, null, null, null, null, null, null));
-        deleteResource(coreApi.deletePersistentVolumeCall(pvc.getSpec().getVolumeName(), deleteOptions, null, null, null, null, null, null));
+        deleteResource(coreApi.deleteNamespacedPersistentVolumeClaimCall(pvcName, pod.getMetadata().getNamespace(), deleteOptions, null, null, null, null, null, null, null));
+        deleteResource(coreApi.deletePersistentVolumeCall(pvc.getSpec().getVolumeName(), deleteOptions, null, null, null, null, null, null, null));
     }
 }

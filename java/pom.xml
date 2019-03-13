@@ -23,6 +23,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
 
         <guice.version>4.2.0</guice.version>
+        <jackson.version>2.9.8</jackson.version>
     </properties>
 
     <dependencyManagement>
@@ -43,21 +44,21 @@
             <dependency>
                 <groupId>io.kubernetes</groupId>
                 <artifactId>client-java</artifactId>
-                <version>1.0.0-beta3</version>
+                <version>4.0.0</version>
             </dependency>
 
 
             <dependency>
                 <groupId>info.picocli</groupId>
                 <artifactId>picocli</artifactId>
-                <version>3.0.0-alpha-6</version>
+                <version>3.9.5</version>
             </dependency>
 
 
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>24.1-jre</version>
+                <version>27.1-jre</version>
             </dependency>
 
 
@@ -81,17 +82,62 @@
                 <version>1.7.16</version>
             </dependency>
 
+
+            <!-- used by legacy backup code -->
+            <dependency>
+                <groupId>args4j</groupId>
+                <artifactId>args4j</artifactId>
+                <version>2.33</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>com.datastax.cassandra</groupId>
+                <artifactId>cassandra-driver-core</artifactId>
+                <version>3.7.1</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                        </manifest>
+                        <manifestEntries>
+                            <Git-Commit>${git.commit.id}</Git-Commit>
+                            <Build-Time>${git.build.time}</Build-Time>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
                 <version>2.2.4</version>
                 <executions>
                     <execution>
-                        <id>get-the-git-infos</id>
                         <goals>
                             <goal>revision</goal>
                         </goals>
@@ -99,16 +145,6 @@
                 </executions>
                 <configuration>
                     <dotGitDirectory>${project.basedir}/../.git</dotGitDirectory>
-                    <prefix>git</prefix>
-                    <verbose>false</verbose>
-                    <generateGitPropertiesFile>true</generateGitPropertiesFile>
-                    <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
-                    <format>properties</format>
-                    <gitDescribe>
-                        <skip>false</skip>
-                        <always>false</always>
-                        <dirty>-dirty</dirty>
-                    </gitDescribe>
                 </configuration>
             </plugin>
         </plugins>

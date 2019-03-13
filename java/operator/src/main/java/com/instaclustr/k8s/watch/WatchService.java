@@ -56,7 +56,8 @@ public class WatchService<ResourceT, ResourceListT, ResourceKeyT extends Key<Res
         ERROR
     }
 
-    public WatchService(final ApiClient apiClient, final EventBus eventBus,
+    public WatchService(final ApiClient apiClient,
+                        final EventBus eventBus,
                         final ListCallProvider listCallProvider,
                         final WatchEvent.Factory<ResourceT> eventFactory,
                         final Map<ResourceKeyT, ResourceT> resourceCache,
@@ -76,13 +77,12 @@ public class WatchService<ResourceT, ResourceListT, ResourceKeyT extends Key<Res
 
         this.gson = apiClient.getJSON().getGson();
 
-
         apiClient.getHttpClient().setReadTimeout(1, TimeUnit.MINUTES);
     }
 
     @Override
     protected String serviceName() {
-        return WatchService.class.getSimpleName() + "(" + resourceType.getRawType().getSimpleName() + ")";
+        return WatchService.class.getSimpleName() + " (" + resourceType.getRawType().getSimpleName() + ")";
     }
 
     @Override
@@ -100,7 +100,6 @@ public class WatchService<ResourceT, ResourceListT, ResourceKeyT extends Key<Res
         currentCall = listCallProvider.get(listResourceVersion, true);
 
         try (final Watch<JsonObject> watch = Watch.createWatch(apiClient, currentCall, new TypeToken<Watch.Response<JsonObject>>() {}.getType())) {
-
             for (final Watch.Response<JsonObject> objectResponse : watch) {
                 final ResponseType responseType = ResponseType.valueOf(objectResponse.type);
 

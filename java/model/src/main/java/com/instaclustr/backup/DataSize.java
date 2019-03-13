@@ -1,4 +1,4 @@
-package com.instaclustr.backup.util;
+package com.instaclustr.backup;
 
 public class DataSize {
     private enum DataSizeUnit {

@@ -32,6 +32,7 @@ public class StatefulSetWatchModule extends AbstractModule {
                                            final EventBus eventBus, final StatefulSetWatchEvent.Factory statefulSetWatchEventFactory,
                                            final Map<StatefulSetKey, V1beta2StatefulSet> cache,
                                            @Namespace final String namespace) {
+
         final ListCallProvider listCallProvider = (resourceVersion, watch) ->
                 appsApi.listNamespacedStatefulSetCall(namespace, null, null, null, null, "operator=instaclustr-cassandra-operator", null, resourceVersion, null, watch, null, null);
 
