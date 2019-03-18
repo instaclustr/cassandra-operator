@@ -13,8 +13,8 @@ import com.instaclustr.cassandra.operator.model.Backup;
 import com.instaclustr.cassandra.operator.model.BackupSpec;
 import com.instaclustr.cassandra.operator.model.key.BackupKey;
 import com.instaclustr.cassandra.sidecar.model.BackupResponse;
+import com.instaclustr.guava.EventBusSubscriber;
 import io.kubernetes.client.ApiException;
-import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.apis.CustomObjectsApi;
 import io.kubernetes.client.models.V1Pod;
 import org.slf4j.Logger;
@@ -22,23 +22,24 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import javax.inject.Inject;
-import javax.ws.rs.BadRequestException;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
+@EventBusSubscriber
 public class BackupControllerService extends AbstractExecutionThreadService {
     private static final Logger logger = LoggerFactory.getLogger(BackupControllerService.class);
     private static final BackupKey POISON = new BackupKey(null, null);
     private final K8sResourceUtils k8sResourceUtils;
-    private final CoreV1Api coreApi;
     private final Map<BackupKey, Backup> backupCache;
     private Client client;
     private final CustomObjectsApi customObjectsApi;
@@ -49,11 +50,10 @@ public class BackupControllerService extends AbstractExecutionThreadService {
 
     @Inject
     public BackupControllerService(final K8sResourceUtils k8sResourceUtils,
-                                   final CoreV1Api coreApi,
-                                   final Map<BackupKey, Backup> backupCache, CustomObjectsApi customObjectsApi) {
+                                   final Map<BackupKey, Backup> backupCache,
+                                   final CustomObjectsApi customObjectsApi) {
 
         this.k8sResourceUtils = k8sResourceUtils;
-        this.coreApi = coreApi;
         this.backupCache = backupCache;
         this.customObjectsApi = customObjectsApi;
         client = ClientBuilder.newClient();
@@ -68,8 +68,6 @@ public class BackupControllerService extends AbstractExecutionThreadService {
         } else {
             logger.debug("Skipping already processed backup {}", event.backup.getMetadata().getName());
         }
-
-
     }
 
     @Override
@@ -79,23 +77,23 @@ public class BackupControllerService extends AbstractExecutionThreadService {
             if (backupKey == POISON)
                 return;
 
-            try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterName = MDC.putCloseable("Backup", backupKey.name);
-                 @SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterNamespace = MDC.putCloseable("Namespace", backupKey.namespace)) {
+            try (@SuppressWarnings("unused") final MDC.MDCCloseable _backupName = MDC.putCloseable("Backup", backupKey.name);
+                 @SuppressWarnings("unused") final MDC.MDCCloseable _backupNamespace = MDC.putCloseable("Namespace", backupKey.namespace)) {
 
-                final Backup dataCenter = backupCache.get(backupKey);
+                final Backup backup = backupCache.get(backupKey);
 
-                // data center deleted
-                if (dataCenter == null) {
+                // backup deleted
+                if (backup == null) {
                     logger.info("Deleting Backup.", backupKey);
                     deleteBackup(backupKey);
 
                     continue;
                 }
 
-                // data center created or modified
+                // backup created or modified
                 try {
                     logger.info("Reconciling Backup.");
-                    createOrReplaceBackup(dataCenter);
+                    createOrReplaceBackup(backup);
 
                 } catch (final Exception e) {
                     logger.warn("Failed to reconcile Backup. This will be an exception in the future.", e);
@@ -105,6 +103,8 @@ public class BackupControllerService extends AbstractExecutionThreadService {
     }
 
     private boolean callBackupApi(final V1Pod pod, Backup backup) {
+        // TODO: move this to SidecarClient
+
         try {
             WebTarget target = client.target("http://" + pod.getStatus().getPodIP() + ":4567").path("backups");
             BackupArguments backupArguments = BackupConfiguration.generateBackupArguments(pod.getStatus().getPodIP(),
@@ -119,7 +119,8 @@ public class BackupControllerService extends AbstractExecutionThreadService {
 
             BackupResponse response = target.request(MediaType.APPLICATION_JSON_TYPE).post(Entity.entity(backupArguments, MediaType.APPLICATION_JSON_TYPE), BackupResponse.class);
             return response.getStatus().equals("success");
-        } catch (BadRequestException e) {
+
+        } catch (WebApplicationException e) {
             logger.warn("bad request", e);
             return false;
         }
@@ -127,30 +128,26 @@ public class BackupControllerService extends AbstractExecutionThreadService {
 
 
     private void createOrReplaceBackup(final Backup backup) throws ApiException, UnknownHostException {
-        String labels = backup.getMetadata().getLabels().entrySet().stream()
+        // TODO: use a different field as a selector for the DC to backup
+        final String dataCenterPodsLabelSelector = backup.getMetadata().getLabels().entrySet().stream()
                 .map(x -> x.getKey() + "=" + x.getValue())
                 .collect(Collectors.joining(","));
 
-        BackupSpec backupSpec = backup.getSpec();
+        final BackupSpec backupSpec = backup.getSpec();
 
-        if(coreApi.listNamespacedPod(backup.getMetadata().getNamespace(), null, null,
-                null, null, labels, null, null, null, null)
-                .getItems()
-                .parallelStream()
-                .map(x -> callBackupApi(x, backup))
-                .anyMatch(e -> !e)) {
-            backupSpec.setStatus("ERROR");
-        } else {
-            backupSpec.setStatus("PROCESSED");
-        }
+        final List<V1Pod> pods = k8sResourceUtils.listNamespacedPods(backup.getMetadata().getNamespace(), null, dataCenterPodsLabelSelector);
 
-        backup.setSpec(backupSpec);
+        final boolean anyFailed = pods.parallelStream()
+                .map(pod -> callBackupApi(pod, backup))
+                .anyMatch(result -> result == false);
+
+        // TODO: don't modify .spec. Use .status instead.
+        backupSpec.setStatus(anyFailed ? "FAILED" : "PROCESSED");
         customObjectsApi.patchNamespacedCustomObject("stable.instaclustr.com", "v1", backup.getMetadata().getNamespace(), "cassandra-backups", backup.getMetadata().getName(), backup);
-
     }
 
     private void deleteBackup(BackupKey backupKey) {
-
+        logger.warn("Deleting backups is not implemented.");
     }
 
     @Override

@@ -4,38 +4,38 @@ import com.google.common.collect.*;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.cassandra.operator.jmx.CassandraConnection;
-import com.instaclustr.cassandra.operator.jmx.CassandraConnectionFactory;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
 import com.instaclustr.cassandra.operator.model.Backup;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.DataCenterSpec;
+import com.instaclustr.cassandra.operator.sidecar.SidecarClient;
+import com.instaclustr.cassandra.operator.sidecar.SidecarClientFactory;
+import com.instaclustr.cassandra.sidecar.model.Status;
 import com.squareup.okhttp.Call;
 import io.kubernetes.client.ApiException;
-import io.kubernetes.client.ApiResponse;
 import io.kubernetes.client.apis.AppsV1beta2Api;
-import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.apis.CustomObjectsApi;
 import io.kubernetes.client.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class DataCenterReconciliationController {
     private static final Logger logger = LoggerFactory.getLogger(DataCenterReconciliationController.class);
 
-    private final CoreV1Api coreApi;
     private final AppsV1beta2Api appsApi;
     private final CustomObjectsApi customObjectsApi;
-    private final CassandraConnectionFactory cassandraConnectionFactory;
+    private final SidecarClientFactory sidecarClientFactory;
+
     private final K8sResourceUtils k8sResourceUtils;
 
     private final V1ObjectMeta dataCenterMetadata;
@@ -44,16 +44,14 @@ public class DataCenterReconciliationController {
     private final Map<String, String> dataCenterLabels;
 
     @Inject
-    public DataCenterReconciliationController(final CoreV1Api coreApi,
-                                              final AppsV1beta2Api appsApi,
+    public DataCenterReconciliationController(final AppsV1beta2Api appsApi,
                                               final CustomObjectsApi customObjectsApi,
-                                              final CassandraConnectionFactory cassandraConnectionFactory,
+                                              final SidecarClientFactory sidecarClientFactory,
                                               final K8sResourceUtils k8sResourceUtils,
                                               @Assisted final DataCenter dataCenter) {
-        this.coreApi = coreApi;
         this.appsApi = appsApi;
         this.customObjectsApi = customObjectsApi;
-        this.cassandraConnectionFactory = cassandraConnectionFactory;
+        this.sidecarClientFactory = sidecarClientFactory;
         this.k8sResourceUtils = k8sResourceUtils;
 
         this.dataCenterMetadata = dataCenter.getMetadata();
@@ -65,34 +63,40 @@ public class DataCenterReconciliationController {
         );
     }
 
+//    private static MDC.MDCCloseable metadataMdc(final String key, final V1ObjectMeta metadata) {
+//        MDC.putCloseable(key, metadata.getName())
+//    }
+
     public void reconcileDataCenter() throws Exception {
-        // create the public service (what clients use to discover the data center)
-        createOrReplaceNodesService();
+        try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterName = MDC.putCloseable("DataCenter", dataCenterMetadata.getName())) {
+            logger.info("Reconciling Data Center.");
 
-        // create the seed-node service (what C* nodes use to discover the DC seeds)
-        final V1Service seedNodesService = createOrReplaceSeedNodesService();
+            // create the public service (what clients use to discover the data center)
+            createOrReplaceNodesService();
 
-        // create configmaps and their volume mounts (operator-defined config, and user overrides)
-        final List<ConfigMapVolumeMount> configMapVolumeMounts;
-        {
-            final ImmutableList.Builder<ConfigMapVolumeMount> builder = ImmutableList.builder();
+            // create the seed-node service (what C* nodes use to discover the DC seeds)
+            final V1Service seedNodesService = createOrReplaceSeedNodesService();
 
-            builder.add(createOrReplaceOperatorConfigMap(seedNodesService));
+            // create configmaps and their volume mounts (operator-defined config, and user overrides)
+            final List<ConfigMapVolumeMount> configMapVolumeMounts;
+            {
+                final ImmutableList.Builder<ConfigMapVolumeMount> builder = ImmutableList.builder();
 
-            if (dataCenterSpec.getUserConfigMapVolumeSource() != null) {
-                builder.add(new ConfigMapVolumeMount("user-config-volume", "/tmp/user-config", dataCenterSpec.getUserConfigMapVolumeSource()));
+                builder.add(createOrReplaceOperatorConfigMap(seedNodesService));
+
+                if (dataCenterSpec.getUserConfigMapVolumeSource() != null) {
+                    builder.add(new ConfigMapVolumeMount("user-config-volume", "/tmp/user-config", dataCenterSpec.getUserConfigMapVolumeSource()));
+                }
+
+                configMapVolumeMounts = builder.build();
             }
 
-            configMapVolumeMounts = builder.build();
-        }
+            // create the StatefulSet for the DC nodes
+            createOrReplaceStateNodesStatefulSet(configMapVolumeMounts, dataCenterSpec.getUserSecretVolumeSource());
 
-
-
-        // create the statefulset for the DC nodes
-        createOrReplaceStateNodesStatefulSet(configMapVolumeMounts, dataCenterSpec.getUserSecretVolumeSource());
-
-        if (dataCenterSpec.getPrometheusSupport()) {
-            createOrReplacePrometheusServiceMonitor();
+            if (dataCenterSpec.getPrometheusSupport()) {
+                createOrReplacePrometheusServiceMonitor();
+            }
         }
     }
 
@@ -133,12 +137,12 @@ public class DataCenterReconciliationController {
                         "SYS_RESOURCE"
                 ))))
                 .readinessProbe(new V1Probe()
-                        .exec(new V1ExecAction().addCommandItem("/usr/bin/readiness-probe"))
+                        .exec(new V1ExecAction().addCommandItem("/usr/bin/cql-readiness-probe"))
                         .initialDelaySeconds(60)
                         .timeoutSeconds(5)
                 )
                 .addVolumeMountsItem(new V1VolumeMount()
-                        .name("data-volume")
+                        .name("cassandra-data-volume")
                         .mountPath("/var/lib/cassandra")
                 )
                 .addVolumeMountsItem(new V1VolumeMount()
@@ -158,7 +162,7 @@ public class DataCenterReconciliationController {
                 .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                 .addPortsItem(new V1ContainerPort().name("http").containerPort(4567))
                 .addVolumeMountsItem(new V1VolumeMount()
-                        .name("data-volume")
+                        .name("cassandra-data-volume")
                         .mountPath("/var/lib/cassandra")
                 );
 
@@ -226,11 +230,12 @@ public class DataCenterReconciliationController {
 
 
         if (dataCenterSpec.getRestoreFromBackup() != null) {
-
-//            Custom objects api object doesn't give us a nice way to pass in the type we want so we do it manually
-            Call call = customObjectsApi.getNamespacedCustomObjectCall("stable.instaclustr.com", "v1", "default", "cassandra-backups", dataCenterSpec.getRestoreFromBackup(), null, null);
-
-            Backup backup = (Backup) customObjectsApi.getApiClient().execute(call, new TypeToken<Backup>(){}.getType()).getData();
+            // custom objects api doesn't give us a nice way to pass in the type we want so we do it manually
+            final Backup backup;
+            {
+                final Call call = customObjectsApi.getNamespacedCustomObjectCall("stable.instaclustr.com", "v1", "default", "cassandra-backups", dataCenterSpec.getRestoreFromBackup(), null, null);
+                backup = (Backup) customObjectsApi.getApiClient().execute(call, new TypeToken<Backup>(){}.getType()).getData();
+            }
 
             podSpec.addInitContainersItem(fileLimitInit())
                     .addInitContainersItem(new V1Container()
@@ -273,7 +278,7 @@ public class DataCenterReconciliationController {
                                 .spec(podSpec)
                         )
                         .addVolumeClaimTemplatesItem(new V1PersistentVolumeClaim()
-                                .metadata(new V1ObjectMeta().name("data-volume"))
+                                .metadata(new V1ObjectMeta().name("cassandra-data-volume"))
                                 .spec(dataCenterSpec.getDataVolumeClaim())
                         )
                 );
@@ -358,9 +363,10 @@ public class DataCenterReconciliationController {
                     "JVM_OPTS=\"${JVM_OPTS} -javaagent:${CASSANDRA_HOME}/agents/cassandra-exporter-agent.jar=@${CASSANDRA_CONF}/cassandra-exporter.conf\"");
         }
 
-        //Tune limits
+        // tune ulimits
         configMapVolumeAddFile(configMap, volumeSource,  "cassandra-env.sh.d/002-cassandra-limits.sh",
-                "ulimit -l unlimited\n");
+                "ulimit -l unlimited\n" // unlimited locked memory
+        );
 
         // heap size and GC settings
         // TODO: tune
@@ -445,6 +451,8 @@ public class DataCenterReconciliationController {
                         .selector(dataCenterLabels)
                 );
 
+        logger.debug("Creating/replacing Seed Nodes Service {}.", service.getMetadata().getName());
+
         k8sResourceUtils.createOrReplaceNamespaceService(service);
 
         return service;
@@ -464,6 +472,8 @@ public class DataCenterReconciliationController {
             service.getSpec().addPortsItem(new V1ServicePort().name("prometheus").port(9500));
         }
 
+        logger.debug("Creating/replacing Nodes Service {}.", service.getMetadata().getName());
+
         k8sResourceUtils.createOrReplaceNamespaceService(service);
     }
 
@@ -471,7 +481,7 @@ public class DataCenterReconciliationController {
 
     // comparator comparing StatefulSet Pods based on their names (which include an index)
     // "newest" pod first.
-    private static final Comparator<V1Pod> STATEFUL_SET_POD_COMPARATOR = Comparator.comparingInt((V1Pod p) -> {
+    private static final Comparator<V1Pod> STATEFUL_SET_POD_NEWEST_FIRST_COMPARATOR = Comparator.comparingInt((V1Pod p) -> {
         final String podName = p.getMetadata().getName();
         final Matcher matcher = STATEFUL_SET_POD_NAME_PATTERN.matcher(podName);
 
@@ -482,72 +492,142 @@ public class DataCenterReconciliationController {
         return Integer.valueOf(matcher.group("index"));
     }).reversed();
 
+    private static final ImmutableSet<Status.OperationMode> SCALE_UP_OPERATION_MODES = Sets.immutableEnumSet(Status.OperationMode.NORMAL);
+    private static final ImmutableSet<Status.OperationMode> SCALE_DOWN_OPERATION_MODES = Sets.immutableEnumSet(Status.OperationMode.NORMAL, Status.OperationMode.DECOMMISSIONED);
+
     private void replaceStatefulSet(final V1beta2StatefulSet statefulSet) throws ApiException {
         final V1ObjectMeta statefulSetMetadata = statefulSet.getMetadata();
 
-        final int currentReplicas;
-        {
-            final V1beta2StatefulSet existingStatefulSet = appsApi.readNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), null, null, null);
-            currentReplicas = existingStatefulSet.getSpec().getReplicas();
-        }
-        final int desiredReplicas = dataCenterSpec.getReplicas();
-
-        // ideally this should use the same selector as the StatefulSet.
-        // why does listNamespacedPod take a string for the selector when V1LabelSelector exists?
-        final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterMetadata.getName());
-
-
-        ArrayList<V1Pod> podsUnsorted = new ArrayList<>();
-        String shouldContinue = null;
-
-        do {
-            ApiResponse<V1PodList> response = coreApi.listNamespacedPodWithHttpInfo(dataCenterMetadata.getNamespace(), null, shouldContinue, null, null, labelSelector, null, null, null, null);
-            podsUnsorted.addAll(response.getData().getItems());
-            shouldContinue = response.getData().getMetadata().getContinue();
-        } while(shouldContinue != null);
-
-
-        final List<V1Pod> pods = ImmutableList.sortedCopyOf(STATEFUL_SET_POD_COMPARATOR, podsUnsorted);
-
-
-        if (!pods.isEmpty() && cassandraConnectionFactory.connectionForPod(Iterables.getFirst(pods, null)).status().operationMode.equals(CassandraConnection.Status.OperationMode.DECOMMISSIONED)) {
-            statefulSet.getSpec().setReplicas(currentReplicas - 1); // todo: modify a copy
-            appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), statefulSet, null, null);
-
-            try {
-                k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(pods.get(0));
-            } catch (final Exception e) {
-                logger.warn("Failed to delete PersistentVolume & PersistentVolumeClaim. Reason is: ", e);
+        try (@SuppressWarnings("unused") final MDC.MDCCloseable _statefulSetName = MDC.putCloseable("StatefulSet", statefulSetMetadata.getName())) {
+            final int currentReplicas;
+            {
+                final V1beta2StatefulSet existingStatefulSet = appsApi.readNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), null, null, null);
+                currentReplicas = existingStatefulSet.getSpec().getReplicas();
             }
+            final int desiredReplicas = dataCenterSpec.getReplicas();
 
-            return;
-        }
+            logger.debug("StatefulSet currentReplicas = {}, desiredReplicas = {}.", currentReplicas, desiredReplicas);
 
-        final ImmutableListMultimap<CassandraConnection.Status.OperationMode, V1Pod> podCassandraOperationModes = Multimaps.index(
-                pods.parallelStream().filter(p -> p.getStatus().getPhase().equals("Running")).collect(Collectors.toList()),
-                p -> {
-                    final CassandraConnection cassandraConnection = cassandraConnectionFactory.connectionForPod(p);
+            // ideally this should use the same selector as the StatefulSet.
+            // why does listNamespacedPod take a string for the selector when V1LabelSelector exists?
+            final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterMetadata.getName());
 
-                    return cassandraConnection.status().operationMode;
-                });
-
-        if (!EnumSet.of(CassandraConnection.Status.OperationMode.NORMAL).equals(podCassandraOperationModes.keySet())) {
-            logger.warn("Skipping StatefulSet reconciliation as some Cassandra nodes are not in the NORMAL state: {}",
-                    Multimaps.transformValues(podCassandraOperationModes, (V1Pod p) -> p.getMetadata().getName())
+            final List<V1Pod> pods = ImmutableList.sortedCopyOf(STATEFUL_SET_POD_NEWEST_FIRST_COMPARATOR,
+                    k8sResourceUtils.listNamespacedPods(statefulSetMetadata.getNamespace(), null, labelSelector)
             );
 
-            return;
-        }
+            logger.debug("Found {} pods.", pods.size());
+
+            // check that all pods are running
+            {
+                final Multimap<String, V1Pod> podsByPhase = Multimaps.index(pods, pod -> pod.getStatus().getPhase());
+                final Multimap<String, V1Pod> notRunningPodsByPhase = Multimaps.filterKeys(podsByPhase, k -> !k.equals("Running"));
+
+                if (notRunningPodsByPhase.size() > 0) {
+                    logger.warn("Skipping StatefulSet reconciliation as some Pods are not in the Running phase: {}.",
+                        Multimaps.transformValues(notRunningPodsByPhase, (V1Pod p) -> p.getMetadata().getName())
+                    );
+
+                    return;
+                }
+            }
 
 
-        if (desiredReplicas >= currentReplicas) {
-            // scale up or modify
+            final Map<V1Pod, SidecarClient> podClients = Maps.toMap(pods, sidecarClientFactory::clientForPod);
+            final Map<V1Pod, Future<Status>> podCassandraStatuses = ImmutableMap.copyOf(Maps.transformValues(podClients, SidecarClient::status));
+
+            final Multimap<Status.OperationMode, V1Pod> podsByCassandraOperationMode;
+            {
+                final ImmutableMultimap.Builder<Status.OperationMode, V1Pod> builder = ImmutableMultimap.builder();
+                boolean podFailures = false;
+
+                for (final Map.Entry<V1Pod, Future<Status>> entry : podCassandraStatuses.entrySet()) {
+                    final V1Pod pod = entry.getKey();
+
+                    try {
+                        final Status.OperationMode operationMode = entry.getValue().get().operationMode;
+
+                        builder.put(operationMode, pod);
+
+                    } catch (final Exception e) {
+                        logger.error("Failed to get the status of Cassandra Pod {}.", pod.getMetadata().getName(), e);
+                        podFailures = true;
+                    }
+                }
+
+                if (podFailures) {
+                    logger.warn("Skipping StatefulSet reconciliation as the status of some Cassandra nodes could not be queried.");
+                    return;
+                }
+
+                podsByCassandraOperationMode = builder.build();
+            }
+
+
+            // check that all Cassandra nodes are in the right state
+            // TODO: extend this to a full "health check"
+            {
+                final Multimap<Status.OperationMode, V1Pod> incorrectStatePodsByCassandraOperationMode = Multimaps.filterKeys(podsByCassandraOperationMode, mode -> {
+                    if (desiredReplicas >= currentReplicas) {
+                        return !SCALE_UP_OPERATION_MODES.contains(mode);
+
+                    } else {
+                        return !SCALE_DOWN_OPERATION_MODES.contains(mode);
+                    }
+                });
+
+                if (incorrectStatePodsByCassandraOperationMode.size() > 0) {
+                    logger.warn("Skipping StatefulSet reconciliation as some Cassandra Pods are not in the correct mode: {}.",
+                            Multimaps.transformValues(incorrectStatePodsByCassandraOperationMode, (V1Pod p) -> p.getMetadata().getName())
+                    );
+
+                    return;
+                }
+            }
+
+
+            if (desiredReplicas > currentReplicas) {
+                logger.debug("Scaling up.");
+
+                statefulSet.getSpec().setReplicas(currentReplicas + 1);
+
+            } else if (desiredReplicas < currentReplicas) {
+                logger.debug("Scaling down.");
+
+                // if all nodes are NORMAL, kick off a decommission
+                // if all nodes except the "newest" are NORMAL, and the newest is DECOMMISSIONED, scale the statefulset
+
+                final V1Pod newestPod = pods.get(0);
+
+                final Collection<V1Pod> decommissionedPods = podsByCassandraOperationMode.get(Status.OperationMode.DECOMMISSIONED);
+
+                if (decommissionedPods.isEmpty()) {
+                    logger.debug("No Cassandra nodes have been decommissioned. Decommissioning the newest node.");
+
+                    sidecarClientFactory.clientForPod(newestPod).decommission();
+
+                } else if (decommissionedPods.size() == 1) {
+                    final V1Pod decommissionedPod = Iterables.getOnlyElement(podsByCassandraOperationMode.get(Status.OperationMode.DECOMMISSIONED));
+
+                    if (decommissionedPod != newestPod) {
+                        logger.error("Skipping StatefulSet reconciliation as the DataCenter contains one decommissioned Cassandra node, but it isn't the newest. Decommissioned Pod = {}, expecting Pod = {}.",
+                                decommissionedPod.getMetadata().getName(), newestPod.getMetadata().getName());
+
+                        return;
+                    }
+
+                    statefulSet.getSpec().setReplicas(currentReplicas - 1);
+                    k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(decommissionedPod);
+
+                } else {
+                    logger.error("Skipping StatefulSet reconciliation as the DataCenter contains more than one decommissioned Cassandra node: {}.",
+                            Iterables.transform(decommissionedPods, (V1Pod p) -> p.getMetadata().getName()));
+
+                    return;
+                }
+            }
+
             appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), statefulSet, null, null);
-
-        } else {
-            // scale down
-            // decommission the newest pod
-            cassandraConnectionFactory.connectionForPod(pods.get(0)).decommission();
         }
     }
 
