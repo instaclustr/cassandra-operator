@@ -14,10 +14,11 @@ import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
 import com.instaclustr.cassandra.operator.sidecar.SidecarClient;
 import com.instaclustr.cassandra.operator.sidecar.SidecarClientFactory;
 import com.instaclustr.cassandra.sidecar.model.Status;
+import com.instaclustr.k8s.watch.ResourceCache;
+import com.instaclustr.slf4j.MDC;
 import io.kubernetes.client.models.V1Pod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 import javax.inject.Inject;
 import java.net.InetAddress;
@@ -26,12 +27,14 @@ import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import static com.instaclustr.cassandra.operator.k8s.K8sLoggingSupport.putNamespacedName;
+
 
 public class CassandraHealthCheckService extends AbstractScheduledService {
     private static final Logger logger = LoggerFactory.getLogger(CassandraHealthCheckService.class);
 
     private final K8sResourceUtils k8sResourceUtils;
-    private final Map<DataCenterKey, DataCenter> dataCenterCache;
+    private final ResourceCache<DataCenterKey, DataCenter> dataCenterCache;
     private final SidecarClientFactory sidecarClientFactory;
 
     private final EventBus eventBus;
@@ -43,7 +46,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
 
     @Inject
     public CassandraHealthCheckService(final K8sResourceUtils k8sResourceUtils,
-                                       final Map<DataCenterKey, DataCenter> dataCenterCache,
+                                       final ResourceCache<DataCenterKey, DataCenter> dataCenterCache,
                                        final SidecarClientFactory sidecarClientFactory,
                                        final EventBus eventBus) {
         this.k8sResourceUtils = k8sResourceUtils;
@@ -60,8 +63,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
         for (final Map.Entry<DataCenterKey, DataCenter> cacheEntry : dataCenterCache.entrySet()) {
              final DataCenterKey dataCenterKey = cacheEntry.getKey();
 
-            try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterName = MDC.putCloseable("DataCenter", dataCenterKey.name);
-                 @SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterNamespace = MDC.putCloseable("Namespace", dataCenterKey.namespace)) {
+            try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterMDC = putNamespacedName("DataCenter", dataCenterKey)) {
                 final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);
 
                 final List<V1Pod> pods = k8sResourceUtils.listNamespacedPods(dataCenterKey.namespace, "status.phase=Running", labelSelector);
@@ -70,11 +72,11 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
                 final Map<V1Pod, Future<Status>> podStatuses = ImmutableMap.copyOf(Maps.transformValues(podClients, SidecarClient::status));
 
                 for (final Map.Entry<V1Pod, Future<Status>> entry : podStatuses.entrySet()) {
-                    try {
-                        final V1Pod pod = entry.getKey();
-                        final Status status = entry.getValue().get();
+                    final V1Pod pod = entry.getKey();
+                    try (@SuppressWarnings("unused") final MDC.MDCCloseable _podMDC = putNamespacedName("Pod", pod.getMetadata())) {
+                        try {
+                            final Status status = entry.getValue().get();
 
-                        try (@SuppressWarnings("unused") final MDC.MDCCloseable _podName = MDC.putCloseable("Pod", pod.getMetadata().getName())) {
                             final InetAddress podIp = InetAddresses.forString(pod.getStatus().getPodIP());
 
                             final Status.OperationMode previousMode = cassandraNodeOperationModes.getIfPresent(podIp);
@@ -87,9 +89,10 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
                             if (previousMode != null && !previousMode.equals(mode)) {
                                 eventBus.post(new CassandraNodeOperationModeChangedEvent(pod, dataCenterKey, previousMode, mode));
                             }
+
+                        } catch (final Exception e) {
+                            logger.warn("Failed to get Cassandra Pod status.", e);
                         }
-                    } catch (final Exception e) {
-                        logger.warn("Failed to get Cassandra Pod status.", e);
                     }
                 }
             }

@@ -11,7 +11,7 @@ public class JMXServiceURLTypeConverter implements CommandLine.ITypeConverter<JM
         try {
             return new JMXServiceURL(value);
 
-        } catch (MalformedURLException e) {
+        } catch (final MalformedURLException e) {
             throw new CommandLine.TypeConversionException("Invalid JMX service URL (" + e.getLocalizedMessage() + ")");
         }
     }

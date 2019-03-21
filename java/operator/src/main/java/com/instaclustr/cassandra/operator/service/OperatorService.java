@@ -7,18 +7,20 @@ import com.instaclustr.cassandra.operator.controller.DataCenterControllerFactory
 import com.instaclustr.cassandra.operator.event.*;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
+import com.instaclustr.cassandra.operator.event.DataCenterWatchEvent;
 import com.instaclustr.cassandra.sidecar.model.Status;
 import com.instaclustr.guava.EventBusSubscriber;
+import com.instaclustr.k8s.watch.ResourceCache;
+import com.instaclustr.slf4j.MDC;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 import javax.inject.Inject;
-import java.util.EnumSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+
+import static com.instaclustr.cassandra.operator.k8s.K8sLoggingSupport.putNamespacedName;
 
 @EventBusSubscriber
 public class OperatorService extends AbstractExecutionThreadService {
@@ -27,12 +29,12 @@ public class OperatorService extends AbstractExecutionThreadService {
     private static final DataCenterKey POISON = new DataCenterKey(null, null);
 
     private final DataCenterControllerFactory dataCenterControllerFactory;
-    private final Map<DataCenterKey, DataCenter> dataCenterCache;
+    private final ResourceCache<DataCenterKey, DataCenter> dataCenterCache;
 
     private final BlockingQueue<DataCenterKey> dataCenterQueue = new LinkedBlockingQueue<>();
 
     @Inject
-    public OperatorService(final DataCenterControllerFactory dataCenterControllerFactory, final Map<DataCenterKey, DataCenter> dataCenterCache) {
+    public OperatorService(final DataCenterControllerFactory dataCenterControllerFactory, final ResourceCache<DataCenterKey, DataCenter> dataCenterCache) {
         this.dataCenterControllerFactory = dataCenterControllerFactory;
         this.dataCenterCache = dataCenterCache;
     }
@@ -58,6 +60,10 @@ public class OperatorService extends AbstractExecutionThreadService {
     @Subscribe
     void handleStatefulSetEvent(final StatefulSetWatchEvent event) {
         logger.debug("Received StatefulSetWatchEvent {}.", event);
+
+        if (event instanceof StatefulSetWatchEvent.Added) {
+            return;
+        }
 
         // Trigger a dc reconciliation event if changes to the stateful set has finished.
         if (event.statefulSet.getStatus().getReplicas().equals(event.statefulSet.getStatus().getReadyReplicas()) && event.statefulSet.getStatus().getCurrentReplicas().equals(event.statefulSet.getStatus().getReplicas())) {
@@ -89,17 +95,15 @@ public class OperatorService extends AbstractExecutionThreadService {
 
     @Override
     protected void run() throws Exception {
-        while (isRunning()) {
+        while (true) {
             final DataCenterKey dataCenterKey = dataCenterQueue.take();
             if (dataCenterKey == POISON)
                 return;
 
-            try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterName = MDC.putCloseable("DataCenter", dataCenterKey.name);
-                 @SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterNamespace = MDC.putCloseable("Namespace", dataCenterKey.namespace)) {
-
+            try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterMDC = putNamespacedName("DataCenter", dataCenterKey)) {
                 final DataCenter dataCenter = dataCenterCache.get(dataCenterKey);
 
-                // data center deleted
+                // data center was removed from cache, delete
                 if (dataCenter == null) {
                     logger.info("Deleting Data Center.");
                     dataCenterControllerFactory.deletionControllerForDataCenter(dataCenterKey).deleteDataCenter();

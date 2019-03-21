@@ -1,7 +1,7 @@
 package com.instaclustr.cassandra.operator.k8s;
 
 import com.google.common.collect.ImmutableList;
-import com.squareup.okhttp.Call;
+import com.instaclustr.slf4j.MDC;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.AppsV1beta2Api;
@@ -9,10 +9,11 @@ import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 import javax.inject.Inject;
 import java.util.List;
+
+import static com.instaclustr.cassandra.operator.k8s.K8sLoggingSupport.putNamespacedName;
 
 public class K8sResourceUtils {
     private static final Logger logger = LoggerFactory.getLogger(K8sResourceUtils.class);
@@ -49,51 +50,53 @@ public class K8sResourceUtils {
         }
     }
 
-    public void createOrReplaceResource(final Call createResourceCall, final Call replaceResourceCall) throws ApiException {
-        createOrReplaceResource(
-                () -> apiClient.execute(createResourceCall),
-                () -> apiClient.execute(replaceResourceCall)
-        );
+    public void createOrReplaceNamespacedService(final V1Service service) throws ApiException {
+        try (@SuppressWarnings("unused") final MDC.MDCCloseable _serviceMDC = putNamespacedName("Service", service.getMetadata())) {
+            final String namespace = service.getMetadata().getNamespace();
+
+            logger.debug("Creating/replacing namespaced Service.");
+
+            createOrReplaceResource(
+                    () -> {
+                        coreApi.createNamespacedService(namespace, service, null, null, null);
+                        logger.debug("Created namespaced Service.");
+                    },
+                    //coreApi.replaceNamespacedService(service.getMetadata().getName(), service.getMetadata().getNamespace(), service, null)
+                    // temporarily disable service replace call to fix issue #41 since service can't be customized right now
+                    () -> {}
+            );
+        }
     }
 
-    private void deleteResource(final Call deleteResourceCall) throws ApiException {
-        apiClient.execute(deleteResourceCall);
-    }
+    public void createOrReplaceNamespacedConfigMap(final V1ConfigMap configMap) throws ApiException {
+        try (@SuppressWarnings("unused") final MDC.MDCCloseable _configMapMDC = putNamespacedName("ConfigMap", configMap.getMetadata())) {
+            final String namespace = configMap.getMetadata().getNamespace();
 
-    public void createOrReplaceNamespaceService(final V1Service service) throws ApiException {
-        final String namespace = service.getMetadata().getNamespace();
+            logger.debug("Creating/replacing namespaced ConfigMap.");
 
-        createOrReplaceResource(
-                coreApi.createNamespacedServiceCall(namespace, service, null, null, null, null, null),
-                //coreApi.replaceNamespacedServiceCall(service.getMetadata().getName(), service.getMetadata().getNamespace(), service, null, null, null)
-                // temporarily disable service replace call to fix issue #41 since service can't be customized right now
-                coreApi.readNamespacedServiceCall(service.getMetadata().getName(), namespace, null, null, null, null, null)
-        );
-    }
-
-    public void createOrReplaceNamespaceConfigMap(final V1ConfigMap configMap) throws ApiException {
-        final String namespace = configMap.getMetadata().getNamespace();
-
-        createOrReplaceResource(
-                coreApi.createNamespacedConfigMapCall(namespace, configMap, null, null, null, null, null),
-                coreApi.replaceNamespacedConfigMapCall(configMap.getMetadata().getName(), namespace, configMap, null, null, null, null)
-        );
+            createOrReplaceResource(
+                    () -> {
+                        coreApi.createNamespacedConfigMap(namespace, configMap, null, null, null);
+                        logger.debug("Created namespaced ConfigMap.");
+                    },
+                    () -> {
+                        coreApi.replaceNamespacedConfigMap(configMap.getMetadata().getName(), namespace, configMap, null, null);
+                        logger.debug("Replaced namespaced ConfigMap.");
+                    }
+            );
+        }
     }
 
     public void deleteService(final V1Service service) throws ApiException {
         final V1ObjectMeta metadata = service.getMetadata();
 
-        deleteResource(
-                coreApi.deleteNamespacedServiceCall(metadata.getName(), metadata.getNamespace(), null, null, null, null, null, null, null, null)
-        );
+        coreApi.deleteNamespacedService(metadata.getName(), metadata.getNamespace(), null, null, null, null, null, null);
     }
 
-    public void deleteConfigMap(final V1ConfigMap configMap, final V1DeleteOptions deleteOptions) throws ApiException {
+    public void deleteConfigMap(final V1ConfigMap configMap) throws ApiException {
         final V1ObjectMeta configMapMetadata = configMap.getMetadata();
 
-        deleteResource(
-                coreApi.deleteNamespacedConfigMapCall(configMapMetadata.getName(), configMapMetadata.getNamespace(), deleteOptions, null, null, null, null, null, null, null)
-        );
+        coreApi.deleteNamespacedConfigMap(configMapMetadata.getName(), configMapMetadata.getNamespace(), null, null, null, null, null, null);
     }
 
     public void deleteStatefulSet(final V1beta2StatefulSet statefulSet) throws ApiException {
@@ -118,23 +121,22 @@ public class K8sResourceUtils {
 
         final V1ObjectMeta statefulSetMetadata = statefulSet.getMetadata();
 
-        deleteResource(appsApi.deleteNamespacedStatefulSetCall(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), deleteOptions, null, null, null, false, "Foreground", null, null));
+        appsApi.deleteNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), deleteOptions, null, null, null, false, "Foreground");
     }
 
     public void deletePersistentVolumeAndPersistentVolumeClaim(final V1Pod pod) throws ApiException {
-        try (@SuppressWarnings("unused") final MDC.MDCCloseable _podName = MDC.putCloseable("Pod", pod.getMetadata().getName());
-             @SuppressWarnings("unused") final MDC.MDCCloseable _podNamespace = MDC.putCloseable("Namespace", pod.getMetadata().getNamespace())) {
-
-            logger.debug("Deleting Persistent Volume Claim.");
+        try (@SuppressWarnings("unused") final MDC.MDCCloseable _podMDC = putNamespacedName("Pod", pod.getMetadata())) {
+            logger.debug("Deleting Pod Persistent Volumes and Claims.");
 
             final V1DeleteOptions deleteOptions = new V1DeleteOptions()
                     .propagationPolicy("Foreground");
 
+            // TODO: maybe delete all volumes?
             final String pvcName = pod.getSpec().getVolumes().get(0).getPersistentVolumeClaim().getClaimName();
             final V1PersistentVolumeClaim pvc = coreApi.readNamespacedPersistentVolumeClaim(pvcName, pod.getMetadata().getNamespace(), null, null, null);
 
-            deleteResource(coreApi.deleteNamespacedPersistentVolumeClaimCall(pvcName, pod.getMetadata().getNamespace(), deleteOptions, null, null, null, null, null, null, null));
-            deleteResource(coreApi.deletePersistentVolumeCall(pvc.getSpec().getVolumeName(), deleteOptions, null, null, null, null, null, null, null));
+            coreApi.deleteNamespacedPersistentVolumeClaim(pvcName, pod.getMetadata().getNamespace(), deleteOptions, null, null, null, null, null);
+            coreApi.deletePersistentVolume(pvc.getSpec().getVolumeName(), deleteOptions, null, null, null, null, null);
         }
     }
 

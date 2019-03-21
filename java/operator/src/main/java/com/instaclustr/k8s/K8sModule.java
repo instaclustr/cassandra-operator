@@ -5,7 +5,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.apis.*;
-import io.kubernetes.client.util.ClientBuilder;
 
 import javax.inject.Singleton;
 

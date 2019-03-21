@@ -44,7 +44,7 @@ public class DataCenterDeletionController {
         // delete configmap
         final V1ConfigMapList configMaps = coreApi.listNamespacedConfigMap(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
         for (final V1ConfigMap configMap : configMaps.getItems()) {
-            k8sResourceUtils.deleteConfigMap(configMap, new V1DeleteOptions());
+            k8sResourceUtils.deleteConfigMap(configMap);
         }
 
         // delete services

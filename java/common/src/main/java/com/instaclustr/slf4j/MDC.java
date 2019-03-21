@@ -1,7 +1,6 @@
 package com.instaclustr.slf4j;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 public class MDC {
     public static class MDCCloseable implements Closeable {
@@ -9,11 +8,11 @@ public class MDC {
         private final String previousValue;
         private final MDCCloseable next;
 
-        public MDCCloseable(final String key, final String value) {
+        MDCCloseable(final String key, final String value) {
             this(key, value, null);
         }
 
-        public MDCCloseable(final String key, final String value, final MDCCloseable next) {
+        MDCCloseable(final String key, final String value, final MDCCloseable next) {
             this.key = key;
             this.previousValue = org.slf4j.MDC.get(key);
             this.next = next;

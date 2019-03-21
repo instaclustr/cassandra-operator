@@ -14,6 +14,7 @@ import com.instaclustr.cassandra.operator.model.BackupSpec;
 import com.instaclustr.cassandra.operator.model.key.BackupKey;
 import com.instaclustr.cassandra.sidecar.model.BackupResponse;
 import com.instaclustr.guava.EventBusSubscriber;
+import com.instaclustr.k8s.watch.ResourceCache;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.CustomObjectsApi;
 import io.kubernetes.client.models.V1Pod;
@@ -39,18 +40,17 @@ import java.util.stream.Collectors;
 public class BackupControllerService extends AbstractExecutionThreadService {
     private static final Logger logger = LoggerFactory.getLogger(BackupControllerService.class);
     private static final BackupKey POISON = new BackupKey(null, null);
+
     private final K8sResourceUtils k8sResourceUtils;
-    private final Map<BackupKey, Backup> backupCache;
+    private final ResourceCache<BackupKey, Backup> backupCache;
     private Client client;
     private final CustomObjectsApi customObjectsApi;
-
-
 
     private final BlockingQueue<BackupKey> backupQueue = new LinkedBlockingQueue<>();
 
     @Inject
     public BackupControllerService(final K8sResourceUtils k8sResourceUtils,
-                                   final Map<BackupKey, Backup> backupCache,
+                                   final ResourceCache<BackupKey, Backup> backupCache,
                                    final CustomObjectsApi customObjectsApi) {
 
         this.k8sResourceUtils = k8sResourceUtils;
@@ -72,7 +72,7 @@ public class BackupControllerService extends AbstractExecutionThreadService {
 
     @Override
     protected void run() throws Exception {
-        while(isRunning()) {
+        while (true) {
             final BackupKey backupKey = backupQueue.take();
             if (backupKey == POISON)
                 return;
