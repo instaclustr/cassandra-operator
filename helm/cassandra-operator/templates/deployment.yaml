@@ -1,4 +1,4 @@
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
@@ -17,6 +17,10 @@ spec:
         operator: cassandra
         release: {{ .Release.Name }}
     spec:
+      {{- with .Values.imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ . }}
+      {{- end }}
       containers:
         - name: {{ template "cassandra-operator.name" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

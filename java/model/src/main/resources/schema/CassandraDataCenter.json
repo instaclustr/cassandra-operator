@@ -35,6 +35,9 @@
         "imagePullPolicy" : {
           "type": "string"
         },
+        "imagePullSecret" : {
+          "type": "string"
+        },
         "env" : {
           "description": "List of environment variables to inject in the Cassandra & Sidecar container.",
           "type": "array",
