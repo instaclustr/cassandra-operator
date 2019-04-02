@@ -3,9 +3,13 @@ replicaCount: 3
 image:
   cassandraRepository: gcr.io/cassandra-operator/cassandra
   sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar
+  cassandraTag: 3.11.3
   tag: latest
 
 imagePullPolicy: Always
+imagePullSecret: ""
+
+privilegedSupported: true
 
 resources:
   limits:
@@ -18,3 +22,5 @@ dataVolumeClaim:
   resources:
     requests:
       storage: 100Mi
+
+prometheusEnabled: false
