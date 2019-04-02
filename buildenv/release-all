@@ -15,9 +15,6 @@ function defer {
 
 trap defer EXIT
 
-if [[ $REPO == gcr.io/* ]]; then
-	gcloud docker -a
-fi
 
 export DONT_LOGIN="true"
 
