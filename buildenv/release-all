@@ -15,6 +15,12 @@ function defer {
 
 trap defer EXIT
 
+# We source this a bunch of times just to make stuff work. TODO: this needs a clean up
+source ./buildenv/repo
+
+if [[ $REPO == gcr.io/* ]]; then
+	gcloud docker -a
+fi
 
 export DONT_LOGIN="true"
 
