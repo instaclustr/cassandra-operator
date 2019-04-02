@@ -18,6 +18,7 @@ trap defer EXIT
 # We source this a bunch of times just to make stuff work. TODO: this needs a clean up
 REPO="${REPO:-gcr.io/cassandra-operator}"
 
+
 if [[ $REPO == gcr.io/* ]]; then
 	gcloud docker -a
 fi
