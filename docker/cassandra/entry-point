@@ -12,4 +12,4 @@ do
 done
 )
 
-/usr/sbin/cassandra || (echo "aww :("; sleep 99999)
+/usr/sbin/cassandra
