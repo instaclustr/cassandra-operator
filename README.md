@@ -13,7 +13,7 @@ We expect to consider the Cassandra operator stable soon; backwards incompatible
 
 The Cassandra operator manages Cassandra clusters deployed to [Kubernetes](http://kubernetes.io) and automates tasks related to operating an Cassandra cluster.
 
-- [Install](#deploy-cassandra-operator)
+- [Install](./doc/op_guide.md)
 - [Create and destroy](#create-and-destroy-an-Cassandra-cluster)
 - [Resize](#resize-an-Cassandra-cluster)
 - [Rolling upgrade](#upgrade-an-Cassandra-cluster) - _TODO_

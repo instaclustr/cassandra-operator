@@ -11,6 +11,7 @@ image:
   sidecarTag: latest
 
 imagePullPolicy: IfNotPresent
+imagePullSecret: ""
 
 privilegedSupported: true
 

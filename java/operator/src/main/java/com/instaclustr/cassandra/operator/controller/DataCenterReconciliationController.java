@@ -1,5 +1,6 @@
 package com.instaclustr.cassandra.operator.controller;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.*;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
@@ -128,6 +129,7 @@ public class DataCenterReconciliationController {
 
         try (@SuppressWarnings("unused") final MDC.MDCCloseable _statefulSetMDC = putNamespacedName("StatefulSet", statefulSetMetadata)) {
 
+
             final V1Container cassandraContainer = new V1Container()
                     .name("cassandra")
                     .image(dataCenterSpec.getCassandraImage())
@@ -158,7 +160,6 @@ public class DataCenterReconciliationController {
                 cassandraContainer.addPortsItem(new V1ContainerPort().name("prometheus").containerPort(9500));
             }
 
-
             final V1Container sidecarContainer = new V1Container()
                     .name("sidecar")
                     .env(dataCenterSpec.getEnv())
@@ -180,22 +181,29 @@ public class DataCenterReconciliationController {
                             .downwardAPI(new V1DownwardAPIVolumeSource()
                                     .addItemsItem(new V1DownwardAPIVolumeFile()
                                             .path("labels")
-                                            .fieldRef(new V1ObjectFieldSelector().fieldPath("resourceMetadata.labels"))
+                                            .fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.labels"))
                                     )
                                     .addItemsItem(new V1DownwardAPIVolumeFile()
                                             .path("annotations")
-                                            .fieldRef(new V1ObjectFieldSelector().fieldPath("resourceMetadata.annotations"))
+                                            .fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.annotations"))
                                     )
                                     .addItemsItem(new V1DownwardAPIVolumeFile()
                                             .path("namespace")
-                                            .fieldRef(new V1ObjectFieldSelector().fieldPath("resourceMetadata.namespace"))
+                                            .fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.namespace"))
                                     )
                                     .addItemsItem(new V1DownwardAPIVolumeFile()
                                             .path("name")
-                                            .fieldRef(new V1ObjectFieldSelector().fieldPath("resourceMetadata.name"))
+                                            .fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.name"))
                                     )
                             )
                     );
+
+            final String secret = dataCenterSpec.getImagePullSecret();
+            if (!Strings.isNullOrEmpty(secret)) {
+                final V1LocalObjectReference pullSecret = new V1LocalObjectReference();
+                pullSecret.setName(dataCenterSpec.getImagePullSecret());
+                podSpec.addImagePullSecretsItem(pullSecret);
+            }
 
 
             // add configmap volumes

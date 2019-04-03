@@ -7,13 +7,21 @@ set -o pipefail
 cd `dirname "$BASH_SOURCE"`/..
 
 function defer {
-	docker logout gcr.io
-	export DONT_LOGIN="false"
+	if [[ $REPO == gcr.io/* ]]; then
+		docker logout gcr.io
+		export DONT_LOGIN="false"
+	fi
 }
 
 trap defer EXIT
 
-gcloud docker -a
+# We source this a bunch of times just to make stuff work. TODO: this needs a clean up
+REPO="${REPO:-gcr.io/cassandra-operator}"
+
+
+if [[ $REPO == gcr.io/* ]]; then
+	gcloud docker -a
+fi
 
 export DONT_LOGIN="true"
 
