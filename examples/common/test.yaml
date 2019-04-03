@@ -3,15 +3,15 @@ kind: CassandraDataCenter
 metadata:
   name: test-dc
 spec:
-  replicas: 3
-  sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
-  cassandraImage: "gcr.io/cassandra-operator/cassandra:latest"
-  imagePullPolicy: IfNotPresent
+  replicas: 5 
+  sidecarImage: "gcr.io/adams-cassandra-operator-dev/cassandra-sidecar:1.0-SNAPSHOT"
+  cassandraImage: "gcr.io/adams-cassandra-operator-dev/cassandra:3.11.3"
+  imagePullPolicy: Always
   resources:
     limits:
-      memory: 512Mi
+      memory: 1Gi
     requests:
-      memory: 512Mi
+      memory: 1Gi
   dataVolumeClaim:
     accessModes:
       - ReadWriteOnce

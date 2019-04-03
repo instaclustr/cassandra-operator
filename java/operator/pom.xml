@@ -8,9 +8,10 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>operator</artifactId>
+    <artifactId>cassandra-operator</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
+
     <properties>
         <jersey.version>2.27</jersey.version>
     </properties>
@@ -68,40 +69,20 @@
             <artifactId>jul-to-slf4j</artifactId>
         </dependency>
 
+
         <dependency>
             <groupId>org.glassfish.jersey.core</groupId>
-            <artifactId>jersey-common</artifactId>
-            <version>${jersey.version}</version>
+            <artifactId>jersey-client</artifactId>
         </dependency>
 
         <dependency>
             <groupId>org.glassfish.jersey.inject</groupId>
             <artifactId>jersey-hk2</artifactId>
-            <version>${jersey.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.glassfish.jersey.containers</groupId>
-            <artifactId>jersey-container-jdk-http</artifactId>
-            <version>${jersey.version}</version>
-        </dependency>
-
-        <dependency>
-        <groupId>org.glassfish.jersey.media</groupId>
-        <artifactId>jersey-media-json-jackson</artifactId>
-        <version>${jersey.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.instaclustr.cassandra-operator</groupId>
-            <artifactId>backup</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.instaclustr.cassandra-operator</groupId>
-            <artifactId>sidecar</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
         </dependency>
 
 
@@ -113,7 +94,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.datastax.cassandra/cassandra-driver-core -->
         <dependency>
             <groupId>com.datastax.cassandra</groupId>
             <artifactId>cassandra-driver-core</artifactId>
@@ -134,6 +114,7 @@
                     <excludedGroups>integration</excludedGroups>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -155,16 +136,13 @@
                         </transformer>
                     </transformers>
                 </configuration>
+
                 <executions>
                     <execution>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
-                        <configuration>
-                            <finalName>${project.artifactId}-${project.version}-final</finalName>
-                            <outputDirectory>../../docker/cassandra-operator</outputDirectory>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

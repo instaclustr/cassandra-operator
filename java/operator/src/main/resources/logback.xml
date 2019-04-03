@@ -1,0 +1,14 @@
+<configuration>
+    <conversionRule conversionWord="exdetails"
+                    converterClass="com.instaclustr.logback.ExceptionDetailsConverter" />
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%-5level [%thread]: %message%replace( {%mdc}){' \{\}',''}%n%exdetails</pattern>
+        </encoder>
+    </appender>
+
+    <root level="DEBUG">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>

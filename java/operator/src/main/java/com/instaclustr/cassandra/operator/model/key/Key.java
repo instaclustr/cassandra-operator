@@ -29,9 +29,6 @@ public abstract class Key<T> {
 
     @Override
     public final String toString() {
-        return MoreObjects.toStringHelper(this)
-                .add("namespace", namespace)
-                .add("name", name)
-                .toString();
+        return namespace + "/" + name;
     }
 }

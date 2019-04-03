@@ -29,11 +29,11 @@ public class DataCenterDeletionController {
     public void deleteDataCenter() throws Exception {
         final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);
 
-        // delete persistent volumes & persistent volume claims
-        final V1PodList pods = coreApi.listNamespacedPod(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, null, null);
-        for (final V1Pod pod : pods.getItems()) {
-            k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(pod);
-        }
+//        // delete persistent volumes & persistent volume claims
+//        final V1PodList pods = coreApi.listNamespacedPod(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, null, null);
+//        for (final V1Pod pod : pods.getItems()) {
+//            k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(pod);
+//        }
 
         // delete statefulset
         final V1beta2StatefulSetList statefulSets = appsApi.listNamespacedStatefulSet(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
@@ -44,7 +44,7 @@ public class DataCenterDeletionController {
         // delete configmap
         final V1ConfigMapList configMaps = coreApi.listNamespacedConfigMap(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
         for (final V1ConfigMap configMap : configMaps.getItems()) {
-            k8sResourceUtils.deleteConfigMap(configMap, new V1DeleteOptions());
+            k8sResourceUtils.deleteConfigMap(configMap);
         }
 
         // delete services

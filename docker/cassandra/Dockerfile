@@ -1,19 +1,22 @@
-FROM base-openjre
+ARG openjre_image
+
+FROM ${openjre_image}
 
 ARG cassandra_version=3.11.2
+ARG cassandra_k8s_addons_jar
 
 COPY install-cassandra /tmp/install-cassandra
 
 RUN /tmp/install-cassandra ${cassandra_version}
 
-COPY entry-point.sh /usr/bin/entry-point
+COPY entry-point /usr/bin/entry-point
 
-COPY cassandra.sh /usr/sbin/cassandra
-COPY nodetool.sh /usr/bin/nodetool
+COPY cassandra /usr/sbin/cassandra
+COPY nodetool /usr/bin/nodetool
 COPY cassandra.in.sh /usr/share/cassandra/
-COPY readiness-probe.sh /usr/bin/readiness-probe
+COPY cql-readiness-probe /usr/bin/cql-readiness-probe
 
-COPY k8s-addons-1.0-SNAPSHOT.jar /usr/share/cassandra/lib
+COPY ${cassandra_k8s_addons_jar} /usr/share/cassandra/lib
 
 ADD default-config /etc/cassandra
 
@@ -25,8 +28,6 @@ VOLUME /etc/cassandra
 # 7199: JMX
 # 9042: CQL
 # 9160: thrift service
-# 9200: elassandra HTTP
-# 9300: elasticsearch transport
-EXPOSE 7000 7001 7199 9042 9160 9200 9300
+EXPOSE 7000 7001 7199 9042 9160
 
 ENTRYPOINT ["/usr/bin/entry-point"]

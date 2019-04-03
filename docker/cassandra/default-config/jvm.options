@@ -29,12 +29,12 @@
 -XX:+PrintTenuringDistribution
 -XX:+PrintGCApplicationStoppedTime
 -XX:+PrintPromotionFailure
--Xloggc:/var/lib/cassandra/logs/gc.log
+-Xloggc:/var/log/cassandra/gc.log
 -XX:+UseGCLogFileRotation
 -XX:NumberOfGCLogFiles=10
 -XX:GCLogFileSize=10M
 
--XX:+PrintFlagsFinal
+#-XX:+PrintFlagsFinal
 -XX:+HeapDumpOnOutOfMemoryError
 
 -XX:MaxDirectMemorySize=18G
