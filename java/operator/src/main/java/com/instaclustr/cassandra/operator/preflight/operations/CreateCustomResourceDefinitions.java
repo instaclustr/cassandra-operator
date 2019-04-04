@@ -41,7 +41,7 @@ public class CreateCustomResourceDefinitions implements Operation {
             logger.info("Creating Custom Resource Definition {}", crdName);
 
             try {
-                apiExtensionsApi.createCustomResourceDefinition(crdDefinition, null);
+                apiExtensionsApi.createCustomResourceDefinition(crdDefinition, null, null, null);
 
             } catch (final ApiException e) {
                 if (e.getCode() == 409) { // HTTP 409 CONFLICT

@@ -3,23 +3,47 @@ package com.instaclustr.cassandra.sidecar;
 import com.instaclustr.backup.RestoreArguments;
 import com.instaclustr.backup.task.RestoreTask;
 import com.instaclustr.backup.util.GlobalLock;
-import com.instaclustr.build.Info;
+import com.instaclustr.cassandra.sidecar.picocli.SidecarJarManifestVersionProvider;
+import com.instaclustr.picocli.JarManifestVersionProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.bridge.SLF4JBridgeHandler;
+import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class SidecarRestore {
+import static com.instaclustr.picocli.JarManifestVersionProvider.logCommandVersionInformation;
+
+@CommandLine.Command(name = "cassandra-restore",
+        description = "Sidecar management application for Apache Cassandra running on Kubernetes.",
+        versionProvider = SidecarJarManifestVersionProvider.class
+)
+public class SidecarRestore implements Callable<Void> {
     private static final Logger logger = LoggerFactory.getLogger(SidecarRestore.class);
 
-    public static void main(final String[] args) throws IOException {
-        Info.logVersionInfo();
+    @CommandLine.Unmatched
+    private String[] args = new String[0];
 
+    @CommandLine.Spec
+    private CommandLine.Model.CommandSpec commandSpec;
+
+    public static void main(final String[] args) throws IOException {
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
+        SLF4JBridgeHandler.install();
+
+        CommandLine.call(new SidecarRestore(), System.err, CommandLine.Help.Ansi.ON, args);
+    }
+
+    @Override
+    public Void call() throws Exception {
+        logCommandVersionInformation(commandSpec);
 
         final RestoreArguments arguments = new RestoreArguments("cassandra-restore", System.err);
         arguments.parseArguments(args);
@@ -39,11 +63,17 @@ public class SidecarRestore {
                     globalLock,
                     arguments
             ).call();
+
             logger.info("Restore completed successfully.");
+
             System.exit(0);
+
         } catch (final Exception e) {
             logger.error("Failed to complete restore.", e);
+
             System.exit(1);
         }
+
+        return null;
     }
 }

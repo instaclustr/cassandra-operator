@@ -3,17 +3,21 @@ package com.instaclustr.guava;
 import com.google.common.eventbus.DeadEvent;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
-import com.google.common.util.concurrent.Service;
 import com.google.inject.AbstractModule;
 import com.google.inject.Binding;
 import com.google.inject.matcher.AbstractMatcher;
+import com.google.inject.matcher.Matcher;
 import com.google.inject.matcher.Matchers;
 import com.google.inject.spi.ProvisionListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.AnnotatedElement;
+
 public class EventBusModule extends AbstractModule {
     private static final Logger logger = LoggerFactory.getLogger(EventBusModule.class);
+
+    private static final Matcher<AnnotatedElement> EVENT_BUS_SUBSCRIBER_MATCHER = Matchers.annotatedWith(EventBusSubscriber.class);
 
     private final EventBus eventBus = new EventBus();
 
@@ -30,12 +34,12 @@ public class EventBusModule extends AbstractModule {
     protected void configure() {
         bind(EventBus.class).toInstance(eventBus);
 
-        // register all provisioned Services with the EventBus
+        // register all provisioned EventBusSubscribers with the EventBus
         bindListener(new AbstractMatcher<Binding<?>>() {
             @Override
             public boolean matches(final Binding<?> binding) {
-                return Matchers.subclassesOf(Service.class)
-                        .matches(binding.getKey().getTypeLiteral().getRawType());
+                return EVENT_BUS_SUBSCRIBER_MATCHER.matches(binding.getKey().getTypeLiteral().getRawType());
+
             }
         }, new ProvisionListener() {
             @Override

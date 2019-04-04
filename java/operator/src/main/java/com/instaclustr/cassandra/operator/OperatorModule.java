@@ -5,11 +5,11 @@ import com.google.inject.AbstractModule;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.Multibinder;
 import com.instaclustr.cassandra.operator.controller.DataCenterControllerFactory;
-import com.instaclustr.cassandra.operator.modules.*;
 import com.instaclustr.cassandra.operator.service.BackupControllerService;
 import com.instaclustr.cassandra.operator.service.CassandraHealthCheckService;
 import com.instaclustr.cassandra.operator.service.OperatorService;
-import com.instaclustr.cassandra.operator.service.GarbageCollectorService;
+import com.instaclustr.cassandra.operator.sidecar.SidecarClientModule;
+import com.instaclustr.cassandra.operator.watch.*;
 
 public class OperatorModule extends AbstractModule {
 
@@ -18,9 +18,10 @@ public class OperatorModule extends AbstractModule {
         final Multibinder<Service> serviceMultibinder = Multibinder.newSetBinder(binder(), Service.class);
 
         serviceMultibinder.addBinding().to(OperatorService.class);
-        serviceMultibinder.addBinding().to(GarbageCollectorService.class);
         serviceMultibinder.addBinding().to(CassandraHealthCheckService.class);
         serviceMultibinder.addBinding().to(BackupControllerService.class);
+
+        install(new SidecarClientModule());
 
         install(new FactoryModuleBuilder().build(DataCenterControllerFactory.class));
 
