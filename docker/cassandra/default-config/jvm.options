@@ -34,7 +34,6 @@
 -XX:NumberOfGCLogFiles=10
 -XX:GCLogFileSize=10M
 
-#-XX:+PrintFlagsFinal
 -XX:+HeapDumpOnOutOfMemoryError
 
 -XX:MaxDirectMemorySize=18G
