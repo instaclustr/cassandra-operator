@@ -29,25 +29,26 @@ public class DataCenterDeletionController {
     public void deleteDataCenter() throws Exception {
         final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);
 
-//        // delete persistent volumes & persistent volume claims
+        // delete persistent volumes & persistent volume claims
+        // TODO: this is disabled for now for saftey. Perhaps add a flag or something to control this.
 //        final V1PodList pods = coreApi.listNamespacedPod(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, null, null);
 //        for (final V1Pod pod : pods.getItems()) {
 //            k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(pod);
 //        }
 
-        // delete statefulset
+        // delete StatefulSets
         final V1beta2StatefulSetList statefulSets = appsApi.listNamespacedStatefulSet(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
         for (final V1beta2StatefulSet statefulSet : statefulSets.getItems()) {
             k8sResourceUtils.deleteStatefulSet(statefulSet);
         }
 
-        // delete configmap
+        // delete ConfigMaps
         final V1ConfigMapList configMaps = coreApi.listNamespacedConfigMap(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
         for (final V1ConfigMap configMap : configMaps.getItems()) {
             k8sResourceUtils.deleteConfigMap(configMap);
         }
 
-        // delete services
+        // delete Services
         final V1ServiceList services = coreApi.listNamespacedService(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, 30, null);
         for (final V1Service service : services.getItems()) {
             k8sResourceUtils.deleteService(service);
