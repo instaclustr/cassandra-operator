@@ -198,11 +198,14 @@ public class DataCenterReconciliationController {
                             )
                     );
 
-            final String secret = dataCenterSpec.getImagePullSecret();
-            if (!Strings.isNullOrEmpty(secret)) {
-                final V1LocalObjectReference pullSecret = new V1LocalObjectReference();
-                pullSecret.setName(dataCenterSpec.getImagePullSecret());
-                podSpec.addImagePullSecretsItem(pullSecret);
+            {
+                final String secret = dataCenterSpec.getImagePullSecret();
+                if (!Strings.isNullOrEmpty(secret)) {
+                    final V1LocalObjectReference pullSecret = new V1LocalObjectReference()
+                            .name(secret);
+
+                    podSpec.addImagePullSecretsItem(pullSecret);
+                }
             }
 
 
@@ -246,8 +249,7 @@ public class DataCenterReconciliationController {
                 final Backup backup;
                 {
                     final Call call = customObjectsApi.getNamespacedCustomObjectCall("stable.instaclustr.com", "v1", "default", "cassandra-backups", dataCenterSpec.getRestoreFromBackup(), null, null);
-                    backup = customObjectsApi.getApiClient().<Backup>execute(call, new TypeToken<Backup>() {
-                    }.getType()).getData();
+                    backup = customObjectsApi.getApiClient().<Backup>execute(call, new TypeToken<Backup>() {}.getType()).getData();
                 }
 
                 podSpec.addInitContainersItem(fileLimitInit())
@@ -654,7 +656,7 @@ public class DataCenterReconciliationController {
         final ImmutableMap<String, Object> prometheusServiceMonitor = ImmutableMap.<String, Object>builder()
                 .put("apiVersion", "monitoring.coreos.com/v1")
                 .put("kind", "ServiceMonitor")
-                .put("resourceMetadata", ImmutableMap.<String, Object>builder()
+                .put("metadata", ImmutableMap.<String, Object>builder()
                         .put("name", name)
                         .put("labels", ImmutableMap.<String, Object>builder()
                                 .putAll(dataCenterLabels)
