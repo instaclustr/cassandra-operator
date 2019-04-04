@@ -4,16 +4,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
+import com.google.common.reflect.TypeToken;
 import com.instaclustr.cassandra.operator.event.WatchEvent;
-import com.instaclustr.cassandra.operator.model.DataCenter;
-import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
 import com.instaclustr.cassandra.operator.model.key.Key;
 import com.instaclustr.slf4j.MDC;
 import io.kubernetes.client.models.V1ObjectMeta;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Singleton;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +27,8 @@ public abstract class ResourceCache<ResourceKeyT extends Key<ResourceT>, Resourc
 
     private final Map<ResourceKeyT, ResourceT> cache = new HashMap<>();
     private final CountDownLatch latch = new CountDownLatch(1);
+
+    private final TypeToken<ResourceT> resourceType = new TypeToken<ResourceT>(getClass()) {};
 
     public ResourceCache(final EventBus eventBus,
                          final WatchEvent.Factory<ResourceT> eventFactory) {
@@ -64,9 +64,13 @@ public abstract class ResourceCache<ResourceKeyT extends Key<ResourceT>, Resourc
         put(key, resource);
     }
 
+    private MDC.MDCCloseable putResourceKeyInMDC(final ResourceKeyT key) {
+        return MDC.put("ResourceKey", key.toString()).andPut("ResourceType", resourceType.toString());
+    }
+
 
     private void put(final ResourceKeyT key, final ResourceT resource) {
-        try (@SuppressWarnings("unused") final MDC.MDCCloseable _resourceMDC = MDC.put("Resource", key.toString())) {
+        try (@SuppressWarnings("unused") final MDC.MDCCloseable _resourceKeyMDC = putResourceKeyInMDC(key)) {
             final ResourceT oldResource = cache.put(key, resource);
 
             if (oldResource == null) {
@@ -80,7 +84,7 @@ public abstract class ResourceCache<ResourceKeyT extends Key<ResourceT>, Resourc
             final String newResourceVersion = resourceMetadata(resource).getResourceVersion();
 
             if (!oldResourceVersion.equals(newResourceVersion)) {
-                logger.debug("Remote and locally cached resource versions differ. Posting modified event. old = {}, new = {}", oldResourceVersion, newResourceVersion);
+                logger.debug("Remote and locally cached resource versions differ. Posting modified event. old = {}, new = {}.", oldResourceVersion, newResourceVersion);
                 eventBus.post(eventFactory.createModifiedEvent(oldResource, resource));
             }
         }
@@ -90,7 +94,7 @@ public abstract class ResourceCache<ResourceKeyT extends Key<ResourceT>, Resourc
     void remove(final ResourceT resource) {
         final ResourceKeyT key = resourceKey(resource);
 
-        try (@SuppressWarnings("unused") final MDC.MDCCloseable _resourceMDC = MDC.put("Resource", key.toString())) {
+        try (@SuppressWarnings("unused") final MDC.MDCCloseable _resourceKeyMDC = putResourceKeyInMDC(key)) {
             logger.debug("Removing resource from local cache. Will post deleted event.");
 
             // ignore the local version -- the server sends a copy of the last version of the resource, which may be newer than the cached copy
@@ -100,7 +104,7 @@ public abstract class ResourceCache<ResourceKeyT extends Key<ResourceT>, Resourc
     }
 
     private void remove(final ResourceKeyT key) {
-        try (@SuppressWarnings("unused") final MDC.MDCCloseable _resourceMDC = MDC.put("Resource", key.toString())) {
+        try (@SuppressWarnings("unused") final MDC.MDCCloseable _resourceKeyMDC = putResourceKeyInMDC(key)) {
             logger.debug("Removing resource from local cache. Will post deleted event.");
 
             final ResourceT resource = cache.remove(key);
