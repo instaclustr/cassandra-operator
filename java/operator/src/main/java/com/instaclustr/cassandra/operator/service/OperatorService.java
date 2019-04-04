@@ -69,7 +69,7 @@ public class OperatorService extends AbstractExecutionThreadService {
         if (event.statefulSet.getStatus().getReplicas().equals(event.statefulSet.getStatus().getReadyReplicas()) && event.statefulSet.getStatus().getCurrentReplicas().equals(event.statefulSet.getStatus().getReplicas())) {
             String datacenterName = event.statefulSet.getMetadata().getLabels().get("cassandra-datacenter");
             if (datacenterName != null)
-                dataCenterQueue.add(new DataCenterKey(event.statefulSet.getMetadata().getNamespace(), datacenterName));
+                dataCenterQueue.add(new DataCenterKey(datacenterName, event.statefulSet.getMetadata().getNamespace()));
         }
     }
 
