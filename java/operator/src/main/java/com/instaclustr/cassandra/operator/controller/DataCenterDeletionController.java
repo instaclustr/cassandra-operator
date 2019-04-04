@@ -30,7 +30,7 @@ public class DataCenterDeletionController {
         final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);
 
         // delete persistent volumes & persistent volume claims
-        // TODO: this is disabled for now for saftey. Perhaps add a flag or something to control this.
+        // TODO: this is disabled for now for safety. Perhaps add a flag or something to control this.
 //        final V1PodList pods = coreApi.listNamespacedPod(dataCenterKey.namespace, null, null, null, null, labelSelector, null, null, null, null);
 //        for (final V1Pod pod : pods.getItems()) {
 //            k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(pod);

@@ -9,6 +9,7 @@ import com.instaclustr.backup.StorageProvider;
 import com.instaclustr.cassandra.operator.configuration.BackupConfiguration;
 import com.instaclustr.cassandra.operator.event.BackupWatchEvent;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
+import com.instaclustr.cassandra.operator.k8s.OperatorLabels;
 import com.instaclustr.cassandra.operator.model.Backup;
 import com.instaclustr.cassandra.operator.model.BackupSpec;
 import com.instaclustr.cassandra.operator.model.key.BackupKey;
@@ -112,7 +113,7 @@ public class BackupControllerService extends AbstractExecutionThreadService {
                     backup.getMetadata().getName(),
                     StorageProvider.valueOf(backup.getSpec().getBackupType()),
                     backup.getSpec().getTarget(),
-                    backup.getMetadata().getLabels().get("cassandra-datacenter"));
+                    backup.getMetadata().getLabels().get(OperatorLabels.DATACENTER));
 
             backupArguments.backupId = pod.getSpec().getHostname();
             backupArguments.speed = CommonBackupArguments.Speed.LUDICROUS;

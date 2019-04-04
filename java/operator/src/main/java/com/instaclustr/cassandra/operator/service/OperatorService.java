@@ -5,6 +5,7 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.instaclustr.cassandra.operator.controller.DataCenterControllerFactory;
 import com.instaclustr.cassandra.operator.event.*;
+import com.instaclustr.cassandra.operator.k8s.OperatorLabels;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
 import com.instaclustr.cassandra.operator.event.DataCenterWatchEvent;
@@ -67,9 +68,10 @@ public class OperatorService extends AbstractExecutionThreadService {
 
         // Trigger a dc reconciliation event if changes to the stateful set has finished.
         if (event.statefulSet.getStatus().getReplicas().equals(event.statefulSet.getStatus().getReadyReplicas()) && event.statefulSet.getStatus().getCurrentReplicas().equals(event.statefulSet.getStatus().getReplicas())) {
-            String datacenterName = event.statefulSet.getMetadata().getLabels().get("cassandra-datacenter");
-            if (datacenterName != null)
+            String datacenterName = event.statefulSet.getMetadata().getLabels().get(OperatorLabels.DATACENTER);
+            if (datacenterName != null) {
                 dataCenterQueue.add(new DataCenterKey(datacenterName, event.statefulSet.getMetadata().getNamespace()));
+            }
         }
     }
 

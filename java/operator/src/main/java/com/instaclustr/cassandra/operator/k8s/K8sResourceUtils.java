@@ -61,9 +61,11 @@ public class K8sResourceUtils {
                         coreApi.createNamespacedService(namespace, service, null, null, null);
                         logger.debug("Created namespaced Service.");
                     },
-                    //coreApi.replaceNamespacedService(service.getMetadata().getName(), service.getMetadata().getNamespace(), service, null)
-                    // temporarily disable service replace call to fix issue #41 since service can't be customized right now
-                    () -> {}
+                    () -> {
+                        // temporarily disable service replace call to fix issue #41 since service can't be customized right now
+//                        coreApi.replaceNamespacedService(service.getMetadata().getName(), service.getMetadata().getNamespace(), service, null, null);
+//                        logger.debug("Replaced namespaced Service.");
+                    }
             );
         }
     }

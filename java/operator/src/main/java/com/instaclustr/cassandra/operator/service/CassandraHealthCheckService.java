@@ -9,6 +9,7 @@ import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.instaclustr.cassandra.operator.event.CassandraNodeOperationModeChangedEvent;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
+import com.instaclustr.cassandra.operator.k8s.OperatorLabels;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
 import com.instaclustr.cassandra.operator.sidecar.SidecarClient;
@@ -64,7 +65,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
              final DataCenterKey dataCenterKey = cacheEntry.getKey();
 
             try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterMDC = putNamespacedName("DataCenter", dataCenterKey)) {
-                final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterKey.name);
+                final String labelSelector = String.format("%s=%s", OperatorLabels.DATACENTER, dataCenterKey.name);
 
                 final List<V1Pod> pods = k8sResourceUtils.listNamespacedPods(dataCenterKey.namespace, "status.phase=Running", labelSelector);
 

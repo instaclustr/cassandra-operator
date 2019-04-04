@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
+import com.instaclustr.cassandra.operator.k8s.OperatorLabels;
 import com.instaclustr.cassandra.operator.model.Backup;
 import com.instaclustr.cassandra.operator.model.DataCenter;
 import com.instaclustr.cassandra.operator.model.DataCenterSpec;
@@ -61,8 +62,9 @@ public class DataCenterReconciliationController {
         this.dataCenterSpec = dataCenter.getSpec();
 
         this.dataCenterLabels = ImmutableMap.of(
-                "cassandra-datacenter", dataCenterMetadata.getName(),
-                "operator", "instaclustr-cassandra-operator" // hard code an identifier for DCs created by this operator
+                OperatorLabels.DATACENTER, dataCenterMetadata.getName(),
+                "app.kubernetes.io/managed-by", "com.instaclustr.cassandra-operator" // hard code an identifier for DCs created by this operator
+                // TODO: add other
         );
     }
 
@@ -263,8 +265,8 @@ public class DataCenterReconciliationController {
                                         "-cp", "/opt/lib/cassandra-sidecar/cassandra-sidecar.jar",
                                         "com.instaclustr.cassandra.sidecar.SidecarRestore",
                                         "-bb", backup.getSpec().getTarget(),
-                                        "-c", backup.getMetadata().getLabels().get("cassandra-datacenter"),
-                                        "-bi", backup.getMetadata().getLabels().get("cassandra-datacenter"),
+                                        "-c", backup.getMetadata().getLabels().get(OperatorLabels.DATACENTER),
+                                        "-bi", backup.getMetadata().getLabels().get(OperatorLabels.DATACENTER),
                                         "-s", backup.getMetadata().getName(),
                                         "--bs", backup.getSpec().getBackupType(),
                                         "-rs"
@@ -526,7 +528,7 @@ public class DataCenterReconciliationController {
 
         // ideally this should use the same selector as the StatefulSet.
         // why does listNamespacedPod take a string for the selector when V1LabelSelector exists?
-        final String labelSelector = String.format("cassandra-datacenter=%s", dataCenterMetadata.getName());
+        final String labelSelector = String.format("%s=%s", OperatorLabels.DATACENTER, dataCenterMetadata.getName());
 
         final List<V1Pod> pods = ImmutableList.sortedCopyOf(STATEFUL_SET_POD_NEWEST_FIRST_COMPARATOR,
                 k8sResourceUtils.listNamespacedPods(statefulSetMetadata.getNamespace(), null, labelSelector)
@@ -636,7 +638,8 @@ public class DataCenterReconciliationController {
                 existingStatefulSet.getSpec().setReplicas(currentReplicas - 1);
                 appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), existingStatefulSet, null, null);
 
-                k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(decommissionedPod);
+                // TODO: this is disabled for now for safety. Perhaps add a flag or something to control this.
+//                k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(decommissionedPod);
             } else {
                 logger.error("Skipping StatefulSet reconciliation as the DataCenter contains more than one decommissioned Cassandra node: {}.",
                         Iterables.transform(decommissionedPods, (V1Pod p) -> p.getMetadata().getName()));
@@ -645,7 +648,7 @@ public class DataCenterReconciliationController {
         } else {
 
             appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), statefulSet, null, null);
-            logger.debug("Repaced namespaced StatefulSet.");
+            logger.debug("Replaced namespaced StatefulSet.");
         }
 
     }
