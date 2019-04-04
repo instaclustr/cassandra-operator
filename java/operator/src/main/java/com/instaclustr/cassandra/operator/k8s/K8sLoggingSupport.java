@@ -17,6 +17,6 @@ public class K8sLoggingSupport {
     }
 
     public static MDC.MDCCloseable putNamespacedName(final String key, final Key<?> objectKey) {
-        return MDC.put(key, key.toString());
+        return MDC.put(key, objectKey.toString());
     }
 }

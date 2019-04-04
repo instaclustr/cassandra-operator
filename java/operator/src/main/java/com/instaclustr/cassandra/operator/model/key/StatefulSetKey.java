@@ -11,6 +11,6 @@ public class StatefulSetKey extends Key<V1beta2StatefulSet> {
     public static StatefulSetKey forStatefulSet(final V1beta2StatefulSet statefulSet) {
         final V1ObjectMeta metadata = statefulSet.getMetadata();
 
-        return new StatefulSetKey(metadata.getNamespace(), metadata.getName());
+        return new StatefulSetKey(metadata.getName(), metadata.getNamespace());
     }
 }
