@@ -15,8 +15,8 @@ See Pivotals documentation for [configuring dynamic PVs](https://docs.pivotal.io
 
 
 ### Installing the operator with Helm and Tiller
-The project include in-tree helm templates to make installation simpler and repeatable. 
-To install via helm follow the steps below:
+The project includes in-tree Helm templates to make installation simpler and repeatable. 
+To install via Helm follow the steps below:
 
 ```bash
 #First check and change the values.yaml file to make sure it meets your requirements:
@@ -31,29 +31,29 @@ helm install helm/cassandra -n test-cluster
 ```
 
 ### Installing the operator without Tiller
-The Helm templates are relatively independent and can also be used to generate the deployments yaml file offline:
+The Helm templates are relatively independent and can also be used to generate the deployment yaml file offline:
 ```bash
 helm template helm/cassandra-operator -n cassandra-operator > operator.yaml
 ```
 
-Once you have generated the yaml file locally using Helm, you can deploy to PKS via kubectl:
+Once you have generated the yaml file locally using Helm, you can deploy to PKS via `kubectl`:
 ```bash
 kubectl apply -f operator.yaml
 ```
 
-You can also build the yaml by hand, refer to the examples directory and the helm templates for requirements. 
+You can also build the yaml by hand. Refer to the `examples` directory and the Helm templates for requirements. 
 
 ## Custom Namespace support
 Custom namespace support is somewhat limited at the moment primarily due to laziness. You can have the operator watch a different namespace (other than "defaul") by changing the namepsace it watches on startup. This is not an optimal way to do so (we should watch all namespaces... maybe), but it's the implementation as it stands.
 
-To changes the namespace the operator watches (it can be deployed in a different namespace if you want), you will need to modify the deployment the operator gets deployed by (either the helm package or the example yaml) to include the following in the containers spec:
+To changes the namespace the operator watches (it can be deployed in a different namespace if you want), you will need to modify the deployment the operator gets deployed by (either the Helm package or the example yaml) to include the following in the containers spec:
 
 ```yaml
 command: ["java"]
 args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--namespace=NAMESPACE"]
 ```
 
-The modified helm package (helm/cassandra-operator/templates/deployment.yaml) would look like:
+The modified helm package (`helm/cassandra-operator/templates/deployment.yaml`) would look like:
 ```yaml
 apiVersion: apps/v1beta1
 kind: Deployment
@@ -101,8 +101,8 @@ spec:
 
 ```
 ## Deploying Cassandra
-You can now deploy Cassandra by using the in Helm package (helm/cassandra) or my creating your own CDC object (see examples directory).
-Key configuration components are defined in a values.yaml file. You can either use the default or define your own (see example below):
+You can now deploy Cassandra by using the Helm package (`helm/cassandra`) or my creating your own CDC object (see `examples` directory).
+Key configuration components are defined in a `values.yaml` file. You can either use the default or define your own (see example below):
 
 
 ```yaml
@@ -153,7 +153,7 @@ Set to `false`
 
 ## Cassandra Configuration
 
-The bundled Cassandra docker image includes a slightly customised Cassandra configuration that better suited for running inside a container,
+The bundled Cassandra docker image includes a slightly customised Cassandra configuration that is better suited for running inside a container,
 but leaves the bulk of the configuration up to cassandra-operator.
 
 cassandra-operator automatically configures Cassandra and the JVM with (what we consider) sane defaults for the deployment,
