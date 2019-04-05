@@ -1,42 +1,22 @@
-## Installing the Cassandra operator
-### Quick start installations
-To build and install locally follow the below steps:
-```bash
-#in the project root directory e.g. cd ~/git/cassandra-operator/
+## Installing the Cassandra operator on PKS
+### Prerequisites
+1) Ensure you have configured kubectl to point to your PKS cluster:
+    ```bash
+    pks login -a PKS-API -u USERNAME -k
+    pks get-credentials CLUSTER-NAME
+    ```
+    `pks` will automatically set your kubectl context so you can now interact with your cluster via standard tooling.
 
-#Start a minikube cluster with enough resources, cassandra is hungry!
-minikube start --cpus 4 --memory 4096 --kubernetes-version v1.9.4
+2) (Optional) Ensure Helm and Tiller is configured and installed in your PKS deployment. Non-Tiller (the cluster side component of Helm) instructions are listed below. 
+See Pivotals documentation for installing [Helm on PKS](https://docs.pivotal.io/runtimes/pks/1-2/helm.html) . 
 
-#Use the minikube docker context 
-eval $(minikube docker-env)
+3) Ensure you have configured Persistant Volumes for your PKS cluster. 
+See Pivotals documentation for [configuring dynamic PVs](https://docs.pivotal.io/runtimes/pks/1-2/configuring-pvs.html). 
 
-#Build the operator
-mvn -f java/pom.xml clean package
 
-#Build the required docker images
-./buildenv/build-all
-
-#Create the operator using the default bundle
-kubectl apply -f examples/common/rbac-bundle.yaml
-
-#Check status
-kubectl get pods --selector=k8s-app=cassandra-operator
-```
-
-Verify that you can create a Cassandra cluster
-```bash
-kubectl apply -f examples/common/test.yaml
-
-#wait for all pods to be up (this may take some time)
-
-kubectl get pods --selector=cassandra-datacenter=test-dc 
-
-kubectl exec test-dc-2 -i -t -- bash -c 'cqlsh test-dc-seeds'
-```
-
-### Helm Instructions
-The project include in-tree helm templates to make installation simpler and repeatable. 
-To install via helm follow the steps below:
+### Installing the operator with Helm and Tiller
+The project includes in-tree Helm templates to make installation simpler and repeatable. 
+To install via Helm follow the steps below:
 
 ```bash
 #First check and change the values.yaml file to make sure it meets your requirements:
@@ -50,23 +30,30 @@ helm install helm/cassandra-operator -n cassandra-operator
 helm install helm/cassandra -n test-cluster
 ```
 
-The Helm templates are relatively independent and can also be used to generate the deployments yaml file offline:
+### Installing the operator without Tiller
+The Helm templates are relatively independent and can also be used to generate the deployment yaml file offline:
 ```bash
-helm template helm/cassandra-operator -n cassandra-operator
+helm template helm/cassandra-operator -n cassandra-operator > operator.yaml
 ```
+
+Once you have generated the yaml file locally using Helm, you can deploy to PKS via `kubectl`:
+```bash
+kubectl apply -f operator.yaml
+```
+
+You can also build the yaml by hand. Refer to the `examples` directory and the Helm templates for requirements. 
 
 ## Custom Namespace support
 Custom namespace support is somewhat limited at the moment primarily due to laziness. You can have the operator watch a different namespace (other than "defaul") by changing the namepsace it watches on startup. This is not an optimal way to do so (we should watch all namespaces... maybe), but it's the implementation as it stands.
 
-To changes the namespace the operator watches (it can be deployed in a different namespace if you want), you will need to modify the deployment the operator gets deployed by (either the helm package or the example yaml) to include the following in the containers spec:
+To changes the namespace the operator watches (it can be deployed in a different namespace if you want), you will need to modify the deployment the operator gets deployed by (either the Helm package or the example yaml) to include the following in the containers spec:
 
 ```yaml
 command: ["java"]
 args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--namespace=NAMESPACE"]
 ```
 
-The modified helm package (helm/cassandra-operator/templates/deployment.yaml) would look like:
-
+The modified helm package (`helm/cassandra-operator/templates/deployment.yaml`) would look like:
 ```yaml
 apiVersion: apps/v1beta1
 kind: Deployment
@@ -113,11 +100,60 @@ spec:
 {{- end }}
 
 ```
- 
+## Deploying Cassandra
+You can now deploy Cassandra by using the Helm package (`helm/cassandra`) or my creating your own CDC object (see `examples` directory).
+Key configuration components are defined in a `values.yaml` file. You can either use the default or define your own (see example below):
+
+
+```yaml
+# Default values for cassandra.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 3
+
+image:
+  cassandraRepository: cassandra
+  sidecarRepository: cassandra-sidecar
+  cassandraTag: 3.11.3
+  sidecarTag: latest
+
+imagePullPolicy: IfNotPresent
+imagePullSecret: ""
+
+privilegedSupported: false
+
+resources:
+  limits:
+    memory: 512Mi
+  requests:
+    memory: 512Mi
+dataVolumeClaim:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+  storageClassName: fast # note this may not be applicable in your environment
+
+
+prometheusEnabled: false
+```
+
+You can also use a client side `helm template` approach as described above. 
+```bash
+helm template helm/cassandra -n cassandra-cluster> cluster.yaml
+```
+
+## PKS Specific configuration
+The following values may need to be modified to run Cassandra on PKS:
+1) `spec.privilegedSupported` - PKS does not allow privileged containers to be run by default. This will cause the init container to error out.
+Set to `false`
+
 
 ## Cassandra Configuration
 
-The bundled Cassandra docker image includes a slightly customised Cassandra configuration that better suited for running inside a container,
+The bundled Cassandra docker image includes a slightly customised Cassandra configuration that is better suited for running inside a container,
 but leaves the bulk of the configuration up to cassandra-operator.
 
 cassandra-operator automatically configures Cassandra and the JVM with (what we consider) sane defaults for the deployment,
@@ -216,80 +252,3 @@ spec:
 ```
 
 Cassandra will load the `cassandra.yaml.d/100-concurrent.yaml` file as well as the default settings managed by the operator!
-
-## Create and destroy an Cassandra cluster without Helm
-
-```bash
-$ kubectl create -f example/common/test.yaml
-```
-
-A 3 member Cassandra cluster will be created.
-
-```bash
-$ kubectl get pods
-NAME                                    READY     STATUS    RESTARTS   AGE
-cassandra-operator7-5d58bc7874-t85dt    1/1       Running   0          18h
-test-dc-0                               1/1       Running   0          1m
-test-dc-1                               1/1       Running   0          1m
-test-dc-2                               1/1       Running   0          1m
-```
-
-See [client service](doc/user/client_service.md) for how to access Cassandra clusters created by operator.
-
-Destroy Cassandra cluster:
-
-```bash
-$ kubectl delete -f example/common/test.yaml
-```
-
-## Resize an Cassandra cluster without Helm
-
-Create an Cassandra cluster, if you haven't already:
-
-```bash
-$ kubectl apply -f example/common/test.yaml
-```
-
-In `example/common/test.yaml` the initial cluster size is 3.
-Modify the file and change `replicas` from 3 to 5.
-
-```yaml
-apiVersion: stable.instaclustr.com/v1
-kind: CassandraDataCenter
-metadata:
-  name: test-dc
-spec:
-  replicas: 5
-  image: "gcr.io/cassandra-operator/cassandra:latest"
-```
-
-Apply the size change to the cluster CR:
-```bash
-$ kubectl apply -f example/common/test.yaml
-```
-The Cassandra cluster will scale to 5 members (5 pods):
-```bash
-$ kubectl get pods
-NAME                            READY     STATUS    RESTARTS   AGE
-test-dc-0                       1/1       Running   0          1m
-test-dc-1                       1/1       Running   0          1m
-test-dc-2                       1/1       Running   0          1m
-test-dc-3                       1/1       Running   0          1m
-test-dc-4                       1/1       Running   0          1m
-```
-
-Similarly we can decrease the size of cluster from 5 back to 3 by changing the size field again and reapplying the change.
-
-```yaml
-apiVersion: stable.instaclustr.com/v1
-kind: CassandraDataCenter
-metadata:
-  name: test-dc
-spec:
-  replicas: 3
-  image: "gcr.io/cassandra-operator/cassandra:latest"
-```
-Then apply the changes
-```bash
-$ kubectl apply -f example/common/test.yaml
-```
