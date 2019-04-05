@@ -4,8 +4,8 @@ metadata:
   name: test-dc
 spec:
   replicas: 5 
-  sidecarImage: "gcr.io/adams-cassandra-operator-dev/cassandra-sidecar:1.0-SNAPSHOT"
-  cassandraImage: "gcr.io/adams-cassandra-operator-dev/cassandra:3.11.3"
+  sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
+  cassandraImage: "gcr.io/cassandra-operator/cassandra:3.11.3"
   imagePullPolicy: Always
   resources:
     limits:
