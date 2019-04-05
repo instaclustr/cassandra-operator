@@ -147,7 +147,7 @@ helm template helm/cassandra -n cassandra-cluster> cluster.yaml
 
 ## PKS Specific configuration
 The following values may need to be modified to run Cassandra on PKS:
-1) `spec.privilegedSupported` - PKS does not allow privileged containers to be run. This will cause the init container to error out.
+1) `spec.privilegedSupported` - PKS does not allow privileged containers to be run by default. This will cause the init container to error out.
 Set to `false`
 
 
