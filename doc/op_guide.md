@@ -216,3 +216,80 @@ spec:
 ```
 
 Cassandra will load the `cassandra.yaml.d/100-concurrent.yaml` file as well as the default settings managed by the operator!
+
+## Create and destroy an Cassandra cluster without Helm
+
+```bash
+$ kubectl create -f example/common/test.yaml
+```
+
+A 3 member Cassandra cluster will be created.
+
+```bash
+$ kubectl get pods
+NAME                                    READY     STATUS    RESTARTS   AGE
+cassandra-operator7-5d58bc7874-t85dt    1/1       Running   0          18h
+test-dc-0                               1/1       Running   0          1m
+test-dc-1                               1/1       Running   0          1m
+test-dc-2                               1/1       Running   0          1m
+```
+
+See [client service](doc/user/client_service.md) for how to access Cassandra clusters created by operator.
+
+Destroy Cassandra cluster:
+
+```bash
+$ kubectl delete -f example/common/test.yaml
+```
+
+## Resize an Cassandra cluster without Helm
+
+Create an Cassandra cluster, if you haven't already:
+
+```bash
+$ kubectl apply -f example/common/test.yaml
+```
+
+In `example/common/test.yaml` the initial cluster size is 3.
+Modify the file and change `replicas` from 3 to 5.
+
+```yaml
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraDataCenter
+metadata:
+  name: test-dc
+spec:
+  replicas: 5
+  image: "gcr.io/cassandra-operator/cassandra:latest"
+```
+
+Apply the size change to the cluster CR:
+```bash
+$ kubectl apply -f example/common/test.yaml
+```
+The Cassandra cluster will scale to 5 members (5 pods):
+```bash
+$ kubectl get pods
+NAME                            READY     STATUS    RESTARTS   AGE
+test-dc-0                       1/1       Running   0          1m
+test-dc-1                       1/1       Running   0          1m
+test-dc-2                       1/1       Running   0          1m
+test-dc-3                       1/1       Running   0          1m
+test-dc-4                       1/1       Running   0          1m
+```
+
+Similarly we can decrease the size of cluster from 5 back to 3 by changing the size field again and reapplying the change.
+
+```yaml
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraDataCenter
+metadata:
+  name: test-dc
+spec:
+  replicas: 3
+  image: "gcr.io/cassandra-operator/cassandra:latest"
+```
+Then apply the changes
+```bash
+$ kubectl apply -f example/common/test.yaml
+```
