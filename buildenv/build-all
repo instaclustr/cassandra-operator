@@ -3,7 +3,8 @@
 
 cd `dirname "$BASH_SOURCE"`/..
 
-./buildenv/build base-openjre
-./buildenv/build-cassandra cassandra
-./buildenv/build cassandra-operator
-./buildenv/build cassandra-sidecar
+export DOCKER_REPO="${REPO:-gcr.io/cassandra-operator}"
+
+cd docker
+make
+cd ..

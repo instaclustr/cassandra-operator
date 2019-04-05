@@ -25,7 +25,8 @@ fi
 
 export DONT_LOGIN="true"
 
-./buildenv/release base-openjre
-./buildenv/release-cassandra cassandra
-./buildenv/release cassandra-sidecar
-./buildenv/release cassandra-operator
+docker push "${REPO}/base-openjre:latest"
+docker push "${REPO}/cassandra-operator:latest"
+docker push "${REPO}/cassandra-sidecar:latest"
+docker push "${REPO}/cassandra:latest"
+docker push "${REPO}/cassandra:3.11.3"
