@@ -15,7 +15,11 @@ spec:
   cassandraImage: "{{ .Values.image.cassandraRepository }}:{{ .Values.image.cassandraTag }}"
   sidecarImage: "{{ .Values.image.sidecarRepository }}:{{ .Values.image.sidecarTag }}"
   imagePullPolicy: {{ .Values.imagePullPolicy }}
+  {{- if  .Values.imagePullSecret }}
   imagePullSecret: {{ .Values.imagePullSecret }}
+  {{- else }}
+  imagePullSecret: ""
+  {{- end }}
   resources:
 {{ toYaml .Values.resources | indent 4 }}
   dataVolumeClaim:
