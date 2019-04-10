@@ -52,7 +52,7 @@ rules:
   - endpoints
   - persistentvolumeclaims
   - persistentvolumes
-  verbs: ['get', 'create', 'update', 'delete']
+  verbs: ['get', 'create', 'update', 'delete', 'list']
 - nonResourceURLs: ["/version", "/version/*"]
   verbs: ['get']
 - apiGroups: ['']
