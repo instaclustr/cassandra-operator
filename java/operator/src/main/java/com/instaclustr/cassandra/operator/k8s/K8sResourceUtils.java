@@ -92,13 +92,13 @@ public class K8sResourceUtils {
     public void deleteService(final V1Service service) throws ApiException {
         final V1ObjectMeta metadata = service.getMetadata();
 
-        coreApi.deleteNamespacedService(metadata.getName(), metadata.getNamespace(), null, null, null, null, null, null);
+        coreApi.deleteNamespacedService(metadata.getName(), metadata.getNamespace(), new V1DeleteOptions(), null, null, null, null, null);
     }
 
     public void deleteConfigMap(final V1ConfigMap configMap) throws ApiException {
         final V1ObjectMeta configMapMetadata = configMap.getMetadata();
 
-        coreApi.deleteNamespacedConfigMap(configMapMetadata.getName(), configMapMetadata.getNamespace(), null, null, null, null, null, null);
+        coreApi.deleteNamespacedConfigMap(configMapMetadata.getName(), configMapMetadata.getNamespace(), new V1DeleteOptions(), null, null, null, null, null);
     }
 
     public void deleteStatefulSet(final V1beta2StatefulSet statefulSet) throws ApiException {
