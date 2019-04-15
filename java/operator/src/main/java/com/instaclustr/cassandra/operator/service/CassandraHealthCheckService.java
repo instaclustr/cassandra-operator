@@ -2,6 +2,7 @@ package com.instaclustr.cassandra.operator.service;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.eventbus.EventBus;
@@ -67,7 +68,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
             try (@SuppressWarnings("unused") final MDC.MDCCloseable _dataCenterMDC = putNamespacedName("DataCenter", dataCenterKey)) {
                 final String labelSelector = String.format("%s=%s", OperatorLabels.DATACENTER, dataCenterKey.name);
 
-                final List<V1Pod> pods = k8sResourceUtils.listNamespacedPods(dataCenterKey.namespace, "status.phase=Running", labelSelector);
+                final Iterable<V1Pod> pods = k8sResourceUtils.listNamespacedPods(dataCenterKey.namespace, "status.phase=Running", labelSelector);
 
                 final Map<V1Pod, SidecarClient> podClients = Maps.toMap(pods, sidecarClientFactory::clientForPod);
                 final Map<V1Pod, Future<Status>> podStatuses = ImmutableMap.copyOf(Maps.transformValues(podClients, SidecarClient::status));
