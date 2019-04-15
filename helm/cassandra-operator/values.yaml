@@ -15,7 +15,7 @@ resources: {}
   # Suggested resource limits for the operator itself (not cassandra), works with a reasonable sized minikube.
 #  limits:
 #    cpu: 200m
-#    memory: 100Mi
+#    memory: 300Mi
 #  requests:
 #    cpu: 100m
 #    memory: 50Mi
