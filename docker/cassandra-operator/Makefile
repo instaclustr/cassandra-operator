@@ -13,7 +13,7 @@ $(CASSANDRA_OPERATOR_JAR):
 	
 .PHONY: cassandra-operator
 cassandra-operator: $(CASSANDRA_OPERATOR_JAR)
-	docker build \
+	$(BUILD_COMMAND) \
 		--build-arg cassandra_operator_jar=$(CASSANDRA_OPERATOR_JAR) \
 		--build-arg openjre_image="$(OPENJRE_IMAGE)" \
 		-t $(DOCKER_REPO)cassandra-operator \
