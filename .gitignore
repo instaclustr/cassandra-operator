@@ -1,7 +1,12 @@
 *.iml
 .idea
+.classpath
 
 /**/target
+.project/
+.project
+.settings/
+.factorypath
 
 *.jar
 
