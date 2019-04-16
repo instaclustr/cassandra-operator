@@ -107,8 +107,12 @@ public class OperatorService extends AbstractExecutionThreadService {
 
                 // data center was removed from cache, delete
                 if (dataCenter == null) {
-                    logger.info("Deleting Data Center.");
-                    dataCenterControllerFactory.deletionControllerForDataCenter(dataCenterKey).deleteDataCenter();
+                    try {
+                        dataCenterControllerFactory.deletionControllerForDataCenter(dataCenterKey).deleteDataCenter();
+
+                    } catch (final Exception e) {
+                        logger.warn("Failed to delete Data Center.", e);
+                    }
 
                     continue;
                 }
@@ -118,7 +122,7 @@ public class OperatorService extends AbstractExecutionThreadService {
                     dataCenterControllerFactory.reconciliationControllerForDataCenter(dataCenter).reconcileDataCenter();
 
                 } catch (final Exception e) {
-                    logger.warn("Failed to reconcile Data Center. This will be an exception in the future.", e);
+                    logger.warn("Failed to reconcile Data Center.", e);
                 }
             }
         }

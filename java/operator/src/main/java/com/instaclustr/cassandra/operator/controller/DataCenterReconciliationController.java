@@ -64,7 +64,7 @@ public class DataCenterReconciliationController {
         this.dataCenterLabels = ImmutableMap.of(
                 OperatorLabels.DATACENTER, dataCenterMetadata.getName(),
                 "app.kubernetes.io/managed-by", "com.instaclustr.cassandra-operator" // hard code an identifier for DCs created by this operator
-                // TODO: add other
+                // TODO: add other recommended labels
         );
     }
 

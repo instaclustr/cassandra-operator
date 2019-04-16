@@ -1,6 +1,8 @@
 package com.instaclustr.cassandra.operator.service;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.instaclustr.backup.BackupArguments;
@@ -36,6 +38,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @EventBusSubscriber
 public class BackupControllerService extends AbstractExecutionThreadService {
@@ -136,11 +139,12 @@ public class BackupControllerService extends AbstractExecutionThreadService {
 
         final BackupSpec backupSpec = backup.getSpec();
 
-        final List<V1Pod> pods = k8sResourceUtils.listNamespacedPods(backup.getMetadata().getNamespace(), null, dataCenterPodsLabelSelector);
 
-        final boolean anyFailed = pods.parallelStream()
+        final Iterable<V1Pod> pods = k8sResourceUtils.listNamespacedPods(backup.getMetadata().getNamespace(), null, dataCenterPodsLabelSelector);
+
+        final boolean anyFailed = Streams.stream(pods).parallel()
                 .map(pod -> callBackupApi(pod, backup))
-                .anyMatch(result -> result == false);
+                .anyMatch(result -> !result);
 
         // TODO: don't modify .spec. Use .status instead.
         backupSpec.setStatus(anyFailed ? "FAILED" : "PROCESSED");
