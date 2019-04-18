@@ -1,22 +1,29 @@
+---
+# Source: cassandra/templates/cassandra.yaml
 apiVersion: stable.instaclustr.com/v1
 kind: CassandraDataCenter
 metadata:
-  name: test-dc
+  name: test-dc-cassandra
+  labels:
+    app: cassandra
 spec:
-  replicas: 5 
-  sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
+  replicas: 5
   cassandraImage: "gcr.io/cassandra-operator/cassandra:3.11.3"
-  imagePullPolicy: Always
+  sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
+  imagePullPolicy: IfNotPresent
+  imagePullSecret: ""
   resources:
     limits:
       memory: 1Gi
     requests:
       memory: 1Gi
+
   dataVolumeClaim:
     accessModes:
-      - ReadWriteOnce
+    - ReadWriteOnce
     resources:
       requests:
-        storage: 100Mi
-  privilegedSupported: true
+        storage: 500Mi
+
   prometheusSupport: false
+  privilegedSupported: true
