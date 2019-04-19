@@ -42,6 +42,25 @@ mkdir /etc/cassandra/logback.xml.d
     curl -SLO "https://github.com/instaclustr/cassandra-exporter/releases/download/v0.9.6/cassandra-exporter-agent-0.9.6.jar" &&
     ln -s cassandra-exporter-agent-0.9.6.jar cassandra-exporter-agent.jar)
 
+# install Instaclustr LDAP and Kerberos authn/authz plugins
+(
+    cd "/usr/share/cassandra/lib" &&
+    case ${cassandra_version} in
+    3.11.*)
+        curl -SLO "https://search.maven.org/remotecontent?filepath=com/instaclustr/cassandra-ldap/3.11.4.4/cassandra-ldap-3.11.4.4.jar"
+        ;;
+    3.0.*)
+        curl -SLO "https://search.maven.org/remotecontent?filepath=com/instaclustr/cassandra-ldap/3.0.18.0/cassandra-ldap-3.0.18.0.jar"
+        ;;
+    2.2.*)
+        curl -SLO "https://search.maven.org/remotecontent?filepath=com/instaclustr/cassandra-ldap/2.2.14.0/cassandra-ldap-2.2.14.jar"
+        ;;
+    *)
+        echo "Warning: No LDAP plugin available for Cassandra version ${cassandra_version}."
+        ;;
+    esac
+)
+
 # clean-up
 rm -rf "${pkg_dir}"
 apt-get -y remove dpkg-dev && apt-get -y autoremove
