@@ -67,9 +67,10 @@ spec:
             restoreFromBackup:
               type: string
               description: Name of an optional backup to restore from.
-            userConfigMapVolumeSource:
-              type: object
-              description: Name of an optional config map to project into container.
+            # disable validation because of a bug : https://github.com/kubernetes/kubernetes/pull/76124
+            #userConfigMapVolumeSource:
+            #  type: object
+            #  description: Name of an optional config map to project into container.
             userSecretVolumeSource:
               type: object
               description: Name of an optional secret to project into container.
