@@ -137,6 +137,7 @@ public class DataCenterReconciliationController {
                     .image(dataCenterSpec.getCassandraImage())
                     .imagePullPolicy(dataCenterSpec.getImagePullPolicy())
                     .addPortsItem(new V1ContainerPort().name("internode").containerPort(7000))
+                    .addPortsItem(new V1ContainerPort().name("internode-ssl").containerPort(7001))
                     .addPortsItem(new V1ContainerPort().name("cql").containerPort(9042))
                     .addPortsItem(new V1ContainerPort().name("jmx").containerPort(7199))
                     .resources(dataCenterSpec.getResources())
