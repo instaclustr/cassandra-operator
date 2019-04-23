@@ -1,6 +1,26 @@
 #!/bin/bash -xue
 
+echoerr() { >&2 echo $@; }
+
 cassandra_version=$1
+
+case $cassandra_version in
+3.*)
+    # supported
+    ;;
+
+2.*)
+    # 2.2 pulls in openjre, which pulls in gtk, x11, etc.
+    # also, the default-config is specific to 3.11.x.
+    # 2.2 fails to start due to unrecognised YAML properties.
+
+    # no k8s addons support, yet.
+    ;&
+
+*)
+    echoerr "WARNING: Cassandra version ${cassandra_version} is unsupported."
+    exit 1;
+esac
 
 adduser --disabled-password --gid 0 --gecos "Cassandra" cassandra
 
@@ -44,10 +64,12 @@ mkdir /etc/cassandra/logback.xml.d
 
 # install Instaclustr LDAP and Kerberos authn/authz plugins
 (
-    cd "/usr/share/cassandra/lib" &&
+    cd "/usr/share/cassandra/lib"
+
+    # TODO: switch remaining Maven Central URLs to GitHub.
     case ${cassandra_version} in
     3.11.*)
-        curl -SLO "https://search.maven.org/remotecontent?filepath=com/instaclustr/cassandra-ldap/3.11.4.4/cassandra-ldap-3.11.4.4.jar"
+        curl -SLO "https://github.com/instaclustr/cassandra-ldap/releases/download/3.11.4.4/cassandra-ldap-3.11.4.jar"
         ;;
     3.0.*)
         curl -SLO "https://search.maven.org/remotecontent?filepath=com/instaclustr/cassandra-ldap/3.0.18.0/cassandra-ldap-3.0.18.0.jar"
@@ -56,10 +78,23 @@ mkdir /etc/cassandra/logback.xml.d
         curl -SLO "https://search.maven.org/remotecontent?filepath=com/instaclustr/cassandra-ldap/2.2.14.0/cassandra-ldap-2.2.14.jar"
         ;;
     *)
-        echo "Warning: No LDAP plugin available for Cassandra version ${cassandra_version}."
+        echoerr "WARNING: No LDAP plugin available for Cassandra version ${cassandra_version}. This feature will be unavailable."
+        ;;
+    esac
+
+    case ${cassandra_version} in
+    3.11.*)
+        curl -SLO "https://github.com/instaclustr/cassandra-kerberos/releases/download/v1.0.0-cassandra-3.11/cassandra-3-11-kerberos-1.0.0.jar"
+        ;;
+    3.0.*)
+        curl -SLO "https://github.com/instaclustr/cassandra-kerberos/releases/download/v1.0.0-cassandra-3.0/cassandra-3-0-kerberos-1.0.0.jar"
+        ;;
+    *)
+        echoerr "WARNING: No Kerberos plugin available for Cassandra version ${cassandra_version}. This feature will be unavailable."
         ;;
     esac
 )
+
 
 # clean-up
 rm -rf "${pkg_dir}"
