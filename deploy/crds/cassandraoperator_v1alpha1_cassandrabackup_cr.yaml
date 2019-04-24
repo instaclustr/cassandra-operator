@@ -1,0 +1,7 @@
+apiVersion: cassandraoperator.instaclustr.com/v1alpha1
+kind: CassandraBackup
+metadata:
+  name: example-cassandrabackup
+spec:
+  # Add fields here
+  size: 3

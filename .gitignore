@@ -11,3 +11,8 @@
 *.jar
 
 dependency-reduced-pom.xml
+
+.DS_Store
+
+build/_output
+vendor/
