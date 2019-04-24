@@ -3,7 +3,7 @@
 
 cd `dirname "$BASH_SOURCE"`/..
 
-export DOCKER_REPO="${REPO:-gcr.io/cassandra-operator}"
+export DOCKER_REPO="${REPO:-gcr.io/cassandra-operator}/"
 
 cd docker
 make

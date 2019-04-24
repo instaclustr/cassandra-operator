@@ -4,7 +4,8 @@ CASSANDRA_SIDECAR_VERSION := 1.0-SNAPSHOT
 CASSANDRA_SIDECAR_JAR := cassandra-sidecar-$(CASSANDRA_SIDECAR_VERSION).jar
 
 ifeq ($(CASSANDRA_SIDECAR_VERSION:%-SNAPSHOT=SNAPSHOT),SNAPSHOT)
-$(info SNAPSHOT version specified. Marking JAR target as .PHONY)
+# mark sidecar-jar target as .PHONY to force a re-copy on every build
+$(info cassandra-sidecar SNAPSHOT version specified ($(CASSANDRA_SIDECAR_VERSION)). Marking JAR target as .PHONY. This will re-download the artifact.)
 .PHONY: $(CASSANDRA_SIDECAR_JAR)
 endif
 
@@ -16,8 +17,8 @@ cassandra-sidecar: $(CASSANDRA_SIDECAR_JAR)
 	docker build \
 		--build-arg cassandra_sidecar_jar=$(CASSANDRA_SIDECAR_JAR) \
 		--build-arg openjre_image="$(OPENJRE_IMAGE)" \
-		-t $(DOCKER_REPO)/cassandra-sidecar \
-		-t $(DOCKER_REPO)/cassandra-sidecar:$(CASSANDRA_SIDECAR_VERSION) \
+		-t $(DOCKER_REPO)cassandra-sidecar \
+		-t $(DOCKER_REPO)cassandra-sidecar:$(CASSANDRA_SIDECAR_VERSION) \
 		.
 
 .PHONY: clean

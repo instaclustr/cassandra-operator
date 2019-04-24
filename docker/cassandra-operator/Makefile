@@ -16,8 +16,8 @@ cassandra-operator: $(CASSANDRA_OPERATOR_JAR)
 	docker build \
 		--build-arg cassandra_operator_jar=$(CASSANDRA_OPERATOR_JAR) \
 		--build-arg openjre_image="$(OPENJRE_IMAGE)" \
-		-t $(DOCKER_REPO)/cassandra-operator \
-		-t $(DOCKER_REPO)/cassandra-operator:$(CASSANDRA_OPERATOR_VERSION) \
+		-t $(DOCKER_REPO)cassandra-operator \
+		-t $(DOCKER_REPO)cassandra-operator:$(CASSANDRA_OPERATOR_VERSION) \
 		.
 
 .PHONY: clean
