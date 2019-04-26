@@ -249,12 +249,28 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 							},
 						},
 					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.ResourceRequirements"),
+						},
+					},
+					"dataVolumeClaimSpec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.PersistentVolumeClaimSpec"),
+						},
+					},
+					"prometheusSupport": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
 				},
-				Required: []string{"cluster", "replicas", "cassandraImage", "sidecarImage", "imagePullPolicy", "imagePullSecrets"},
+				Required: []string{"cluster", "replicas", "cassandraImage", "sidecarImage", "imagePullPolicy", "imagePullSecrets", "resources", "dataVolumeClaimSpec", "prometheusSupport"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.LocalObjectReference"},
+			"k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.PersistentVolumeClaimSpec", "k8s.io/api/core/v1.ResourceRequirements"},
 	}
 }
 

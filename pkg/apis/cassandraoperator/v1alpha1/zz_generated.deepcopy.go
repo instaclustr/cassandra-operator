@@ -265,6 +265,8 @@ func (in *CassandraDataCenterSpec) DeepCopyInto(out *CassandraDataCenterSpec) {
 		*out = make([]v1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
+	in.Resources.DeepCopyInto(&out.Resources)
+	in.DataVolumeClaimSpec.DeepCopyInto(&out.DataVolumeClaimSpec)
 	return
 }
 

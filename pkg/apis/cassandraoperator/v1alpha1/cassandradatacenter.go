@@ -10,11 +10,17 @@ import (
 // +k8s:openapi-gen=true
 type CassandraDataCenterSpec struct {
 	Cluster v1.LocalObjectReference `json:"cluster"`
-	Replicas int `json:"replicas"`
+	Replicas int32 `json:"replicas"`
 	CassandraImage string `json:"cassandraImage"`
 	SidecarImage string `json:"sidecarImage"`
 	ImagePullPolicy v1.PullPolicy `json:"imagePullPolicy"`
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets"`
+
+	Resources v1.ResourceRequirements `json:"resources"`
+
+	DataVolumeClaimSpec v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec"`
+
+	PrometheusSupport bool `json:"prometheusSupport"`
 }
 
 // CassandraDataCenterStatus defines the observed state of CassandraDataCenter

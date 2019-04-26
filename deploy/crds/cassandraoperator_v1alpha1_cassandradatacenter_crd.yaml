@@ -33,15 +33,21 @@ spec:
               type: string
             cluster:
               type: object
+            dataVolumeClaimSpec:
+              type: object
             imagePullPolicy:
               type: string
             imagePullSecrets:
               items:
                 type: object
               type: array
+            prometheusSupport:
+              type: boolean
             replicas:
-              format: int64
+              format: int32
               type: integer
+            resources:
+              type: object
             sidecarImage:
               type: string
           required:
@@ -51,6 +57,9 @@ spec:
           - sidecarImage
           - imagePullPolicy
           - imagePullSecrets
+          - resources
+          - dataVolumeClaimSpec
+          - prometheusSupport
           type: object
         status:
           type: object
