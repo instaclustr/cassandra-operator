@@ -303,7 +303,7 @@ func (r *CassandraDataCenterReconciler) createOrUpdateStatefulSet(cdc *cassandra
 	statefulSet := &v1beta2.StatefulSet{ObjectMeta: dataCenterResourceMetadata(cdc),}
 
 	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, statefulSet, func(_ runtime.Object) error {
-		if *statefulSet.Spec.Replicas != cdc.Spec.Replicas {
+		if statefulSet.Spec.Replicas != nil && *statefulSet.Spec.Replicas != cdc.Spec.Replicas {
 			// TODO: scale safely
 
 		}
@@ -342,7 +342,9 @@ func (r *CassandraDataCenterReconciler) createOrUpdateOperatorConfigMap(cdc *cas
 	volumeSource := &corev1.ConfigMapVolumeSource{LocalObjectReference:corev1.LocalObjectReference{Name: configMap.Name}}
 
 	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, configMap, func(_ runtime.Object) error {
-		configMap.Data["test"] = "echo hello world; exit 1"
+		configMap.Data = map[string]string{
+			"test": "echo hello world; exit 1",
+		}
 
 		volumeSource.Items = append(volumeSource.Items, corev1.KeyToPath{Key: "test", Path: "cassandra-env.sh.d/001-cassandra-exporter.sh"})
 
