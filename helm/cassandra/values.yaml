@@ -5,8 +5,8 @@
 replicaCount: 3
 
 image:
-  cassandraRepository: gcr.io/cassandra-operator/cassandra-dev
-  sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar-dev
+  cassandraRepository: gcr.io/cassandra-operator/cassandra
+  sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar
   cassandraTag: 3.11.3
   sidecarTag: latest
 
