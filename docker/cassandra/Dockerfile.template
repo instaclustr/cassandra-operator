@@ -1,6 +1,5 @@
-ARG openjre_image
-
-FROM ${openjre_image}
+# please execute 'make' in this directory to build this image
+FROM {{openjre_image}}
 
 ARG cassandra_version=3.11.2
 ARG cassandra_k8s_addons_jar
