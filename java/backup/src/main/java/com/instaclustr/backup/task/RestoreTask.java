@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.security.InvalidKeyException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -49,7 +50,7 @@ public class RestoreTask implements Callable<Void> {
 
     public RestoreTask(final GlobalLock globalLock,
                        final RestoreArguments arguments
-    ) throws StorageException, ConfigurationException, URISyntaxException {
+    ) throws StorageException, ConfigurationException, URISyntaxException, InvalidKeyException {
 
 
 
@@ -298,22 +299,22 @@ public class RestoreTask implements Callable<Void> {
 
             Files.write(cassandraConfigDirectory.resolve("cassandra-env.sh"), cassandraEnvStringBuilder.toString().getBytes(), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
         }
-
-        //TODO: re-enable once cascading yaml loader lands
         // Can't write to cassandra-env.sh as nodetool could generate "File name too long" error
+    
+        logger.info("download tokens.yaml");
         RemoteObjectReference tokens = downloader.objectKeyToRemoteReference(Paths.get("tokens/" + arguments.snapshotTag + "-tokens.yaml"));
-        final Path tokensPath = cassandraDataDirectory.resolve("tokens.yaml");
+        final Path tokensPath = sharedContainerRoot.resolve("tokens.yaml");
         downloader.downloadFile(tokensPath, tokens);
-//
-//        final StringBuilder stringBuilder = new StringBuilder();
-//        final String contents = new String(Files.readAllBytes(cassandraConfigDirectory.resolve("cassandra.yaml")));
-//        // Just replace. In case nodepoint later doesn't write auto_bootstrap, just delete here and append later to guarantee we're setting it
-//        stringBuilder.append(contents.replace("auto_bootstrap: true", ""));
-//
-//        stringBuilder.append(System.lineSeparator());
-//        stringBuilder.append(new String(Files.readAllBytes(tokensPath)));
-//        // Don't stream on Cassandra startup, as tokens and SSTables are already present on node
-//        stringBuilder.append("auto_bootstrap: false");
-//        Files.write(cassandraConfigDirectory.resolve("cassandra.yaml"), ImmutableList.of(stringBuilder.toString()), StandardOpenOption.WRITE, StandardOpenOption.CREATE);
+
+        // add a config fragment with initial_token and auto_bootstrap disabled
+        logger.info("generate cassandra fragment config");
+        final Path configDir = cassandraConfigDirectory.resolve("cassandra.yaml.d");
+        Files.createDirectories(configDir);
+        final StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(new String(Files.readAllBytes(tokensPath)));
+        stringBuilder.append(System.lineSeparator());
+        // Don't stream on Cassandra startup, as tokens and SSTables are already present on node
+        stringBuilder.append("auto_bootstrap: false");
+        Files.write(configDir.resolve("100-backup-restore.yaml"), ImmutableList.of(stringBuilder.toString()), StandardOpenOption.WRITE, StandardOpenOption.CREATE);
     }
 }

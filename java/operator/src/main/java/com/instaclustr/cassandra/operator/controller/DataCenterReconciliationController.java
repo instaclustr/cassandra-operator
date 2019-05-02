@@ -157,7 +157,15 @@ public class DataCenterReconciliationController {
                     .addVolumeMountsItem(new V1VolumeMount()
                             .name("pod-info")
                             .mountPath("/etc/podinfo")
-                    );
+                    )
+                    .addVolumeMountsItem(new V1VolumeMount()
+                            .name("sidecar-config-volume")
+                            .mountPath("/tmp/sidecar-config-volume")
+                    )
+                    .addArgsItem("/tmp/sidecar-config-volume")
+                    .addEnvItem(new V1EnvVar().name("NAMESPACE").valueFrom(new V1EnvVarSource().fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.namespace"))))
+                    .addEnvItem(new V1EnvVar().name("POD_NAME").valueFrom(new V1EnvVarSource().fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.name"))))
+                    .addEnvItem(new V1EnvVar().name("POD_IP").valueFrom(new V1EnvVarSource().fieldRef(new V1ObjectFieldSelector().fieldPath("status.podIP"))));
 
             if (dataCenterSpec.getPrometheusSupport()) {
                 cassandraContainer.addPortsItem(new V1ContainerPort().name("prometheus").containerPort(9500));
@@ -172,6 +180,10 @@ public class DataCenterReconciliationController {
                     .addVolumeMountsItem(new V1VolumeMount()
                             .name("cassandra-data-volume")
                             .mountPath("/var/lib/cassandra")
+                    )
+                    .addVolumeMountsItem(new V1VolumeMount()
+                            .name("sidecar-config-volume")
+                            .mountPath("/tmp/sidecar-config-volume")
                     );
 
 
@@ -199,6 +211,10 @@ public class DataCenterReconciliationController {
                                             .fieldRef(new V1ObjectFieldSelector().fieldPath("metadata.name"))
                                     )
                             )
+                    )
+                    .addVolumesItem(new V1Volume()
+                            .name("sidecar-config-volume")
+                            .emptyDir(new V1EmptyDirVolumeSource())
                     );
 
             {
@@ -255,8 +271,7 @@ public class DataCenterReconciliationController {
                     backup = customObjectsApi.getApiClient().<Backup>execute(call, new TypeToken<Backup>() {}.getType()).getData();
                 }
 
-                podSpec.addInitContainersItem(fileLimitInit())
-                        .addInitContainersItem(new V1Container()
+                podSpec.addInitContainersItem(new V1Container()
                                 .name("sidecar-restore")
                                 .env(dataCenterSpec.getEnv())
                                 .image(dataCenterSpec.getSidecarImage())
@@ -265,21 +280,22 @@ public class DataCenterReconciliationController {
                                         "java", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap",
                                         "-cp", "/opt/lib/cassandra-sidecar/cassandra-sidecar.jar",
                                         "com.instaclustr.cassandra.sidecar.SidecarRestore",
-                                        "-bb", backup.getSpec().getTarget(),
-                                        "-c", backup.getMetadata().getLabels().get(OperatorLabels.DATACENTER),
-                                        "-bi", backup.getMetadata().getLabels().get(OperatorLabels.DATACENTER),
-                                        "-s", backup.getMetadata().getName(),
+                                        "-bb", backup.getSpec().getTarget(), // bucket name
+                                        "-c", dataCenterMetadata.getName(), // clusterID == DcName. Backup dc and restore dc must have the same name
+                                        "-bi", dataCenterChildObjectName("%s"), // pod name prefix
+                                        "-s", backup.getMetadata().getName(), // backup tag used to find the manifest file
                                         "--bs", backup.getSpec().getBackupType(),
-                                        "-rs"
+                                        "-rs",
+                                        "--cd", "/tmp/sidecar-config-volume" // location where the restore task can write config fragments
                                 ))
                                 .addVolumeMountsItem(new V1VolumeMount()
                                         .name("pod-info")
-                                        .mountPath("/etc/podinfo"))
-                                .addVolumeMountsItem(new V1VolumeMount()
-                                        .name("config-volume")
-                                        .mountPath("/etc/cassandra")
+                                        .mountPath("/etc/podinfo")
                                 ).addVolumeMountsItem(new V1VolumeMount()
-                                        .name("data-volume")
+                                        .name("sidecar-config-volume")
+                                        .mountPath("/tmp/sidecar-config-volume")
+                                ).addVolumeMountsItem(new V1VolumeMount()
+                                        .name("cassandra-data-volume")
                                         .mountPath("/var/lib/cassandra")
                                 )
                         );

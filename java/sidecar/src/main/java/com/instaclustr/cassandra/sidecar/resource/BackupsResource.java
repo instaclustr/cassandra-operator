@@ -13,6 +13,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.security.InvalidKeyException;
 
 @Path("/backups")
 @Produces(MediaType.APPLICATION_JSON)
@@ -28,7 +29,7 @@ public class BackupsResource {
 
 
     @POST
-    public BackupResponse createBackup(BackupArguments backupArguments) throws URISyntaxException, StorageException, ConfigurationException, IOException {
+    public BackupResponse createBackup(BackupArguments backupArguments) throws URISyntaxException, StorageException, ConfigurationException, IOException, InvalidKeyException {
         logger.info("received backup request for {}", backupArguments.backupId);
         backupService.enqueueBackup(backupArguments);
         logger.info("enqueued backup request for {}", backupArguments.backupId);

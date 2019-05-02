@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.InvalidKeyException;
 import java.util.Collection;
 import java.util.concurrent.*;
 import java.util.function.Function;
@@ -72,7 +73,7 @@ public class FilesUploader {
         }
     }
 
-    public FilesUploader(final BackupArguments arguments) throws StorageException, ConfigurationException, URISyntaxException {
+    public FilesUploader(final BackupArguments arguments) throws StorageException, ConfigurationException, URISyntaxException, InvalidKeyException {
         this.snapshotUploaderProvider = CloudDownloadUploadFactory.getUploader(arguments);
         this.arguments = arguments;
         this.executorService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(arguments.concurrentConnections));
