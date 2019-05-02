@@ -2,8 +2,9 @@ apiVersion: stable.instaclustr.com/v1
 kind: CassandraBackup
 metadata:
   name: backup-now37
-  labels:
-    cassandra-datacenter: backup3-cassandra
 spec:
+  selector:
+    matchLabels:
+      cassandra-operator.instaclustr.com/datacenter: backup3-cassandra
   backupType: "AWS_S3"
   target: "kube-backup-test-cassandra"
