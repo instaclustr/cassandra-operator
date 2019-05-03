@@ -174,7 +174,7 @@ spec:
       secretKeyRef:
         name: azure-storage
         key: accountName
-  - name: AZURE_STORAGE_ACCESS_KEY
+  - name: AZURE_STORAGE_KEY
     valueFrom:
       secretKeyRef:
         name: azure-storage

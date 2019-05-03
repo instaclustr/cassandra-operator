@@ -39,7 +39,7 @@ public class AzureDownloader extends Downloader {
     @Override
     public void downloadFile(final Path localPath, final RemoteObjectReference object) throws Exception {
         final CloudBlockBlob blob = ((AzureRemoteObjectReference) object).blob;
-        logger.info(String.format("download file with azure remote_path=%s", blob.getUri()));
+        logger.info("download file with azure remote_path={}", blob.getUri());
         Files.createDirectories(localPath.getParent());
         blob.downloadToFile(localPath.toAbsolutePath().toString());
     }

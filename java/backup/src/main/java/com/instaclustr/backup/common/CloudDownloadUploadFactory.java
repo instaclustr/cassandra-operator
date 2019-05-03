@@ -38,15 +38,23 @@ public class CloudDownloadUploadFactory {
     public static CloudBlobClient getCloudBlobClient() throws URISyntaxException, InvalidKeyException {
         
         //TODO: use azure SAS token ?
-        String accountName = System.getenv("AZURE_STORAGE_ACCOUNT");
-        String accessKey = System.getenv("AZURE_STORAGE_ACCESS_KEY");
+        
+        // Seems that the azure-storage java SDK does not support credentials discovery. However az cli does support this
+        // so here we try to reproduce the same behavior using AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_KEY
+        final String accountName = System.getenv("AZURE_STORAGE_ACCOUNT");
+        String accessKey = System.getenv("AZURE_STORAGE_KEY");
+        if (accessKey == null) {
+            // az cli also uses AZURE_STORAGE_ACCESS_KEY because of a bug : https://github.com/MicrosoftDocs/azure-docs/issues/14365
+            accessKey = System.getenv("AZURE_STORAGE_ACCESS_KEY");
+        }
+        
         
         // TODO: what to do when credentials are not specified ?
-        String connectionString = "DefaultEndpointsProtocol=http;"
+        final String connectionString = "DefaultEndpointsProtocol=https;"
                 + String.format("AccountName=%s;", accountName)
                 + String.format("AccountKey=%s", accessKey);
     
-        CloudStorageAccount account = CloudStorageAccount.parse(connectionString);
+        final CloudStorageAccount account = CloudStorageAccount.parse(connectionString);
         return account.createCloudBlobClient();
     }
 
