@@ -14,6 +14,7 @@ import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
 import com.instaclustr.cassandra.operator.k8s.OperatorLabels;
 import com.instaclustr.cassandra.operator.model.Backup;
 import com.instaclustr.cassandra.operator.model.BackupSpec;
+import com.instaclustr.cassandra.operator.model.BackupStatus;
 import com.instaclustr.cassandra.operator.model.key.BackupKey;
 import com.instaclustr.cassandra.sidecar.model.BackupResponse;
 import com.instaclustr.guava.EventBusSubscriber;
@@ -67,7 +68,9 @@ public class BackupControllerService extends AbstractExecutionThreadService {
     @Subscribe
     void handleBackupEvent(final BackupWatchEvent event) {
         logger.info("Received BackupWatchEvent {}.", event);
-        if(!Strings.isNullOrEmpty(event.backup.getSpec().getStatus()) && !event.backup.getSpec().getStatus().equals("PROCESSED")) {
+        if(event.backup.getStatus() == null ||
+                Strings.isNullOrEmpty(event.backup.getStatus().getProgress()) ||
+                !event.backup.getStatus().getProgress().equals("PROCESSED")) {
             backupQueue.add(BackupKey.forBackup(event.backup));
         } else {
             logger.debug("Skipping already processed backup {}", event.backup.getMetadata().getName());
@@ -116,7 +119,7 @@ public class BackupControllerService extends AbstractExecutionThreadService {
                     backup.getMetadata().getName(),
                     StorageProvider.valueOf(backup.getSpec().getBackupType()),
                     backup.getSpec().getTarget(),
-                    backup.getMetadata().getLabels().get(OperatorLabels.DATACENTER));
+                    pod.getMetadata().getLabels().get(OperatorLabels.DATACENTER));
 
             backupArguments.backupId = pod.getSpec().getHostname();
             backupArguments.speed = CommonBackupArguments.Speed.LUDICROUS;
@@ -131,23 +134,20 @@ public class BackupControllerService extends AbstractExecutionThreadService {
     }
 
 
-    private void createOrReplaceBackup(final Backup backup) throws ApiException, UnknownHostException {
-        // TODO: use a different field as a selector for the DC to backup
-        final String dataCenterPodsLabelSelector = backup.getMetadata().getLabels().entrySet().stream()
-                .map(x -> x.getKey() + "=" + x.getValue())
-                .collect(Collectors.joining(","));
-
+    private void createOrReplaceBackup(final Backup backup) throws ApiException {
         final BackupSpec backupSpec = backup.getSpec();
 
-
+        final String dataCenterPodsLabelSelector = backupSpec.getSelector().getMatchLabels().entrySet().stream()
+                .map(x -> x.getKey() + "=" + x.getValue())
+                .collect(Collectors.joining(","));
+        
         final Iterable<V1Pod> pods = k8sResourceUtils.listNamespacedPods(backup.getMetadata().getNamespace(), null, dataCenterPodsLabelSelector);
 
         final boolean anyFailed = Streams.stream(pods).parallel()
                 .map(pod -> callBackupApi(pod, backup))
                 .anyMatch(result -> !result);
-
-        // TODO: don't modify .spec. Use .status instead.
-        backupSpec.setStatus(anyFailed ? "FAILED" : "PROCESSED");
+        
+        backup.setStatus(new BackupStatus().withProgress(anyFailed ? "FAILED" : "PROCESSED"));
         customObjectsApi.patchNamespacedCustomObject("stable.instaclustr.com", "v1", backup.getMetadata().getNamespace(), "cassandra-backups", backup.getMetadata().getName(), backup);
     }
 

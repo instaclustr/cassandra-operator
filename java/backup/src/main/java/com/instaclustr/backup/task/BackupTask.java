@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.InvalidKeyException;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -83,7 +84,7 @@ public class BackupTask implements Callable<Void> {
     }
 
     public BackupTask(final BackupArguments arguments,
-                      final GlobalLock globalLock) throws IOException, StorageException, ConfigurationException, URISyntaxException {
+                      final GlobalLock globalLock) throws IOException, StorageException, ConfigurationException, URISyntaxException, InvalidKeyException {
         this.cassandraJMXServiceURL = arguments.jmxServiceURL;
         this.snapshotManifestDirectory = arguments.sharedContainerPath.resolve(Paths.get("cassandra-operator/manifests"));
         this.snapshotTokensDirectory = arguments.sharedContainerPath.resolve(Paths.get("cassandra-operator/tokens"));

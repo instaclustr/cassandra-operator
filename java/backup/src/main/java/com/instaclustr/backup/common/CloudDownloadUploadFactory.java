@@ -10,6 +10,7 @@ import com.instaclustr.backup.CommonBackupArguments;
 import com.instaclustr.backup.RestoreArguments;
 import com.instaclustr.backup.downloader.*;
 import com.instaclustr.backup.uploader.*;
+import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 
@@ -17,6 +18,7 @@ import javax.naming.ConfigurationException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.InvalidKeyException;
 
 public class CloudDownloadUploadFactory {
 
@@ -33,9 +35,27 @@ public class CloudDownloadUploadFactory {
         return TransferManagerBuilder.defaultTransferManager();
     }
 
-    public static CloudBlobClient getCloudBlobClient() {
-        //TODO: Implement!
-        return null;
+    public static CloudBlobClient getCloudBlobClient() throws URISyntaxException, InvalidKeyException {
+        
+        //TODO: use azure SAS token ?
+        
+        // Seems that the azure-storage java SDK does not support credentials discovery. However az cli does support this
+        // so here we try to reproduce the same behavior using AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_KEY
+        final String accountName = System.getenv("AZURE_STORAGE_ACCOUNT");
+        String accessKey = System.getenv("AZURE_STORAGE_KEY");
+        if (accessKey == null) {
+            // az cli also uses AZURE_STORAGE_ACCESS_KEY because of a bug : https://github.com/MicrosoftDocs/azure-docs/issues/14365
+            accessKey = System.getenv("AZURE_STORAGE_ACCESS_KEY");
+        }
+        
+        
+        // TODO: what to do when credentials are not specified ?
+        final String connectionString = "DefaultEndpointsProtocol=https;"
+                + String.format("AccountName=%s;", accountName)
+                + String.format("AccountKey=%s", accessKey);
+    
+        final CloudStorageAccount account = CloudStorageAccount.parse(connectionString);
+        return account.createCloudBlobClient();
     }
 
     public static Storage getGCPStorageClient() {
@@ -49,7 +69,7 @@ public class CloudDownloadUploadFactory {
 
 
 
-    public static SnapshotUploader getUploader(final BackupArguments arguments) throws URISyntaxException, StorageException, ConfigurationException {
+    public static SnapshotUploader getUploader(final BackupArguments arguments) throws URISyntaxException, StorageException, ConfigurationException, InvalidKeyException {
         //final String backupID, final String clusterID, final String backupBucket,
 
         switch (arguments.storageProvider) {
@@ -69,7 +89,7 @@ public class CloudDownloadUploadFactory {
     }
 
 
-    public static Downloader getDownloader(final RestoreArguments arguments) throws URISyntaxException, StorageException, ConfigurationException {
+    public static Downloader getDownloader(final RestoreArguments arguments) throws URISyntaxException, StorageException, ConfigurationException, InvalidKeyException {
         switch (arguments.storageProvider) {
             case AWS_S3:
                 //TODO: support encrypted backups via KMS

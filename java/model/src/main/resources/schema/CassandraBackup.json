@@ -21,13 +21,23 @@
       "javaType": "com.instaclustr.cassandra.operator.model.BackupSpec",
       "type": "object",
       "properties": {
+        "selector": {
+          "type": "object",
+          "javaType": "io.kubernetes.client.models.V1LabelSelector"
+        },
         "backupType" : {
           "type": "string"
         },
         "target" : {
           "type": "string"
-        },
-        "status": {
+        }
+      }
+    },
+    "status": {
+      "javaType": "com.instaclustr.cassandra.operator.model.BackupStatus",
+      "type": "object",
+      "properties": {
+        "progress": {
           "type": "string"
         }
       }

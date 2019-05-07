@@ -9,13 +9,14 @@ import com.microsoft.azure.storage.StorageException;
 import javax.naming.ConfigurationException;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.security.InvalidKeyException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class BackupService extends AbstractIdleService {
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-    public void enqueueBackup(final BackupArguments arguments) throws IOException, StorageException, ConfigurationException, URISyntaxException {
+    public void enqueueBackup(final BackupArguments arguments) throws IOException, StorageException, ConfigurationException, URISyntaxException, InvalidKeyException {
         final BackupTask backupTask = new BackupTask(arguments, new GlobalLock("/tmp"));
 
         executorService.submit(backupTask);

@@ -134,9 +134,56 @@ spec:
   prometheusEnabled: false
 ```
 
+## Configuring Azure Storage via environment variables
+
+First create a secret in kubernetes to hold an Azure Storage account name and key (assuming they are stored in files named accountName and accessKey respectively) :
+```
+kubectl create secret generic azure-storage --from-file=./accountName --from-file=./accessKey
+```
+
+Create a `CassandraDataCenter` CRD that mounts the secret in environment variables as follows :
+
+```yaml
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraDataCenter
+metadata:
+  name: foo-cassandra
+  labels:
+    app: cassandra
+    chart: cassandra-0.1.0
+    release: foo
+spec:
+  replicas: 1
+  cassandraImage: "gcr.io/cassandra-operator/cassandra:latest"
+  sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
+  imagePullPolicy: IfNotPresent
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      memory: 512Mi
+  dataVolumeClaim:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Mi
+  env:
+  - name: AZURE_STORAGE_ACCOUNT
+    valueFrom:
+      secretKeyRef:
+        name: azure-storage
+        key: accountName
+  - name: AZURE_STORAGE_KEY
+    valueFrom:
+      secretKeyRef:
+        name: azure-storage
+        key: accessKey
+```
+
 ## Taking a backup
 The Cassandra-operator manages backups via a backup CRD object in Kubernetes, this makes it easy to track and audit backups, you can schedule backups via a cron mechanism that creates new CRDs etc.
-It also allows you to reference a known backup when you restore. Backups will target all pods that match the labels specified on the backup CRD, you can backup multiple clusters via a single backup CRD. 
+It also allows you to reference a known backup when you restore. Backups will target all pods that match the selector specified on the backup CRD, you can backup multiple clusters via a single backup CRD. 
 Node identitiy is maintained via the backup path.
 
 The name field in metadata will be used as the snapshot name (e.g. via nodetool snapshot and when uploaded to the external storage provider).
@@ -149,12 +196,12 @@ apiVersion: stable.instaclustr.com/v1
 kind: CassandraBackup
 metadata:
   name: backup-hostname
-  labels:
-    cassandra-datacenter: foo-cassandra
 spec:
+  selector:
+    matchLabels:
+      cassandra-operator.instaclustr.com/datacenter: foo-cassandra
   backupType: AWS_S3
   target: kube-backup-test-cassandra
-  status: "PENDING"
 ```
 
 ### GCP
@@ -163,17 +210,32 @@ apiVersion: stable.instaclustr.com/v1
 kind: CassandraBackup
 metadata:
   name: backup-hostname
-  labels:
-    cassandra-datacenter: foo-cassandra
 spec:
+  selector:
+    matchLabels:
+      cassandra-operator.instaclustr.com/datacenter: foo-cassandra
   backupType: GCP_BLOB
   target: ben-cassandra-operator
-  status: "PENDING"
 ```
+
+### Azure
+```yaml
+apiVersion: stable.instaclustr.com/v1
+kind: CassandraBackup
+metadata:
+  name: backup-hostname
+spec:
+  selector:
+    matchLabels:
+      cassandra-operator.instaclustr.com/datacenter: foo-cassandra
+  backupType: AZURE_BLOB
+  target: ben-cassandra-operator
+```
+
 
 In the spec field, `backupType` indicates what storage mechanism to use and `target` will be the undecorated location (e.g. the S3 bucket). To create the backup run `kubectl apply -f backup.yaml`
 
-The Cassandra operator will detect the new backup CRD and take snapshots of all nodes that match the same labels as the `CassandraBackup`. You can follow the progress of the backup by following the sidecar logs for each node included in the backup.
+The Cassandra operator will detect the new backup CRD and take snapshots of all nodes that match the selector. You can follow the progress of the backup by following the sidecar logs for each node included in the backup.
 The backup will include all user data as well as the system/schema tables. This means on restoration your schema will exist.
 
 ## Restoring from a backup
@@ -225,4 +287,4 @@ spec:
 
 The new cluster will download the sstables from the existing backup before starting Cassandra and restore the tokens associated with the node the backup was taken on. The schema will be restored along side the data as well. 
 The operator will match the new clusters nodes to backups from previous cluster based on the ordinal value of the pod assigned by its stateful set (e.g. old-cluster-0 will be restored to new-cluster-0). 
-You should always restore to a cluster with the same number of nodes as the original backup cluster. Restore currently works against just a single DC, if you backup using a broader set of lables, restore from that broader label group won't work.
+You should always restore to a cluster with the same number of nodes and the same name as the original backup cluster. Restore currently works against just a single DC, if you backup using a broader set of labels, restore from that broader label group won't work.

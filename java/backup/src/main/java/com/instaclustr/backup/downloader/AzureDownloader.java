@@ -27,9 +27,9 @@ public class AzureDownloader extends Downloader {
     public AzureDownloader(final CloudBlobClient cloudBlobClient,
                            final RestoreArguments arguments) throws StorageException, URISyntaxException {
         super(arguments);
-        this.blobContainer = cloudBlobClient.getContainerReference(restoreFromClusterId);
+        this.blobContainer = cloudBlobClient.getContainerReference(restoreFromBackupBucket);
     }
-
+    
     @Override
     public RemoteObjectReference objectKeyToRemoteReference(final Path objectKey) throws StorageException, URISyntaxException {
         final String path = resolveRemotePath(objectKey);
@@ -39,7 +39,8 @@ public class AzureDownloader extends Downloader {
     @Override
     public void downloadFile(final Path localPath, final RemoteObjectReference object) throws Exception {
         final CloudBlockBlob blob = ((AzureRemoteObjectReference) object).blob;
-        Files.createDirectories(localPath);
+        logger.info("download file with azure remote_path={}", blob.getUri());
+        Files.createDirectories(localPath.getParent());
         blob.downloadToFile(localPath.toAbsolutePath().toString());
     }
 
