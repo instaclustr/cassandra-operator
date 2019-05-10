@@ -9,6 +9,7 @@ required = [
   "k8s.io/kube-openapi/cmd/openapi-gen",
   "k8s.io/gengo/args",
   "sigs.k8s.io/controller-tools/pkg/crd/generator",
+  "github.com/go-resty/resty"
 ]
 
 [[override]]
@@ -61,6 +62,10 @@ required = [
   # The version rule is used for a specific release and the master branch for in between releases.
   # branch = "master" #osdk_branch_annotation
   version = "=v0.7.0" #osdk_version_annotation
+
+[[constraint]]
+  name = "github.com/go-resty/resty"
+  version = "=v1.12.0"
 
 [prune]
   go-tests = true
