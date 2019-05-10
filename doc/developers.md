@@ -22,17 +22,8 @@ The k8s-addon jar gets included Cassandra docker image and is dropped into the C
 ## Building
 To build the project and generate relevant jars, from the project root, run: 
 ```bash
-mvn clean package
+make
 ```
-This will build all the submodules defined in the parent pom.xml
+This will build all the submodules defined in the parent pom.xml of java/ and it will also build all required docker images.
 
-To build the relevant docker images, run:
-```bash
-./buildenv/build-all
-```
-
-This will by default build an images for the projects gcr.io development image repo, the component and the suffix `-dev` will be appended.
-The default tag is the git short hash.
-e.g. `gcr.io/cassandra-operator/cassandra-operator-dev:0cf96c3` 
-
-This behavior can be overrode by defining `NO_DEV`, `REPO` and `TAG` environment variables. 
+To define a registry for the docker containers, set the `DOCKER_REPO` environment variable. E.g. `DOCKER_REPO=gcr.io/foo/bar/`
