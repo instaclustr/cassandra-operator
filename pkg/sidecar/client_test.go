@@ -37,10 +37,10 @@ func TestClient_DecommissionNode(t *testing.T) {
 
 	// first decommissioning
 
-	response, e := client.DecommissionNode()
+	response, err := client.DecommissionNode()
 
-	if e != nil {
-		t.Errorf(e.Error())
+	if err != nil {
+		t.Errorf(err.Error())
 	}
 
 	if response == nil {
@@ -49,9 +49,9 @@ func TestClient_DecommissionNode(t *testing.T) {
 
 	// second decommissioning on the same node
 
-	response2, e2 := client.DecommissionNode()
+	response2, err2 := client.DecommissionNode()
 
-	if e2 == nil || response2 != nil {
+	if err2 == nil || response2 != nil {
 		t.Errorf("Decommissioning of already decomissioned node should fail.")
 	}
 }

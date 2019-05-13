@@ -83,12 +83,12 @@ func (client *Client) CreateBackup(arguments BackupArguments) (*BackupResponse, 
 
 type DecommissionError struct {
 	status   int
-	msg      string
+	err      error
 	endpoint string
 }
 
 func (e *DecommissionError) Error() string {
-	return convertErrorToString(e.endpoint, e.status, e.msg)
+	return convertErrorToString(e.endpoint, e.status, e.err)
 }
 
 type DecommissionResponse struct {
@@ -104,12 +104,12 @@ func (client *Client) DecommissionNode() (*DecommissionResponse, error) {
 
 	response, err := client.restyClient.R().
 		SetHeader(ACCEPT, ApplicationJson).
-		SetResult(&decommissionResponse).
+		SetResult(decommissionResponse).
 		Post(EndpointOperationsDecommission)
 
 	if err != nil {
 		return nil, &DecommissionError{
-			msg:      err.Error(),
+			err:      err,
 			endpoint: EndpointOperationsDecommission,
 		}
 	}
@@ -130,12 +130,12 @@ func (client *Client) DecommissionNode() (*DecommissionResponse, error) {
 
 type StatusError struct {
 	status   int
-	msg      string
+	err      error
 	endpoint string
 }
 
 func (e *StatusError) Error() string {
-	return convertErrorToString(e.endpoint, e.status, e.msg)
+	return convertErrorToString(e.endpoint, e.status, e.err)
 }
 
 type OperationMode string
@@ -165,12 +165,12 @@ func (client *Client) GetStatus() (*StatusResponse, error) {
 
 	response, err := client.restyClient.R().
 		SetHeader(ACCEPT, ApplicationJson).
-		SetResult(&statusResponse).
+		SetResult(statusResponse).
 		Get(EndpointStatus)
 
 	if err != nil {
 		return nil, &StatusError{
-			msg:      err.Error(),
+			err:      err,
 			endpoint: EndpointStatus,
 		}
 	}
@@ -187,10 +187,10 @@ func (client *Client) GetStatus() (*StatusResponse, error) {
 
 //// helpers
 
-func convertErrorToString(endpoint string, status int, msg string) string {
+func convertErrorToString(endpoint string, status int, err error) string {
 	if status != 0 {
 		return fmt.Sprintf("Operation on endpoint %s was not successful, response code %d", endpoint, status)
 	}
 
-	return fmt.Sprintf("Operation on endpoint %s was errorneous: %s", endpoint, msg)
+	return fmt.Sprintf("Operation on endpoint %s was errorneous: %s", endpoint, err)
 }
