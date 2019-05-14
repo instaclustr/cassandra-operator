@@ -10,11 +10,11 @@ import (
 type CassandraDataCenterSpec struct {
 	// Cluster is either a string or v1.LocalObjectReference
 	//Cluster interface{} `json:"cluster,omitempty"`
-	Cluster string `json:"cluster,omitempty"`
-	Nodes int32 `json:"nodes"`
-	CassandraImage string `json:"cassandraImage"`
-	SidecarImage string `json:"sidecarImage"`
-	ImagePullPolicy v1.PullPolicy `json:"imagePullPolicy"`
+	Cluster          string                    `json:"cluster,omitempty"`
+	Nodes            int32                     `json:"nodes"`
+	CassandraImage   string                    `json:"cassandraImage"`
+	SidecarImage     string                    `json:"sidecarImage"`
+	ImagePullPolicy  v1.PullPolicy             `json:"imagePullPolicy"`
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	Resources v1.ResourceRequirements `json:"resources"`

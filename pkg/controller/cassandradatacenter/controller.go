@@ -111,7 +111,6 @@ func (r *CassandraDataCenterReconciler) Reconcile(request reconcile.Request) (re
 	//	return reconcile.Result{}, err
 	//}
 
-
 	nodesService, err := r.createOrUpdateNodesService(cdc)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -134,7 +133,6 @@ func (r *CassandraDataCenterReconciler) Reconcile(request reconcile.Request) (re
 
 	// TODO:
 	_, _, _ = nodesService, seedNodesService, statefulSet
-
 
 	return reconcile.Result{}, nil
 }
@@ -229,7 +227,7 @@ func (r *CassandraDataCenterReconciler) Reconcile(request reconcile.Request) (re
 func dataCenterLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
 	return map[string]string{
 		"cassandra-operator.instaclustr.com/datacenter": cdc.Name,
-		"app.kubernetes.io/managed-by": "com.instaclustr.cassandra-operator",
+		"app.kubernetes.io/managed-by":                  "com.instaclustr.cassandra-operator",
 	}
 }
 
@@ -238,26 +236,26 @@ func dataCenterResourceMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCent
 
 	return metav1.ObjectMeta{
 		Namespace: cdc.Namespace,
-		Name: "cassandra-" + cdc.Name + suffix,
-		Labels: dataCenterLabels(cdc),
+		Name:      "cassandra-" + cdc.Name + suffix,
+		Labels:    dataCenterLabels(cdc),
 	}
 }
 
 func (r *CassandraDataCenterReconciler) createOrUpdateNodesService(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) (*corev1.Service, error) {
-	nodesService := &corev1.Service{ObjectMeta: dataCenterResourceMetadata(cdc, "nodes"),}
+	nodesService := &corev1.Service{ObjectMeta: dataCenterResourceMetadata(cdc, "nodes")}
 
 	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, nodesService, func(_ runtime.Object) error {
 		nodesService.Spec = corev1.ServiceSpec{
-					ClusterIP: "None",
-					Ports: []corev1.ServicePort{
-						{
-							Name: "cql",
-							Port: 9042,
-						},
-						{
-							Name: "jmx",
-							Port: 7199,
-						},
+			ClusterIP: "None",
+			Ports: []corev1.ServicePort{
+				{
+					Name: "cql",
+					Port: 9042,
+				},
+				{
+					Name: "jmx",
+					Port: 7199,
+				},
 			},
 			Selector: dataCenterLabels(cdc),
 		}
@@ -276,18 +274,18 @@ func (r *CassandraDataCenterReconciler) createOrUpdateNodesService(cdc *cassandr
 }
 
 func (r *CassandraDataCenterReconciler) createOrUpdateSeedNodesService(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) (*corev1.Service, error) {
-	seedNodesService := &corev1.Service{ObjectMeta: dataCenterResourceMetadata(cdc, "seeds"),}
+	seedNodesService := &corev1.Service{ObjectMeta: dataCenterResourceMetadata(cdc, "seeds")}
 
 	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, seedNodesService, func(_ runtime.Object) error {
 		seedNodesService.Spec = corev1.ServiceSpec{
 			ClusterIP: "None",
 			Ports: []corev1.ServicePort{
 				{
-					Name:"internode",
-					Port:7000,
+					Name: "internode",
+					Port: 7000,
 				},
 			},
-			Selector: dataCenterLabels(cdc),
+			Selector:                 dataCenterLabels(cdc),
 			PublishNotReadyAddresses: true,
 		}
 
@@ -306,7 +304,7 @@ func (r *CassandraDataCenterReconciler) createOrUpdateSeedNodesService(cdc *cass
 
 func (r *CassandraDataCenterReconciler) createOrUpdateStatefulSet(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumeMounts []*VolumeMount) (*v1beta2.StatefulSet, error) {
 	dataVolumeClaim := corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{Name:"data-volume"},
+		ObjectMeta: metav1.ObjectMeta{Name: "data-volume"},
 		Spec:       cdc.Spec.DataVolumeClaimSpec,
 	}
 
@@ -315,10 +313,10 @@ func (r *CassandraDataCenterReconciler) createOrUpdateStatefulSet(cdc *cassandra
 		VolumeSource: corev1.VolumeSource{
 			DownwardAPI: &corev1.DownwardAPIVolumeSource{
 				Items: []corev1.DownwardAPIVolumeFile{
-					{Path:"labels", FieldRef:&corev1.ObjectFieldSelector{FieldPath:"metadata.labels"},},
-					{Path:"annotations", FieldRef:&corev1.ObjectFieldSelector{FieldPath:"metadata.annotations"},},
-					{Path:"namespace", FieldRef:&corev1.ObjectFieldSelector{FieldPath:"metadata.namespace"},},
-					{Path:"name", FieldRef:&corev1.ObjectFieldSelector{FieldPath:"metadata.name"},},
+					{Path: "labels", FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.labels"}},
+					{Path: "annotations", FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.annotations"}},
+					{Path: "namespace", FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}},
+					{Path: "name", FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}},
 				},
 			},
 		},
@@ -328,11 +326,11 @@ func (r *CassandraDataCenterReconciler) createOrUpdateStatefulSet(cdc *cassandra
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
-		Args: []string{},
+		Args:            []string{},
 		Ports: []corev1.ContainerPort{
-			{Name: "internode", ContainerPort: 7000,},
-			{Name: "cql", ContainerPort: 9042,},
-			{Name: "jmx", ContainerPort: 7199,},
+			{Name: "internode", ContainerPort: 7000},
+			{Name: "cql", ContainerPort: 9042},
+			{Name: "jmx", ContainerPort: 7199},
 		},
 		Resources: cdc.Spec.Resources,
 		SecurityContext: &corev1.SecurityContext{
@@ -363,7 +361,7 @@ func (r *CassandraDataCenterReconciler) createOrUpdateStatefulSet(cdc *cassandra
 		Image:           cdc.Spec.SidecarImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Ports: []corev1.ContainerPort{
-			{Name: "http", ContainerPort: 4567,},
+			{Name: "http", ContainerPort: 4567},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: dataVolumeClaim.Name, MountPath: "/var/lib/cassandra"},
@@ -372,22 +370,22 @@ func (r *CassandraDataCenterReconciler) createOrUpdateStatefulSet(cdc *cassandra
 	}
 
 	podSpec := corev1.PodSpec{
-		Volumes: []corev1.Volume{podInfoVolume},
-		ImagePullSecrets:cdc.Spec.ImagePullSecrets,
+		Volumes:          []corev1.Volume{podInfoVolume},
+		ImagePullSecrets: cdc.Spec.ImagePullSecrets,
 	}
 
 	// add all config Volumes and their VolumeMounts
 	for _, vm := range volumeMounts {
 		cassandraContainer.VolumeMounts = append(cassandraContainer.VolumeMounts, corev1.VolumeMount{
-			Name:vm.Volume.Name,
-			MountPath:vm.MountPath,
+			Name:      vm.Volume.Name,
+			MountPath: vm.MountPath,
 		})
 
 		// provide access to config map volumes in the sidecar, these reside in /tmp though and are not overlayed into /etc/cassandra
 		// TODO: rework this
 		sidecarContainer.VolumeMounts = append(sidecarContainer.VolumeMounts, corev1.VolumeMount{
-			Name:vm.Volume.Name,
-			MountPath:vm.MountPath,
+			Name:      vm.Volume.Name,
+			MountPath: vm.MountPath,
 		})
 
 		// entrypoint takes mount paths as arguments
@@ -399,7 +397,7 @@ func (r *CassandraDataCenterReconciler) createOrUpdateStatefulSet(cdc *cassandra
 	// this is a deep copy
 	podSpec.Containers = []corev1.Container{cassandraContainer, sidecarContainer}
 
-	statefulSet := &v1beta2.StatefulSet{ObjectMeta: dataCenterResourceMetadata(cdc),}
+	statefulSet := &v1beta2.StatefulSet{ObjectMeta: dataCenterResourceMetadata(cdc)}
 
 	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, statefulSet, func(_ runtime.Object) error {
 		if statefulSet.Spec.Replicas != nil && *statefulSet.Spec.Replicas != cdc.Spec.Nodes {
@@ -412,12 +410,12 @@ func (r *CassandraDataCenterReconciler) createOrUpdateStatefulSet(cdc *cassandra
 		statefulSet.Spec = v1beta2.StatefulSetSpec{
 			ServiceName: "cassandra",
 			Replicas:    &cdc.Spec.Nodes,
-			Selector:    &metav1.LabelSelector{MatchLabels:podLabels},
+			Selector:    &metav1.LabelSelector{MatchLabels: podLabels},
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels:podLabels,},
-				Spec: podSpec,
+				ObjectMeta: metav1.ObjectMeta{Labels: podLabels},
+				Spec:       podSpec,
 			},
-			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{dataVolumeClaim,},
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{dataVolumeClaim},
 		}
 
 		if err := controllerutil.SetControllerReference(cdc, statefulSet, r.scheme); err != nil {
@@ -429,8 +427,6 @@ func (r *CassandraDataCenterReconciler) createOrUpdateStatefulSet(cdc *cassandra
 	if err != nil {
 		return nil, err
 	}
-
-
 
 	return statefulSet, err
 }
@@ -461,8 +457,8 @@ func configMapVolumeAddBinaryFile(configMap *corev1.ConfigMap, volumeSource *cor
 
 func (r *CassandraDataCenterReconciler) createOrUpdateOperatorConfigMap(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, seedNodesService *corev1.Service) (*VolumeMount, error) {
 	// TODO: should these two be wrapped up into a single struct, since they always need to be passed around together to the various addXYZ functions?
-	configMap := &corev1.ConfigMap{ObjectMeta: dataCenterResourceMetadata(cdc, "operator-config"),}
-	volumeSource := &corev1.ConfigMapVolumeSource{LocalObjectReference:corev1.LocalObjectReference{Name: configMap.Name}}
+	configMap := &corev1.ConfigMap{ObjectMeta: dataCenterResourceMetadata(cdc, "operator-config")}
+	volumeSource := &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name}}
 
 	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, configMap, func(_ runtime.Object) error {
 		// cassandra.yaml overrides
@@ -485,15 +481,13 @@ func (r *CassandraDataCenterReconciler) createOrUpdateOperatorConfigMap(cdc *cas
 		// unlimited locked memory
 		// TODO: move this into the image -- it should be the default
 		// TODO: other limits too?
-		configMapVolumeAddTextFile(configMap, volumeSource,  "cassandra-env.sh.d/002-cassandra-limits.sh",
+		configMapVolumeAddTextFile(configMap, volumeSource, "cassandra-env.sh.d/002-cassandra-limits.sh",
 			"ulimit -l unlimited\n")
-
 
 		// JVM options
 		if err := addCassandraJVMOptions(cdc, configMap, volumeSource); err != nil {
 			return err
 		}
-
 
 		if err := controllerutil.SetControllerReference(cdc, configMap, r.scheme); err != nil {
 			return err
@@ -508,8 +502,8 @@ func (r *CassandraDataCenterReconciler) createOrUpdateOperatorConfigMap(cdc *cas
 
 	volumeMount := &VolumeMount{
 		Volume: corev1.Volume{
-			Name: "operator-config-volume",
-			VolumeSource:corev1.VolumeSource{ConfigMap:volumeSource},
+			Name:         "operator-config-volume",
+			VolumeSource: corev1.VolumeSource{ConfigMap: volumeSource},
 		},
 		MountPath: "/tmp/operator-config",
 	}
@@ -519,14 +513,14 @@ func (r *CassandraDataCenterReconciler) createOrUpdateOperatorConfigMap(cdc *cas
 
 func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, seedNodesService *corev1.Service, configMap *corev1.ConfigMap, volumeSource *corev1.ConfigMapVolumeSource) error {
 	type SeedProvider struct {
-		ClassName string `yaml:"class_name"`
+		ClassName  string              `yaml:"class_name"`
 		Parameters []map[string]string `yaml:"parameters"`
 	}
 
 	type CassandraConfig struct {
-		ClusterName string `yaml:"cluster_name"`
+		ClusterName   string  `yaml:"cluster_name"`
 		ListenAddress *string `yaml:"listen_address"`
-		RPCAddress *string `yaml:"rpc_address"`
+		RPCAddress    *string `yaml:"rpc_address"`
 
 		SeedProvider []SeedProvider `yaml:"seed_provider"`
 
@@ -537,7 +531,7 @@ func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCente
 		ClusterName: cdc.Spec.Cluster,
 
 		ListenAddress: nil, // let C* discover the listen address
-		RPCAddress: nil, // let C* discover the rpc address
+		RPCAddress:    nil, // let C* discover the rpc address
 
 		SeedProvider: []SeedProvider{
 			{
@@ -565,7 +559,7 @@ func addCassandraGPFSnitchProperties(cdc *cassandraoperatorv1alpha1.CassandraDat
 
 	_, _ = fmt.Fprintln(&writer, "# generated by cassandra-operator") // min heap size
 
-	writeProperty := func (key string, value string) {
+	writeProperty := func(key string, value string) {
 		_, _ = fmt.Fprintf(&writer, "%s=%s\n", key, value)
 	}
 
@@ -603,14 +597,14 @@ func addCassandraJVMOptions(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, 
 	memoryLimit := cdc.Spec.Resources.Limits.Memory().Value() // Value() gives bytes
 
 	jvmHeapSize := max(
-		min(memoryLimit / 2, GIBIBYTE),
-		min(memoryLimit / 4, 8 * GIBIBYTE))
+		min(memoryLimit/2, GIBIBYTE),
+		min(memoryLimit/4, 8*GIBIBYTE))
 
 	youngGenSize := min(
-		coreCount * MEBIBYTE,
-		jvmHeapSize / 4)
+		coreCount*MEBIBYTE,
+		jvmHeapSize/4)
 
-	useG1GC := jvmHeapSize > 8 * GIBIBYTE;
+	useG1GC := jvmHeapSize > 8*GIBIBYTE
 
 	var writer strings.Builder
 
@@ -638,7 +632,7 @@ func addCassandraJVMOptions(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, 
 		_, _ = fmt.Fprintln(&writer, "-XX:G1RSetUpdatingPauseTimePercent=5")
 		_, _ = fmt.Fprintln(&writer, "-XX:MaxGCPauseMillis=500")
 
-		if jvmHeapSize > 16 * GIBIBYTE {
+		if jvmHeapSize > 16*GIBIBYTE {
 			_, _ = fmt.Fprintln(&writer, "-XX:InitiatingHeapOccupancyPercent=70")
 		}
 
