@@ -1128,6 +1128,7 @@
     "sigs.k8s.io/controller-runtime/pkg/runtime/signals",
     "sigs.k8s.io/controller-runtime/pkg/source",
     "sigs.k8s.io/controller-tools/pkg/crd/generator",
+    "gopkg.in/yaml.v2"
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
