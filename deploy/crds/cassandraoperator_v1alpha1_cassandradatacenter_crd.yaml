@@ -32,7 +32,9 @@ spec:
             cassandraImage:
               type: string
             cluster:
-              type: object
+              description: Cluster is either a string or v1.LocalObjectReference Cluster
+                interface{} `json:"cluster,omitempty"`
+              type: string
             dataVolumeClaimSpec:
               type: object
             imagePullPolicy:
@@ -41,22 +43,20 @@ spec:
               items:
                 type: object
               type: array
-            prometheusSupport:
-              type: boolean
-            replicas:
+            nodes:
               format: int32
               type: integer
+            prometheusSupport:
+              type: boolean
             resources:
               type: object
             sidecarImage:
               type: string
           required:
-          - cluster
-          - replicas
+          - nodes
           - cassandraImage
           - sidecarImage
           - imagePullPolicy
-          - imagePullSecrets
           - resources
           - dataVolumeClaimSpec
           - prometheusSupport

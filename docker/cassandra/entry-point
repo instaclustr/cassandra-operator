@@ -12,4 +12,4 @@ do
 done
 )
 
-/usr/sbin/cassandra
+exec /usr/sbin/cassandra

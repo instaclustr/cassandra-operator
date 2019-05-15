@@ -210,10 +210,12 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 				Properties: map[string]spec.Schema{
 					"cluster": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/api/core/v1.LocalObjectReference"),
+							Description: "Cluster is either a string or v1.LocalObjectReference Cluster interface{} `json:\"cluster,omitempty\"`",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
-					"replicas": {
+					"nodes": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
 							Format: "int32",
@@ -266,7 +268,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 						},
 					},
 				},
-				Required: []string{"cluster", "replicas", "cassandraImage", "sidecarImage", "imagePullPolicy", "imagePullSecrets", "resources", "dataVolumeClaimSpec", "prometheusSupport"},
+				Required: []string{"nodes", "cassandraImage", "sidecarImage", "imagePullPolicy", "resources", "dataVolumeClaimSpec", "prometheusSupport"},
 			},
 		},
 		Dependencies: []string{

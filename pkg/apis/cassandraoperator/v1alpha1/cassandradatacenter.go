@@ -5,16 +5,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-
 // CassandraDataCenterSpec defines the desired state of CassandraDataCenter
 // +k8s:openapi-gen=true
 type CassandraDataCenterSpec struct {
-	Cluster v1.LocalObjectReference `json:"cluster"`
-	Replicas int32 `json:"replicas"`
-	CassandraImage string `json:"cassandraImage"`
-	SidecarImage string `json:"sidecarImage"`
-	ImagePullPolicy v1.PullPolicy `json:"imagePullPolicy"`
-	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets"`
+	// Cluster is either a string or v1.LocalObjectReference
+	//Cluster interface{} `json:"cluster,omitempty"`
+	Cluster          string                    `json:"cluster,omitempty"`
+	Nodes            int32                     `json:"nodes"`
+	CassandraImage   string                    `json:"cassandraImage"`
+	SidecarImage     string                    `json:"sidecarImage"`
+	ImagePullPolicy  v1.PullPolicy             `json:"imagePullPolicy"`
+	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	Resources v1.ResourceRequirements `json:"resources"`
 
