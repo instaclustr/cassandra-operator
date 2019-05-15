@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"github.com/instaclustr/cassandra-operator/pkg/controller/cassandradatacenter/controller"
+	"github.com/instaclustr/cassandra-operator/pkg/controller/cassandradatacenter"
 )
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, controller.Add)
+	AddToManagerFuncs = append(AddToManagerFuncs, cassandradatacenter.Add)
 }

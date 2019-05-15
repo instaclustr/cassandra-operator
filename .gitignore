@@ -16,4 +16,3 @@ dependency-reduced-pom.xml
 
 build/_output
 vendor/
-/cmd/manager/manager
