@@ -96,7 +96,7 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		Args:            []string{},
 		Ports: []corev1.ContainerPort{
 			{Name: "internode", ContainerPort: CassandraInternodePort},
-			{Name: "cql", ContainerPort: CassandraCqlPort},
+			{Name: "cql", ContainerPort: CassandraCQLPort},
 			{Name: "jmx", ContainerPort: CassandraJMXPort},
 		},
 		Resources: cdc.Spec.Resources,

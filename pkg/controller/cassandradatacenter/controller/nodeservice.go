@@ -20,7 +20,7 @@ func CreateOrUpdateNodesService(reconciler *CassandraDataCenterReconciler, cdc *
 			Ports: []corev1.ServicePort{
 				{
 					Name: "cql",
-					Port: CassandraCqlPort,
+					Port: CassandraCQLPort,
 				},
 				{
 					Name: "jmx",

@@ -4,7 +4,7 @@ package controller
 
 const (
 	CassandraInternodePort  = 7000
-	CassandraCqlPort        = 9042
+	CassandraCQLPort        = 9042
 	CassandraJMXPort        = 7199
 	CassandraPrometheusPort = 9500
 )
