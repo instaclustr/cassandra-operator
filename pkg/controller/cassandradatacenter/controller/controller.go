@@ -21,13 +21,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-
-	cdcReconciler := &CassandraDataCenterReconciler{}
-
-	cdcReconciler.SetClient(mgr.GetClient())
-	cdcReconciler.SetScheme(mgr.GetScheme())
-
-	return cdcReconciler
+	return &CassandraDataCenterReconciler{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler

@@ -5,8 +5,6 @@ import (
 	"k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -20,12 +18,4 @@ type CassandraOperator interface {
 	CreateOrUpdateStatefulSet(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumeMounts VolumeMounts) (*v1beta2.StatefulSet, error)
 
 	Reconcile(request reconcile.Request) (reconcile.Result, error)
-
-	GetClient() client.Client
-
-	GetScheme() *runtime.Scheme
-
-	SetClient(client client.Client)
-
-	SetScheme(scheme *runtime.Scheme)
 }

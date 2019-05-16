@@ -26,22 +26,6 @@ func (reconciler *CassandraDataCenterReconciler) CreateOrUpdateNodesService(cdc 
 	return CreateOrUpdateNodesService(reconciler, cdc)
 }
 
-func (reconciler *CassandraDataCenterReconciler) GetClient() client.Client {
-	return reconciler.client
-}
-
-func (reconciler *CassandraDataCenterReconciler) GetScheme() *runtime.Scheme {
-	return reconciler.scheme
-}
-
-func (reconciler *CassandraDataCenterReconciler) SetClient(client client.Client) {
-	reconciler.client = client
-}
-
-func (reconciler *CassandraDataCenterReconciler) SetScheme(scheme *runtime.Scheme) {
-	reconciler.scheme = scheme
-}
-
 func (reconciler *CassandraDataCenterReconciler) CreateOrUpdateSeedNodesService(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) (*corev1.Service, error) {
 	return CreateOrUpdateSeedNodesService(reconciler, cdc)
 }
@@ -66,7 +50,7 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	// Fetch the CassandraDataCenter instance
 
 	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
-	err := reconciler.GetClient().Get(context.TODO(), request.NamespacedName, cdc)
+	err := reconciler.client.Get(context.TODO(), request.NamespacedName, cdc)
 
 	if err != nil {
 		if errors.IsNotFound(err) {

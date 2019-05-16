@@ -11,19 +11,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	SidecarPort                                         = 4567
+	SidecarContainerVolumeMountPath                     = "/var/lib/cassandra"
+	SidecarContainerPodInfoVolumeMountPath              = "/etc/pod-info"
+	CassandraContainerCqlReadinessProbeScriptPath       = "/usr/bin/cql-readiness-probe"
+	CassandraContainerVolumeMountPath                   = "/var/lib/cassandra"
+	CassandraReadinessProbeInitialDelayInSeconds        = 60
+	CassandraReadinessProbeInitialDelayTimeoutInSeconds = 5
+)
+
 func CreateOrUpdateStatefulSet(reconciler *CassandraDataCenterReconciler, cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumeMounts VolumeMounts) (*v1beta2.StatefulSet, error) {
 
 	dataVolumeClaim := getDataVolumeClaim(cdc.Spec.DataVolumeClaimSpec)
 
 	podInfoVolume := getPodInfoVolume()
 
-	cassandraContainer := getCassandraContainer(cdc, dataVolumeClaim)
-	sidecarContainer := getSidecarContainer(cdc, dataVolumeClaim, podInfoVolume)
+	cassandraContainer := newCassandraContainer(cdc, dataVolumeClaim)
+	sidecarContainer := newSidecarContainer(cdc, dataVolumeClaim, podInfoVolume)
 
 	addMountsToCassandra(cassandraContainer, volumeMounts)
 	addMountsToSidecar(sidecarContainer, volumeMounts)
 
-	podSpec := getPodSpec(cdc, podInfoVolume, volumeMounts, []corev1.Container{*cassandraContainer, *sidecarContainer})
+	podSpec := getPodSpec(cdc, podInfoVolume, []corev1.Container{*cassandraContainer, *sidecarContainer})
 	addMountsToPodSpec(podSpec, volumeMounts)
 
 	statefulSet := &v1beta2.StatefulSet{ObjectMeta: DataCenterResourceMetadata(cdc)}
@@ -54,7 +64,7 @@ func getStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podS
 	podLabels := DataCenterLabels(cdc)
 
 	return v1beta2.StatefulSetSpec{
-		ServiceName: StatefulSetServiceName,
+		ServiceName: "cassandra",
 		Replicas:    &cdc.Spec.Nodes,
 		Selector:    &metav1.LabelSelector{MatchLabels: podLabels},
 		Template: corev1.PodTemplateSpec{
@@ -65,7 +75,7 @@ func getStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podS
 	}
 }
 
-func getPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podInfoVolume *corev1.Volume, volumeMounts VolumeMounts, containers []corev1.Container) *corev1.PodSpec {
+func getPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podInfoVolume *corev1.Volume, containers []corev1.Container) *corev1.PodSpec {
 
 	podSpec := &corev1.PodSpec{
 		Volumes:          []corev1.Volume{*podInfoVolume},
@@ -78,9 +88,9 @@ func getPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podInfoVolum
 	return podSpec
 }
 
-func getCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim) *corev1.Container {
+func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim) *corev1.Container {
 	container := &corev1.Container{
-		Name:            CassandraContainerName,
+		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Args:            []string{},
@@ -145,10 +155,10 @@ func addMountsToPodSpec(podSpec *corev1.PodSpec, volumeMounts VolumeMounts) {
 	}
 }
 
-func getSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, podInfoVolume *corev1.Volume) *corev1.Container {
+func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, podInfoVolume *corev1.Volume) *corev1.Container {
 
 	return &corev1.Container{
-		Name:            SidecarContainerName,
+		Name:            "sidecar",
 		Image:           cdc.Spec.SidecarImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Ports: []corev1.ContainerPort{
@@ -163,7 +173,7 @@ func getSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dat
 
 func getPodInfoVolume() *corev1.Volume {
 	return &corev1.Volume{
-		Name: PodInfoVolumeName,
+		Name: "pod-info",
 		VolumeSource: corev1.VolumeSource{
 			DownwardAPI: &corev1.DownwardAPIVolumeSource{
 				Items: []corev1.DownwardAPIVolumeFile{

@@ -1,90 +1,67 @@
 package controller
 
 import (
-	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
-	"strconv"
+	"fmt"
 	"strings"
 )
 
-func cassandraJVMOptions(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) (*string, error) {
+const (
+	MEBIBYTE = 1 << 20
+	GIBIBYTE = 1 << 30
+)
+
+func addCassandraJVMOptions(config configurationResources) {
+
 	// TODO: should this be Limits or Requests?
-	jvmHeapSize := jvmHeapSize(memoryLimit(cdc))
+	memoryLimit := config.cdc.Spec.Resources.Limits.Memory().Value()
+
+	jvmHeapSize := maxInt64(minInt64(memoryLimit/2, GIBIBYTE), minInt64(memoryLimit/4, 8*GIBIBYTE))
+
+	youngGenSize := youngGen(jvmHeapSize)
+
+	useG1GC := jvmHeapSize > 8*GIBIBYTE
 
 	var writer strings.Builder
 
-	if err := writeFormattedProperties(&writer, map[string]string{
-		"-Xms%s\n": strconv.FormatInt(jvmHeapSize, 10),
-		"-Xmx%s\n": strconv.FormatInt(jvmHeapSize, 10),
-	}); err != nil {
-		return nil, err
-	}
+	_, _ = fmt.Fprintf(&writer, "-Xms%d\n", jvmHeapSize) // min heap size
+	_, _ = fmt.Fprintf(&writer, "-Xmx%d\n", jvmHeapSize) // max heap size
 
 	// copied from stock jvm.options
-	if !isUsingGC1(jvmHeapSize) {
+	if !useG1GC {
+		_, _ = fmt.Fprintf(&writer, "-Xmn%d\n", youngGenSize) // young gen size
 
-		// young gen size
-		if err := writeFormattedProperty(&writer, "-Xmn%s\n", strconv.FormatInt(youngGen(jvmHeapSize), 10)); err != nil {
-			return nil, err
-		}
+		_, _ = fmt.Fprintln(&writer, "-XX:+UseParNewGC")
+		_, _ = fmt.Fprintln(&writer, "-XX:+UseConcMarkSweepGC")
+		_, _ = fmt.Fprintln(&writer, "-XX:+CMSParallelRemarkEnabled")
+		_, _ = fmt.Fprintln(&writer, "-XX:SurvivorRatio=8")
+		_, _ = fmt.Fprintln(&writer, "-XX:MaxTenuringThreshold=1")
+		_, _ = fmt.Fprintln(&writer, "-XX:CMSInitiatingOccupancyFraction=75")
+		_, _ = fmt.Fprintln(&writer, "-XX:+UseCMSInitiatingOccupancyOnly")
+		_, _ = fmt.Fprintln(&writer, "-XX:CMSWaitDuration=10000")
+		_, _ = fmt.Fprintln(&writer, "-XX:+CMSParallelInitialMarkEnabled")
+		_, _ = fmt.Fprintln(&writer, "-XX:+CMSEdenChunksRecordAlways")
+		_, _ = fmt.Fprintln(&writer, "-XX:+CMSClassUnloadingEnabled")
 
-		if err := writePropertiesWithNewLine(&writer, []string{
-			"-XX:+UseParNewGC",
-			"-XX:+UseConcMarkSweepGC",
-			"-XX:+CMSParallelRemarkEnabled",
-			"-XX:SurvivorRatio=8",
-			"-XX:MaxTenuringThreshold=1",
-			"-XX:CMSInitiatingOccupancyFraction=75",
-			"-XX:+UseCMSInitiatingOccupancyOnly",
-			"-XX:CMSWaitDuration=10000",
-			"-XX:+CMSParallelInitialMarkEnabled",
-			"-XX:+CMSEdenChunksRecordAlways",
-			"-XX:+CMSClassUnloadingEnabled",
-		}); err != nil {
-			return nil, err
-		}
 	} else {
+		_, _ = fmt.Fprintln(&writer, "-XX:+UseG1GC")
+		_, _ = fmt.Fprintln(&writer, "-XX:G1RSetUpdatingPauseTimePercent=5")
+		_, _ = fmt.Fprintln(&writer, "-XX:MaxGCPauseMillis=500")
 
-		if err := writePropertiesConditionally(&writer, []conditionalProperty{
-			{property: "-XX:+UseG1GC",},
-			{property: "-XX:G1RSetUpdatingPauseTimePercent=5",},
-			{property: "-XX:MaxGCPauseMillis=500",},
-			{
-				condition: func() bool {
-					return jvmHeapSize > 16*GIBIBYTE
-				},
-				property: "-XX:InitiatingHeapOccupancyPercent=70",
-			},
-		}); err != nil {
-			return nil, err
+		if jvmHeapSize > 16*GIBIBYTE {
+			_, _ = fmt.Fprintln(&writer, "-XX:InitiatingHeapOccupancyPercent=70")
 		}
 
 		// TODO: tune -XX:ParallelGCThreads, -XX:ConcGCThreads
 	}
 
 	// OOM Error handling
-	if err := writePropertiesWithNewLine(&writer, []string{
-		"-XX:+HeapDumpOnOutOfMemoryError",
-		"-XX:+CrashOnOutOfMemoryError",
-	}); err != nil {
-		return nil, err
-	}
+	_, _ = fmt.Fprintln(&writer, "-XX:+HeapDumpOnOutOfMemoryError")
+	_, _ = fmt.Fprintln(&writer, "-XX:+CrashOnOutOfMemoryError")
 
 	// TODO: maybe tune -Dcassandra.available_processors=number_of_processors - Wait till we build C* for Java 11
 	// not sure if k8s exposes the right number of CPU cores inside the container
 
-	result := writer.String()
-
-	return &result, nil
-}
-
-func memoryLimit(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) int64 {
-	return cdc.Spec.Resources.Limits.Memory().Value()
-}
-
-func jvmHeapSize(memoryLimit int64) int64 {
-	return maxInt64(
-		minInt64(memoryLimit/2, GIBIBYTE),
-		minInt64(memoryLimit/4, 8*GIBIBYTE))
+	configMapVolumeAddTextFile(config.configMap, config.volumeSource, ConfigMapJVMMemoryGcOptionsFilePath, writer.String())
 }
 
 func youngGen(jvmHeapSize int64) int64 {
@@ -92,10 +69,6 @@ func youngGen(jvmHeapSize int64) int64 {
 	coreCount := int64(4) // TODO
 
 	return minInt64(coreCount*MEBIBYTE, jvmHeapSize/4)
-}
-
-func isUsingGC1(jvmHeapSize int64) bool {
-	return jvmHeapSize > 8*GIBIBYTE
 }
 
 func minInt64(a int64, b int64) int64 {
