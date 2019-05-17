@@ -13,9 +13,9 @@ import (
 
 func CreateOrUpdateStatefulSet(reconciler *CassandraDataCenterReconciler, cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumeMounts VolumeMounts) (*v1beta2.StatefulSet, error) {
 
-	dataVolumeClaim := getDataVolumeClaim(cdc.Spec.DataVolumeClaimSpec)
+	dataVolumeClaim := newDataVolumeClaim(cdc.Spec.DataVolumeClaimSpec)
 
-	podInfoVolume := getPodInfoVolume()
+	podInfoVolume := newPodInfoVolume()
 
 	cassandraContainer := newCassandraContainer(cdc, dataVolumeClaim)
 	sidecarContainer := newSidecarContainer(cdc, dataVolumeClaim, podInfoVolume)
@@ -23,7 +23,7 @@ func CreateOrUpdateStatefulSet(reconciler *CassandraDataCenterReconciler, cdc *c
 	addMountsToCassandra(cassandraContainer, volumeMounts)
 	addMountsToSidecar(sidecarContainer, volumeMounts)
 
-	podSpec := getPodSpec(cdc, podInfoVolume, []corev1.Container{*cassandraContainer, *sidecarContainer})
+	podSpec := newPodSpec(cdc, podInfoVolume, []corev1.Container{*cassandraContainer, *sidecarContainer})
 	addMountsToPodSpec(podSpec, volumeMounts)
 
 	statefulSet := &v1beta2.StatefulSet{ObjectMeta: DataCenterResourceMetadata(cdc)}
@@ -33,7 +33,7 @@ func CreateOrUpdateStatefulSet(reconciler *CassandraDataCenterReconciler, cdc *c
 			// TODO: scale safely
 		}
 
-		statefulSet.Spec = getStatefulSetSpec(cdc, podSpec, dataVolumeClaim)
+		statefulSet.Spec = newStatefulSetSpec(cdc, podSpec, dataVolumeClaim)
 
 		if err := controllerutil.SetControllerReference(cdc, statefulSet, reconciler.scheme); err != nil {
 			return err
@@ -49,7 +49,7 @@ func CreateOrUpdateStatefulSet(reconciler *CassandraDataCenterReconciler, cdc *c
 	return statefulSet, err
 }
 
-func getStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podSpec *corev1.PodSpec, dataVolumeClaim *corev1.PersistentVolumeClaim) v1beta2.StatefulSetSpec {
+func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podSpec *corev1.PodSpec, dataVolumeClaim *corev1.PersistentVolumeClaim) v1beta2.StatefulSetSpec {
 
 	podLabels := DataCenterLabels(cdc)
 
@@ -65,7 +65,7 @@ func getStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podS
 	}
 }
 
-func getPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podInfoVolume *corev1.Volume, containers []corev1.Container) *corev1.PodSpec {
+func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podInfoVolume *corev1.Volume, containers []corev1.Container) *corev1.PodSpec {
 
 	podSpec := &corev1.PodSpec{
 		Volumes:          []corev1.Volume{*podInfoVolume},
@@ -161,7 +161,7 @@ func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dat
 	}
 }
 
-func getPodInfoVolume() *corev1.Volume {
+func newPodInfoVolume() *corev1.Volume {
 	return &corev1.Volume{
 		Name: "pod-info",
 		VolumeSource: corev1.VolumeSource{
@@ -177,7 +177,7 @@ func getPodInfoVolume() *corev1.Volume {
 	}
 }
 
-func getDataVolumeClaim(dataVolumeClaimSpec corev1.PersistentVolumeClaimSpec) *corev1.PersistentVolumeClaim {
+func newDataVolumeClaim(dataVolumeClaimSpec corev1.PersistentVolumeClaimSpec) *corev1.PersistentVolumeClaim {
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{Name: "data-volume"},
 		Spec:       dataVolumeClaimSpec,
