@@ -1,7 +1,7 @@
 package com.instaclustr.cassandra.operator;
 
-import ch.qos.logback.classic.Level;
 import com.google.inject.*;
+import com.instaclustr.cassandra.operator.configuration.DeletePVC;
 import com.instaclustr.cassandra.operator.configuration.Namespace;
 import com.instaclustr.cassandra.operator.k8s.K8sApiVersionValidator;
 import com.instaclustr.cassandra.operator.picocli.OperatorJarManifestVersionProvider;
@@ -11,10 +11,8 @@ import com.instaclustr.guava.Application;
 import com.instaclustr.guava.EventBusModule;
 import com.instaclustr.guava.ServiceManagerModule;
 import com.instaclustr.k8s.K8sModule;
-import com.instaclustr.picocli.typeconverter.ExistingFilePathTypeConverter;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.util.ClientBuilder;
-import io.kubernetes.client.util.KubeConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
@@ -23,9 +21,6 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 
 import static com.instaclustr.picocli.JarManifestVersionProvider.logCommandVersionInformation;
@@ -49,6 +44,9 @@ public class Operator implements Callable<Void> {
     static class OperatorOptions {
         @Option(names = {"-n", "--namespace"}, description = "")
         String namespace = "default";
+
+        @Option(names = {"-p", "--allow-pvc-cleanup"}, description = "")
+        Boolean allowPVCCleanups = false;
     }
 
 //    public static class K8sClientOptions {
@@ -109,6 +107,7 @@ public class Operator implements Callable<Void> {
                     protected void configure() {
                         bind(K8sApiVersionValidator.Options.class).toInstance(versionValidatorOptions);
                         bindConstant().annotatedWith(Namespace.class).to(operatorOptions.namespace);
+                        bindConstant().annotatedWith(DeletePVC.class).to(operatorOptions.allowPVCCleanups);
 
                         bind(ApiClient.class).toInstance(apiClient);
                     }
