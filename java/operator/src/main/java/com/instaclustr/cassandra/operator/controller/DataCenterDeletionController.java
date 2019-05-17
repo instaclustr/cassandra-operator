@@ -25,13 +25,13 @@ public class DataCenterDeletionController {
 
     private final K8sResourceUtils k8sResourceUtils;
 
-    final Boolean allowCleanups;
+    final boolean allowCleanups;
 
     private final DataCenterKey dataCenterKey;
 
     @Inject
     public DataCenterDeletionController(final K8sResourceUtils k8sResourceUtils,
-                                        @DeletePVC final Boolean allowCleanups,
+                                        @DeletePVC final boolean allowCleanups,
                                         @Assisted final DataCenterKey dataCenterKey) {
         this.k8sResourceUtils = k8sResourceUtils;
         this.dataCenterKey = dataCenterKey;
@@ -98,7 +98,7 @@ public class DataCenterDeletionController {
 
 
             // delete persistent volumes & persistent volume claims
-            if(allowCleanups) {
+            if (allowCleanups) {
                 k8sResourceUtils.deletePersistentPersistentVolumeClaims(labelSelector, dataCenterKey.namespace);
             }
 

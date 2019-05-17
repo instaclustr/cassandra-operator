@@ -46,7 +46,7 @@ public class Operator implements Callable<Void> {
         String namespace = "default";
 
         @Option(names = {"-p", "--allow-pvc-cleanup"}, description = "")
-        Boolean allowPVCCleanups = false;
+        boolean allowPVCCleanups = false;
     }
 
 //    public static class K8sClientOptions {

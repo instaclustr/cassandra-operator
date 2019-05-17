@@ -47,14 +47,14 @@ public class DataCenterReconciliationController {
     private final DataCenterSpec dataCenterSpec;
 
     private final Map<String, String> dataCenterLabels;
-    private final Boolean allowCleanups;
+    private final boolean allowCleanups;
 
     @Inject
     public DataCenterReconciliationController(final AppsV1beta2Api appsApi,
                                               final CustomObjectsApi customObjectsApi,
                                               final SidecarClientFactory sidecarClientFactory,
                                               final K8sResourceUtils k8sResourceUtils,
-                                              @DeletePVC final Boolean allowCleanups,
+                                              @DeletePVC final boolean allowCleanups,
                                               @Assisted final DataCenter dataCenter) {
         this.appsApi = appsApi;
         this.customObjectsApi = customObjectsApi;
