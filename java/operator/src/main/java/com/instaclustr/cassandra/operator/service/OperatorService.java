@@ -13,6 +13,7 @@ import com.instaclustr.cassandra.sidecar.model.Status;
 import com.instaclustr.guava.EventBusSubscriber;
 import com.instaclustr.k8s.watch.ResourceCache;
 import com.instaclustr.slf4j.MDC;
+import io.kubernetes.client.models.V1beta2StatefulSetStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,15 +63,10 @@ public class OperatorService extends AbstractExecutionThreadService {
     void handleStatefulSetEvent(final StatefulSetWatchEvent event) {
         logger.debug("Received StatefulSetWatchEvent {}.", event);
 
-        if (event instanceof StatefulSetWatchEvent.Added) {
-            return;
-        }
-
-        // Trigger a dc reconciliation event if changes to the stateful set has finished.
-        if (event.statefulSet.getStatus().getReplicas().equals(event.statefulSet.getStatus().getReadyReplicas()) && event.statefulSet.getStatus().getCurrentReplicas().equals(event.statefulSet.getStatus().getReplicas())) {
-            String datacenterName = event.statefulSet.getMetadata().getLabels().get(OperatorLabels.DATACENTER);
-            if (datacenterName != null) {
-                dataCenterQueue.add(new DataCenterKey(datacenterName, event.statefulSet.getMetadata().getNamespace()));
+        if (event instanceof StatefulSetWatchEvent.Modified) {
+            final String dataCenterName = event.statefulSet.getMetadata().getLabels().get(OperatorLabels.DATACENTER);
+            if (dataCenterName != null) {
+                dataCenterQueue.add(new DataCenterKey(dataCenterName, event.statefulSet.getMetadata().getNamespace()));
             }
         }
     }

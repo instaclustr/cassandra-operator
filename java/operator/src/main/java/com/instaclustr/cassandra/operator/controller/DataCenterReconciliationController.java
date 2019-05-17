@@ -13,6 +13,8 @@ import com.instaclustr.cassandra.operator.model.DataCenterSpec;
 import com.instaclustr.cassandra.operator.sidecar.SidecarClient;
 import com.instaclustr.cassandra.operator.sidecar.SidecarClientFactory;
 import com.instaclustr.cassandra.sidecar.model.Status;
+import com.instaclustr.k8s.K8sLabels;
+import com.instaclustr.k8s.LabelSelectors;
 import com.instaclustr.slf4j.MDC;
 import com.squareup.okhttp.Call;
 import io.kubernetes.client.ApiException;
@@ -63,7 +65,7 @@ public class DataCenterReconciliationController {
 
         this.dataCenterLabels = ImmutableMap.of(
                 OperatorLabels.DATACENTER, dataCenterMetadata.getName(),
-                "app.kubernetes.io/managed-by", "com.instaclustr.cassandra-operator" // hard code an identifier for DCs created by this operator
+                K8sLabels.MANAGED_BY, OperatorLabels.OPERATOR_IDENTIFIER
                 // TODO: add other recommended labels
         );
     }
@@ -527,9 +529,9 @@ public class DataCenterReconciliationController {
 
         logger.debug("StatefulSet currentReplicas = {}, desiredReplicas = {}.", currentReplicas, desiredReplicas);
 
-        // ideally this should use the same selector as the StatefulSet.
-        // why does listNamespacedPod take a string for the selector when V1LabelSelector exists?
-        final String labelSelector = String.format("%s=%s", OperatorLabels.DATACENTER, dataCenterMetadata.getName());
+        // ideally this should use the same equalitySelector as the StatefulSet.
+        // why does listNamespacedPod take a string for the equalitySelector when V1LabelSelector exists?
+        final String labelSelector = LabelSelectors.equalitySelector(OperatorLabels.DATACENTER, dataCenterMetadata.getName());
 
         final List<V1Pod> pods = ImmutableList.sortedCopyOf(STATEFUL_SET_POD_NEWEST_FIRST_COMPARATOR,
                 k8sResourceUtils.listNamespacedPods(statefulSetMetadata.getNamespace(), null, labelSelector)
