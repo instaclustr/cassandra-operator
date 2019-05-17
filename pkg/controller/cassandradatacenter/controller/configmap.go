@@ -12,18 +12,6 @@ import (
 	"strings"
 )
 
-const (
-	ConfigMapEndpointSnitch                = "org.apache.cassandra.locator.GossipingPropertyFileSnitch"
-	ConfigMapSeedProviderClass             = "com.instaclustr.cassandra.k8s.SeedProvider"
-	ConfigMapOperatorOverridesYamlPath     = "cassandra.yaml.d/001-operator-overrides.yaml"
-	ConfigMapJVMMemoryGcOptionsFilePath    = "jvm.options.d/001-jvm-memory-gc.options"
-	ConfigMapCassandraEnvExporterPath      = "cassandra-env.sh.d/001-cassandra-exporter.sh"
-	ConfigMapCassandraEnvLimitsPath        = "cassandra-env.sh.d/002-cassandra-limits.sh"
-	ConfigMapCassandraRackDCPropertiesPath = "cassandra-rackdc.properties"
-	ConfigMapOperatorVolumeName            = "operator-config-volume"
-	ConfigMapOperatorVolumeMountPath       = "/tmp/operator-config"
-)
-
 // TODO: better name? This "conflicts" with corev1.VolumeMount
 type VolumeMount struct {
 	Volume    corev1.Volume
@@ -78,10 +66,10 @@ func CreateOrUpdateOperatorConfigMap(reconciler *CassandraDataCenterReconciler, 
 
 	volumeMount := &VolumeMount{
 		Volume: corev1.Volume{
-			Name:         ConfigMapOperatorVolumeName,
+			Name:         "operator-config-volume",
 			VolumeSource: corev1.VolumeSource{ConfigMap: config.volumeSource},
 		},
-		MountPath: ConfigMapOperatorVolumeMountPath,
+		MountPath: "/tmp/operator-config",
 	}
 
 	return volumeMount, nil
@@ -107,7 +95,7 @@ func addCassandraGossipingPropertyFileSnitchProperties(config configurationResou
 		writeProperty(key, value)
 	}
 
-	configMapVolumeAddTextFile(config.configMap, config.volumeSource, ConfigMapCassandraRackDCPropertiesPath, writer.String())
+	configMapVolumeAddTextFile(config.configMap, config.volumeSource, "cassandra-rackdc.properties", writer.String())
 }
 
 func addPrometheusSupport(config configurationResources) {
@@ -115,7 +103,7 @@ func addPrometheusSupport(config configurationResources) {
 		configMapVolumeAddTextFile(
 			config.configMap,
 			config.volumeSource,
-			ConfigMapCassandraEnvExporterPath,
+			"cassandra-env.sh.d/001-cassandra-exporter.sh",
 			"JVM_OPTS=\"${JVM_OPTS} -javaagent:${CASSANDRA_HOME}/agents/cassandra-exporter-agent.jar=@${CASSANDRA_CONF}/cassandra-exporter.conf\"",
 		)
 	}
@@ -129,7 +117,7 @@ func addCassandraLimits(config configurationResources) {
 	configMapVolumeAddTextFile(
 		config.configMap,
 		config.volumeSource,
-		ConfigMapCassandraEnvLimitsPath,
+		"cassandra-env.sh.d/002-cassandra-limits.sh",
 		"ulimit -l unlimited\n")
 }
 
@@ -158,21 +146,21 @@ func addCassandraYamlOverrides(config configurationResources) error {
 
 		SeedProvider: []SeedProvider{
 			{
-				ClassName: ConfigMapSeedProviderClass,
+				ClassName: "com.instaclustr.cassandra.k8s.SeedProvider",
 				Parameters: []map[string]string{
 					{"service": config.seedNodesService.Name},
 				},
 			},
 		},
 
-		EndpointSnitch: ConfigMapEndpointSnitch, // TODO: custom snitch implementation?
+		EndpointSnitch: "org.apache.cassandra.locator.GossipingPropertyFileSnitch", // TODO: custom snitch implementation?
 	})
 
 	if err != nil {
 		return err
 	}
 
-	configMapVolumeAddTextFile(config.configMap, config.volumeSource, ConfigMapOperatorOverridesYamlPath, string(data))
+	configMapVolumeAddTextFile(config.configMap, config.volumeSource, "cassandra.yaml.d/001-operator-overrides.yaml", string(data))
 
 	return nil
 }

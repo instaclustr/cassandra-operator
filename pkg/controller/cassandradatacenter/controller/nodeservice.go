@@ -20,18 +20,18 @@ func CreateOrUpdateNodesService(reconciler *CassandraDataCenterReconciler, cdc *
 			Ports: []corev1.ServicePort{
 				{
 					Name: "cql",
-					Port: CassandraCQLPort,
+					Port: 9042,
 				},
 				{
 					Name: "jmx",
-					Port: CassandraJMXPort,
+					Port: 7199,
 				},
 			},
 			Selector: DataCenterLabels(cdc),
 		}
 
 		if cdc.Spec.PrometheusSupport {
-			nodesService.Spec.Ports = append(nodesService.Spec.Ports, corev1.ServicePort{Name: "prometheus", Port: CassandraPrometheusPort})
+			nodesService.Spec.Ports = append(nodesService.Spec.Ports, corev1.ServicePort{Name: "prometheus", Port: 9500})
 		}
 
 		if err := controllerutil.SetControllerReference(cdc, nodesService, reconciler.scheme); err != nil {

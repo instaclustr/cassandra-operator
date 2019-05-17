@@ -61,7 +61,7 @@ func addCassandraJVMOptions(config configurationResources) {
 	// TODO: maybe tune -Dcassandra.available_processors=number_of_processors - Wait till we build C* for Java 11
 	// not sure if k8s exposes the right number of CPU cores inside the container
 
-	configMapVolumeAddTextFile(config.configMap, config.volumeSource, ConfigMapJVMMemoryGcOptionsFilePath, writer.String())
+	configMapVolumeAddTextFile(config.configMap, config.volumeSource, "jvm.options.d/001-jvm-memory-gc.options", writer.String())
 }
 
 func youngGen(jvmHeapSize int64) int64 {

@@ -26,7 +26,7 @@ func CreateOrUpdateSeedNodesService(reconciler *CassandraDataCenterReconciler, c
 			Ports: []corev1.ServicePort{
 				{
 					Name: "internode",
-					Port: CassandraInternodePort,
+					Port: 7000,
 				},
 			},
 			Selector:                 DataCenterLabels(cdc),

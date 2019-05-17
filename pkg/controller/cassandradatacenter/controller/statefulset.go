@@ -11,16 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	SidecarPort                                         = 4567
-	SidecarContainerVolumeMountPath                     = "/var/lib/cassandra"
-	SidecarContainerPodInfoVolumeMountPath              = "/etc/pod-info"
-	CassandraContainerCqlReadinessProbeScriptPath       = "/usr/bin/cql-readiness-probe"
-	CassandraContainerVolumeMountPath                   = "/var/lib/cassandra"
-	CassandraReadinessProbeInitialDelayInSeconds        = 60
-	CassandraReadinessProbeInitialDelayTimeoutInSeconds = 5
-)
-
 func CreateOrUpdateStatefulSet(reconciler *CassandraDataCenterReconciler, cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumeMounts VolumeMounts) (*v1beta2.StatefulSet, error) {
 
 	dataVolumeClaim := getDataVolumeClaim(cdc.Spec.DataVolumeClaimSpec)
@@ -95,9 +85,9 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Args:            []string{},
 		Ports: []corev1.ContainerPort{
-			{Name: "internode", ContainerPort: CassandraInternodePort},
-			{Name: "cql", ContainerPort: CassandraCQLPort},
-			{Name: "jmx", ContainerPort: CassandraJMXPort},
+			{Name: "internode", ContainerPort: 7000},
+			{Name: "cql", ContainerPort: 9042},
+			{Name: "jmx", ContainerPort: 7199},
 		},
 		Resources: cdc.Spec.Resources,
 		SecurityContext: &corev1.SecurityContext{
@@ -108,19 +98,19 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				Exec: &corev1.ExecAction{
-					Command: []string{CassandraContainerCqlReadinessProbeScriptPath},
+					Command: []string{"/usr/bin/cql-readiness-probe"},
 				},
 			},
-			InitialDelaySeconds: CassandraReadinessProbeInitialDelayInSeconds,
-			TimeoutSeconds:      CassandraReadinessProbeInitialDelayTimeoutInSeconds,
+			InitialDelaySeconds: 60,
+			TimeoutSeconds:      5,
 		},
 		VolumeMounts: []corev1.VolumeMount{
-			{Name: dataVolumeClaim.Name, MountPath: CassandraContainerVolumeMountPath},
+			{Name: dataVolumeClaim.Name, MountPath: "/var/lib/cassandra"},
 		},
 	}
 
 	if cdc.Spec.PrometheusSupport == true {
-		container.Ports = append(container.Ports, corev1.ContainerPort{Name: "promql", ContainerPort: CassandraPrometheusPort})
+		container.Ports = append(container.Ports, corev1.ContainerPort{Name: "promql", ContainerPort: 9500})
 	}
 
 	return container
@@ -162,11 +152,11 @@ func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dat
 		Image:           cdc.Spec.SidecarImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Ports: []corev1.ContainerPort{
-			{Name: "http", ContainerPort: SidecarPort},
+			{Name: "http", ContainerPort: 4567},
 		},
 		VolumeMounts: []corev1.VolumeMount{
-			{Name: dataVolumeClaim.Name, MountPath: SidecarContainerVolumeMountPath},
-			{Name: podInfoVolume.Name, MountPath: SidecarContainerPodInfoVolumeMountPath},
+			{Name: dataVolumeClaim.Name, MountPath: "/var/lib/cassandra"},
+			{Name: podInfoVolume.Name, MountPath: "/etc/pod-info"},
 		},
 	}
 }
