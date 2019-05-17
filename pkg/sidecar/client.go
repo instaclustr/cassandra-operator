@@ -3,6 +3,8 @@ package sidecar
 import (
 	"fmt"
 	"github.com/go-resty/resty"
+	"strconv"
+	"time"
 )
 
 const (
@@ -25,6 +27,8 @@ type Client struct {
 type ClientOptions struct {
 	Secure   bool
 	HttpMode bool
+	Port     int
+	Timeout  time.Duration
 }
 
 func NewSidecarClient(host string, options *ClientOptions) *Client {
@@ -34,6 +38,10 @@ func NewSidecarClient(host string, options *ClientOptions) *Client {
 			Secure:   true,
 			HttpMode: false,
 		}
+	}
+
+	if options.Timeout == 0 {
+		options.Timeout = 1 * time.Minute
 	}
 
 	client := &Client{}
@@ -48,11 +56,19 @@ func NewSidecarClient(host string, options *ClientOptions) *Client {
 		protocol = "http"
 	}
 
-	restyClient.SetHostURL(fmt.Sprintf("%s://%s", protocol, client.Host))
+	var port = ""
+
+	if options.Port != 0 {
+		port = ":" + strconv.FormatInt(int64(options.Port), 10)
+	}
+
+	restyClient.SetHostURL(fmt.Sprintf("%s://%s%s", protocol, client.Host, port))
 
 	if client.Options.HttpMode {
 		restyClient.SetHTTPMode()
 	}
+
+	restyClient.SetTimeout(client.Options.Timeout)
 
 	client.restyClient = restyClient
 
@@ -140,19 +156,8 @@ func (e *StatusError) Error() string {
 
 type OperationMode string
 
-const (
-	STARTING       = OperationMode("STARTING")
-	NORMAL         = OperationMode("NORMAL")
-	JOINING        = OperationMode("JOINING")
-	LEAVING        = OperationMode("LEAVING")
-	DECOMMISSIONED = OperationMode("DECOMMISSIONED")
-	MOVING         = OperationMode("MOVING")
-	DRAINING       = OperationMode("DRAINING")
-	DRAINED        = OperationMode("DRAINED")
-)
-
 type StatusResponse struct {
-	OperationMode OperationMode
+	OperationMode string
 }
 
 type Statuses interface {
