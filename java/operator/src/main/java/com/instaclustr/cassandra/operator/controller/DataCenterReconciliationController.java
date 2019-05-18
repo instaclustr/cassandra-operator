@@ -13,6 +13,8 @@ import com.instaclustr.cassandra.operator.model.DataCenterSpec;
 import com.instaclustr.cassandra.operator.sidecar.SidecarClient;
 import com.instaclustr.cassandra.operator.sidecar.SidecarClientFactory;
 import com.instaclustr.cassandra.sidecar.model.Status;
+import com.instaclustr.k8s.K8sLabels;
+import com.instaclustr.k8s.LabelSelectors;
 import com.instaclustr.slf4j.MDC;
 import com.squareup.okhttp.Call;
 import io.kubernetes.client.ApiException;
@@ -63,7 +65,7 @@ public class DataCenterReconciliationController {
 
         this.dataCenterLabels = ImmutableMap.of(
                 OperatorLabels.DATACENTER, dataCenterMetadata.getName(),
-                "app.kubernetes.io/managed-by", "com.instaclustr.cassandra-operator" // hard code an identifier for DCs created by this operator
+                K8sLabels.MANAGED_BY, OperatorLabels.OPERATOR_IDENTIFIER
                 // TODO: add other recommended labels
         );
     }
@@ -538,14 +540,27 @@ public class DataCenterReconciliationController {
 
         final V1beta2StatefulSet existingStatefulSet = appsApi.readNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), null, null, null);
 
-        final int currentReplicas = existingStatefulSet.getSpec().getReplicas();
-        final int desiredReplicas = dataCenterSpec.getReplicas();
+        final int existingSpecReplicas = existingStatefulSet.getSpec().getReplicas();
+        final int desiredSpecReplicas = dataCenterSpec.getReplicas();
 
-        logger.debug("StatefulSet currentReplicas = {}, desiredReplicas = {}.", currentReplicas, desiredReplicas);
+        // check that the existing StatefulSet is in a stable state and not undergoing scaling
+        {
+            final int currentReplicas = existingStatefulSet.getStatus().getReplicas(); // number of created pods
+
+            logger.debug("StatefulSet existingSpecReplicas = {}, desiredSpecReplicas = {}, currentReplicas = {}.", existingSpecReplicas, desiredSpecReplicas, currentReplicas);
+
+            if (currentReplicas != existingSpecReplicas) {
+                // some pods have not yet been created or destroyed
+                logger.warn("Skipping StatefulSet reconciliation as it is undergoing scaling operations.");
+
+                return;
+            }
+        }
+
 
         // ideally this should use the same selector as the StatefulSet.
         // why does listNamespacedPod take a string for the selector when V1LabelSelector exists?
-        final String labelSelector = String.format("%s=%s", OperatorLabels.DATACENTER, dataCenterMetadata.getName());
+        final String labelSelector = LabelSelectors.equalitySelector(OperatorLabels.DATACENTER, dataCenterMetadata.getName());
 
         final List<V1Pod> pods = ImmutableList.sortedCopyOf(STATEFUL_SET_POD_NEWEST_FIRST_COMPARATOR,
                 k8sResourceUtils.listNamespacedPods(statefulSetMetadata.getNamespace(), null, labelSelector)
@@ -553,7 +568,9 @@ public class DataCenterReconciliationController {
 
         logger.debug("Found {} pods.", pods.size());
 
-        // check that all pods are running
+
+
+        // check that all pods are running (note that Running != Ready)
         {
             final Multimap<String, V1Pod> podsByPhase = Multimaps.index(pods, pod -> pod.getStatus().getPhase());
             final Multimap<String, V1Pod> notRunningPodsByPhase = Multimaps.filterKeys(podsByPhase, k -> !k.equals("Running"));
@@ -603,7 +620,7 @@ public class DataCenterReconciliationController {
         // TODO: extend this to a full "health check"
         {
             final Multimap<Status.OperationMode, V1Pod> incorrectStatePodsByCassandraOperationMode = Multimaps.filterKeys(podsByCassandraOperationMode, mode -> {
-                if (desiredReplicas >= currentReplicas) {
+                if (desiredSpecReplicas >= existingSpecReplicas) {
                     return !SCALE_UP_OPERATION_MODES.contains(mode);
 
                 } else {
@@ -621,17 +638,15 @@ public class DataCenterReconciliationController {
         }
 
 
-        if (desiredReplicas > currentReplicas) {
+        if (desiredSpecReplicas > existingSpecReplicas) {
             logger.debug("Scaling StatefulSet up.");
 
-            existingStatefulSet.getSpec().setReplicas(currentReplicas + 1);
+            existingStatefulSet.getSpec().setReplicas(existingSpecReplicas + 1);
             appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), existingStatefulSet, null, null);
 
-        } else if (desiredReplicas < currentReplicas) {
-            logger.debug("Scaling StatefulSet down.");
-
+        } else if (desiredSpecReplicas < existingSpecReplicas) {
             // if all nodes are NORMAL, kick off a decommission
-            // if all nodes except the "newest" are NORMAL, and the newest is DECOMMISSIONED, scale the statefulset
+            // if all nodes except the "newest" are NORMAL, and the newest is DECOMMISSIONED, scale the StatefulSet
 
             final V1Pod newestPod = pods.get(0);
 
@@ -643,6 +658,8 @@ public class DataCenterReconciliationController {
                 sidecarClientFactory.clientForPod(newestPod).decommission();
 
             } else if (decommissionedPods.size() == 1) {
+                logger.debug("Decommissioned Cassandra node found. Scaling StatefulSet down.");
+
                 final V1Pod decommissionedPod = Iterables.getOnlyElement(podsByCassandraOperationMode.get(Status.OperationMode.DECOMMISSIONED));
 
                 if (decommissionedPod != newestPod) {
@@ -652,7 +669,7 @@ public class DataCenterReconciliationController {
                     return;
                 }
 
-                existingStatefulSet.getSpec().setReplicas(currentReplicas - 1);
+                existingStatefulSet.getSpec().setReplicas(existingSpecReplicas - 1);
                 appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), existingStatefulSet, null, null);
 
                 // TODO: this is disabled for now for safety. Perhaps add a flag or something to control this.

@@ -40,6 +40,15 @@ public class OperatorService extends AbstractExecutionThreadService {
         this.dataCenterCache = dataCenterCache;
     }
 
+    synchronized private void addToQueue(final DataCenterKey key) {
+        if (dataCenterQueue.contains(key)) {
+            logger.debug("Reconcile request for {} is already pending.", key);
+            return;
+        }
+
+        dataCenterQueue.add(key);
+    }
+
     @Subscribe
     void clusterEvent(final ClusterWatchEvent event) {
         logger.debug("Received ClusterWatchEvent {}.", event);
@@ -49,7 +58,7 @@ public class OperatorService extends AbstractExecutionThreadService {
     @Subscribe
     void handleDataCenterEvent(final DataCenterWatchEvent event) {
         logger.debug("Received DataCenterWatchEvent {}.", event);
-        dataCenterQueue.add(DataCenterKey.forDataCenter(event.dataCenter));
+        addToQueue(DataCenterKey.forDataCenter(event.dataCenter));
     }
 
     @Subscribe
@@ -62,15 +71,10 @@ public class OperatorService extends AbstractExecutionThreadService {
     void handleStatefulSetEvent(final StatefulSetWatchEvent event) {
         logger.debug("Received StatefulSetWatchEvent {}.", event);
 
-        if (event instanceof StatefulSetWatchEvent.Added) {
-            return;
-        }
-
-        // Trigger a dc reconciliation event if changes to the stateful set has finished.
-        if (event.statefulSet.getStatus().getReplicas().equals(event.statefulSet.getStatus().getReadyReplicas()) && event.statefulSet.getStatus().getCurrentReplicas().equals(event.statefulSet.getStatus().getReplicas())) {
-            String datacenterName = event.statefulSet.getMetadata().getLabels().get(OperatorLabels.DATACENTER);
-            if (datacenterName != null) {
-                dataCenterQueue.add(new DataCenterKey(datacenterName, event.statefulSet.getMetadata().getNamespace()));
+        if (event instanceof StatefulSetWatchEvent.Modified) {
+            final String dataCenterName = event.statefulSet.getMetadata().getLabels().get(OperatorLabels.DATACENTER);
+            if (dataCenterName != null) {
+                addToQueue(new DataCenterKey(dataCenterName, event.statefulSet.getMetadata().getNamespace()));
             }
         }
     }
@@ -92,7 +96,7 @@ public class OperatorService extends AbstractExecutionThreadService {
         if (!RECONCILE_OPERATION_MODES.contains(event.currentMode))
             return;
 
-        dataCenterQueue.add(event.dataCenterKey);
+        addToQueue(event.dataCenterKey);
     }
 
     @Override
@@ -132,4 +136,5 @@ public class OperatorService extends AbstractExecutionThreadService {
     protected void triggerShutdown() {
         dataCenterQueue.add(POISON);
     }
+
 }

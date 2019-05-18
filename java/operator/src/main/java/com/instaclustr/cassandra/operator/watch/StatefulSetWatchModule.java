@@ -8,7 +8,10 @@ import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.Multibinder;
 import com.instaclustr.cassandra.operator.configuration.Namespace;
 import com.instaclustr.cassandra.operator.event.StatefulSetWatchEvent;
+import com.instaclustr.cassandra.operator.k8s.OperatorLabels;
 import com.instaclustr.cassandra.operator.model.key.StatefulSetKey;
+import com.instaclustr.k8s.K8sLabels;
+import com.instaclustr.k8s.LabelSelectors;
 import com.instaclustr.k8s.watch.ResourceCache;
 import com.instaclustr.k8s.watch.WatchService;
 import com.squareup.okhttp.Call;
@@ -61,7 +64,9 @@ public class StatefulSetWatchModule extends AbstractModule {
 
         @Override
         protected Call listResources(final String continueToken, final String resourceVersion, final boolean watch) throws ApiException {
-            return appsApi.listNamespacedStatefulSetCall(namespace, null, null, continueToken, null, "operator=instaclustr-cassandra-operator", null, resourceVersion, null, watch, null, null);
+            final String labelSelector = LabelSelectors.equalitySelector(K8sLabels.MANAGED_BY, OperatorLabels.OPERATOR_IDENTIFIER);
+
+            return appsApi.listNamespacedStatefulSetCall(namespace, null, null, continueToken, null, labelSelector, null, resourceVersion, null, watch, null, null);
         }
 
         @Override

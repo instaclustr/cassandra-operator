@@ -9,6 +9,7 @@ import com.instaclustr.cassandra.operator.k8s.K8sLoggingSupport;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
 import com.instaclustr.cassandra.operator.k8s.OperatorLabels;
 import com.instaclustr.cassandra.operator.model.key.DataCenterKey;
+import com.instaclustr.k8s.K8sLabels;
 import com.instaclustr.slf4j.MDC;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.apis.AppsV1beta2Api;
@@ -40,7 +41,7 @@ public class DataCenterDeletionController {
             final String labelSelector = Joiner.on(',').withKeyValueSeparator('=').join(
                     ImmutableMap.of(
                             OperatorLabels.DATACENTER, dataCenterKey.name,
-                            "app.kubernetes.io/managed-by", "com.instaclustr.cassandra-operator"
+                            K8sLabels.MANAGED_BY, OperatorLabels.OPERATOR_IDENTIFIER
                     )
             );
 

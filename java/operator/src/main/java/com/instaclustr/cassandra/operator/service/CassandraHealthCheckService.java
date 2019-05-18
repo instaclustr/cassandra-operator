@@ -88,7 +88,7 @@ public class CassandraHealthCheckService extends AbstractScheduledService {
 
                             cassandraNodeOperationModes.put(podIp, mode);
 
-                            if (previousMode != null && !previousMode.equals(mode)) {
+                            if (previousMode == null || !previousMode.equals(mode)) {
                                 eventBus.post(new CassandraNodeOperationModeChangedEvent(pod, dataCenterKey, previousMode, mode));
                             }
 
