@@ -13,7 +13,6 @@ import com.instaclustr.cassandra.sidecar.model.Status;
 import com.instaclustr.guava.EventBusSubscriber;
 import com.instaclustr.k8s.watch.ResourceCache;
 import com.instaclustr.slf4j.MDC;
-import io.kubernetes.client.models.V1beta2StatefulSetStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +40,15 @@ public class OperatorService extends AbstractExecutionThreadService {
         this.dataCenterCache = dataCenterCache;
     }
 
+    synchronized private void addToQueue(final DataCenterKey key) {
+        if (dataCenterQueue.contains(key)) {
+            logger.debug("Reconcile request for {} is already pending.", key);
+            return;
+        }
+
+        dataCenterQueue.add(key);
+    }
+
     @Subscribe
     void clusterEvent(final ClusterWatchEvent event) {
         logger.debug("Received ClusterWatchEvent {}.", event);
@@ -50,7 +58,7 @@ public class OperatorService extends AbstractExecutionThreadService {
     @Subscribe
     void handleDataCenterEvent(final DataCenterWatchEvent event) {
         logger.debug("Received DataCenterWatchEvent {}.", event);
-        dataCenterQueue.add(DataCenterKey.forDataCenter(event.dataCenter));
+        addToQueue(DataCenterKey.forDataCenter(event.dataCenter));
     }
 
     @Subscribe
@@ -66,7 +74,7 @@ public class OperatorService extends AbstractExecutionThreadService {
         if (event instanceof StatefulSetWatchEvent.Modified) {
             final String dataCenterName = event.statefulSet.getMetadata().getLabels().get(OperatorLabels.DATACENTER);
             if (dataCenterName != null) {
-                dataCenterQueue.add(new DataCenterKey(dataCenterName, event.statefulSet.getMetadata().getNamespace()));
+                addToQueue(new DataCenterKey(dataCenterName, event.statefulSet.getMetadata().getNamespace()));
             }
         }
     }
@@ -88,7 +96,7 @@ public class OperatorService extends AbstractExecutionThreadService {
         if (!RECONCILE_OPERATION_MODES.contains(event.currentMode))
             return;
 
-        dataCenterQueue.add(event.dataCenterKey);
+        addToQueue(event.dataCenterKey);
     }
 
     @Override
@@ -128,4 +136,5 @@ public class OperatorService extends AbstractExecutionThreadService {
     protected void triggerShutdown() {
         dataCenterQueue.add(POISON);
     }
+
 }
