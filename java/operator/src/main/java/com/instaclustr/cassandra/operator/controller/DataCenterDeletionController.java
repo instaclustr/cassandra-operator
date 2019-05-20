@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonSyntaxException;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.instaclustr.cassandra.operator.configuration.DeletePVC;
 import com.instaclustr.cassandra.operator.k8s.K8sLoggingSupport;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
 import com.instaclustr.cassandra.operator.k8s.OperatorLabels;
@@ -25,13 +26,17 @@ public class DataCenterDeletionController {
 
     private final K8sResourceUtils k8sResourceUtils;
 
+    final boolean allowCleanups;
+
     private final DataCenterKey dataCenterKey;
 
     @Inject
     public DataCenterDeletionController(final K8sResourceUtils k8sResourceUtils,
+                                        @DeletePVC final boolean allowCleanups,
                                         @Assisted final DataCenterKey dataCenterKey) {
         this.k8sResourceUtils = k8sResourceUtils;
         this.dataCenterKey = dataCenterKey;
+        this.allowCleanups = allowCleanups;
     }
 
     public void deleteDataCenter() throws Exception {
@@ -44,21 +49,6 @@ public class DataCenterDeletionController {
                             K8sLabels.MANAGED_BY, OperatorLabels.OPERATOR_IDENTIFIER
                     )
             );
-
-            // delete persistent volumes & persistent volume claims
-            // TODO: this is disabled for now for safety. Perhaps add a flag or something to control this.
-//        k8sResourceUtils.listNamespacedPods(dataCenterKey.namespace, null, labelSelector).forEach(pod -> {
-//            try (@SuppressWarnings("unused") final MDC.MDCCloseable _podMDC = putNamespacedName("Pod", pod.getMetadata())) {
-//                try {
-//                    k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(pod);
-//                    logger.debug("Deleted Pod Persistent Volume & Claim.");
-//
-//                } catch (final ApiException e) {
-//                    logger.error("Failed to delete Pod Persistent Volume and/or Claim.", e);
-//                }
-//            }
-//        });
-
             // delete StatefulSets
             k8sResourceUtils.listNamespacedStatefulSets(dataCenterKey.namespace, null, labelSelector).forEach(statefulSet -> {
                 try (@SuppressWarnings("unused") final MDC.MDCCloseable _statefulSetMDC = putNamespacedName("StatefulSet", statefulSet.getMetadata())) {
@@ -106,6 +96,12 @@ public class DataCenterDeletionController {
                     }
                 }
             });
+
+
+            // delete persistent volumes & persistent volume claims
+            if (allowCleanups) {
+                k8sResourceUtils.deletePersistentPersistentVolumeClaims(labelSelector, dataCenterKey.namespace);
+            }
 
             logger.info("Deleted DataCenter.");
         }

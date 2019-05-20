@@ -146,6 +146,11 @@ public class K8sResourceUtils {
         }
     }
 
+    public void deletePersistentPersistentVolumeClaims(final String labels, final String namespace) throws ApiException {
+            logger.debug("Deleting Pod Persistent Volumes and Claims.");
+            coreApi.deleteCollectionNamespacedPersistentVolumeClaim(namespace, true, null, null, null, labels, null, null, null, null);
+    }
+
 
 
     static class ResourceListIterable<T> implements Iterable<T> {

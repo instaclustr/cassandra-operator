@@ -5,6 +5,7 @@ import com.google.common.collect.*;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.instaclustr.cassandra.operator.configuration.DeletePVC;
 import com.instaclustr.cassandra.operator.k8s.K8sResourceUtils;
 import com.instaclustr.cassandra.operator.k8s.OperatorLabels;
 import com.instaclustr.cassandra.operator.model.Backup;
@@ -48,12 +49,14 @@ public class DataCenterReconciliationController {
     private final DataCenterSpec dataCenterSpec;
 
     private final Map<String, String> dataCenterLabels;
+    private final boolean allowCleanups;
 
     @Inject
     public DataCenterReconciliationController(final AppsV1beta2Api appsApi,
                                               final CustomObjectsApi customObjectsApi,
                                               final SidecarClientFactory sidecarClientFactory,
                                               final K8sResourceUtils k8sResourceUtils,
+                                              @DeletePVC final boolean allowCleanups,
                                               @Assisted final DataCenter dataCenter) {
         this.appsApi = appsApi;
         this.customObjectsApi = customObjectsApi;
@@ -62,6 +65,7 @@ public class DataCenterReconciliationController {
 
         this.dataCenterMetadata = dataCenter.getMetadata();
         this.dataCenterSpec = dataCenter.getSpec();
+        this.allowCleanups = allowCleanups;
 
         this.dataCenterLabels = ImmutableMap.of(
                 OperatorLabels.DATACENTER, dataCenterMetadata.getName(),
@@ -672,7 +676,7 @@ public class DataCenterReconciliationController {
                 existingStatefulSet.getSpec().setReplicas(existingSpecReplicas - 1);
                 appsApi.replaceNamespacedStatefulSet(statefulSetMetadata.getName(), statefulSetMetadata.getNamespace(), existingStatefulSet, null, null);
 
-                // TODO: this is disabled for now for safety. Perhaps add a flag or something to control this.
+                // TODO: this is disabled for now for safety. The operator will delete all PVCs on deletion of the cluster for now.
 //                k8sResourceUtils.deletePersistentVolumeAndPersistentVolumeClaim(decommissionedPod);
             } else {
                 logger.error("Skipping StatefulSet reconciliation as the DataCenter contains more than one decommissioned Cassandra node: {}.",
