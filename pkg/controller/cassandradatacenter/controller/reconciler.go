@@ -3,9 +3,6 @@ package controller
 import (
 	"context"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
-	"k8s.io/api/apps/v1beta2"
-	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,22 +17,6 @@ type CassandraDataCenterReconciler struct {
 	// This client is a split client that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
-}
-
-func (reconciler *CassandraDataCenterReconciler) CreateOrUpdateNodesService(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) (*v1.Service, error) {
-	return CreateOrUpdateNodesService(reconciler, cdc)
-}
-
-func (reconciler *CassandraDataCenterReconciler) CreateOrUpdateSeedNodesService(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) (*corev1.Service, error) {
-	return CreateOrUpdateSeedNodesService(reconciler, cdc)
-}
-
-func (reconciler *CassandraDataCenterReconciler) CreateOrUpdateOperatorConfigMap(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, seedNodesService *corev1.Service) (*VolumeMount, error) {
-	return CreateOrUpdateOperatorConfigMap(reconciler, cdc, seedNodesService)
-}
-
-func (reconciler *CassandraDataCenterReconciler) CreateOrUpdateStatefulSet(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumeMounts VolumeMounts) (*v1beta2.StatefulSet, error) {
-	return CreateOrUpdateStatefulSet(reconciler, cdc, volumeMounts)
 }
 
 // Reconcile reads that state of the cluster for a CassandraDataCenter object and makes changes based on the state read
@@ -59,22 +40,22 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 		return reconcile.Result{}, err
 	}
 
-	nodesService, err := reconciler.CreateOrUpdateNodesService(cdc)
+	nodesService, err := CreateOrUpdateNodesService(reconciler, cdc)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	seedNodesService, err := reconciler.CreateOrUpdateSeedNodesService(cdc)
+	seedNodesService, err := CreateOrUpdateSeedNodesService(reconciler, cdc)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	configMapVolumeMount, err := reconciler.CreateOrUpdateOperatorConfigMap(cdc, seedNodesService)
+	configMapVolumeMount, err := CreateOrUpdateOperatorConfigMap(reconciler, cdc, seedNodesService)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	statefulSet, err := reconciler.CreateOrUpdateStatefulSet(cdc, VolumeMounts{configMapVolumeMount})
+	statefulSet, err := CreateOrUpdateStatefulSet(reconciler, cdc, VolumeMounts{configMapVolumeMount})
 	if err != nil {
 		return reconcile.Result{}, err
 	}

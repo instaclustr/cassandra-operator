@@ -154,8 +154,6 @@ func (e *StatusError) Error() string {
 	return convertErrorToString(e.endpoint, e.status, e.err)
 }
 
-type OperationMode string
-
 type StatusResponse struct {
 	OperationMode string
 }

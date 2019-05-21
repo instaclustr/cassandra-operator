@@ -362,14 +362,13 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 
 	for pod, c := range podClients {
 		go func(pod *corev1.Pod, client *sidecar.Client) {
-
-			defer wg.Done()
-
 			if response, err := client.GetStatus(); err != nil {
 				podByOperationMode[pod] = "ERROR"
 			} else {
 				podByOperationMode[pod] = response.OperationMode
 			}
+
+			wg.Done()
 		}(pod, c)
 	}
 
