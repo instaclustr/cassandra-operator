@@ -1,6 +1,6 @@
 FROM debian:stretch
 
-ARG openjre_version=8u181-b13-2~deb9u1
+ARG openjre_version=8u212-b01-1~deb9u1
 
 COPY dagi /usr/local/bin/
 
