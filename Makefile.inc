@@ -1,1 +1,1 @@
-BUILD_COMMAND ?= "docker build"
+BUILD_COMMAND ?= docker build
