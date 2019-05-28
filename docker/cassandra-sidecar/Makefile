@@ -14,7 +14,7 @@ $(CASSANDRA_SIDECAR_JAR):
 	
 .PHONY: cassandra-sidecar
 cassandra-sidecar: $(CASSANDRA_SIDECAR_JAR)
-	docker build \
+	$(BUILD_COMMAND) \
 		--build-arg cassandra_sidecar_jar=$(CASSANDRA_SIDECAR_JAR) \
 		--build-arg openjre_image="$(OPENJRE_IMAGE)" \
 		-t $(DOCKER_REPO)cassandra-sidecar \
