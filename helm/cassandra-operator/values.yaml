@@ -27,3 +27,5 @@ rbacEnable: true
 tolerations: []
 
 affinity: {}
+
+pvcCleanup: false
