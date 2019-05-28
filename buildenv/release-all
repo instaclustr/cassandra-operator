@@ -1,32 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/bash -xue
 
-set -o errexit
-set -o nounset
-set -o pipefail
-
-cd `dirname "$BASH_SOURCE"`/..
-
-function defer {
-	if [[ $REPO == gcr.io/* ]]; then
-		docker logout gcr.io
-		export DONT_LOGIN="false"
-	fi
-}
-
-trap defer EXIT
-
-# We source this a bunch of times just to make stuff work. TODO: this needs a clean up
-REPO="${REPO:-gcr.io/cassandra-operator}"
-
-
-if [[ $REPO == gcr.io/* ]]; then
-	gcloud docker -a
-fi
-
-export DONT_LOGIN="true"
-
-docker push "${REPO}/base-openjre:latest"
-docker push "${REPO}/cassandra-operator:latest"
-docker push "${REPO}/cassandra-sidecar:latest"
-docker push "${REPO}/cassandra:latest"
-docker push "${REPO}/cassandra:3.11.3"
+#docker push "${DOCKER_REPO}base-openjre:latest"
+docker push "${DOCKER_REPO}cassandra-operator:latest"
+docker push "${DOCKER_REPO}cassandra-sidecar:latest"
+docker push "${DOCKER_REPO}cassandra:latest"
+docker push "${DOCKER_REPO}cassandra:3.11.3"

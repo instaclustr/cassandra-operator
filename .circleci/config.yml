@@ -39,6 +39,7 @@ jobs:
     environment:
       # Customize the JVM maximum heap limit
       MAVEN_OPTS: -Xmx3200m
+      DOCKER_REPO: gcr.io/cassandra-operator/
 
     steps:
       - checkout
@@ -47,9 +48,12 @@ jobs:
       - run:
           name: Dump Google Cloud Credentials to file
           command: echo ${GOOGLE_AUTH} > ${HOME}/gcp-key.json
+
       - run:
           name: Setup Google Cloud
-          command: gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json && gcloud --quiet config set project ${GOOGLE_PROJECT_ID} && gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+          command: gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json &&
+                   gcloud --quiet config set project ${GOOGLE_PROJECT_ID} &&
+                   gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
 
       - run: cd java && mvn -q install -Dgroups=basic
 
@@ -60,11 +64,11 @@ jobs:
 
       - run:
           name: Create Docker image
-          command: ./buildenv/build-all
+          command: cd docker && make
 
       - run:
           name: Release docker images
-          command: ./buildenv/release-all
+          command: gcloud docker -a && ./buildenv/release-all
 
   test-pivotal:
         docker:

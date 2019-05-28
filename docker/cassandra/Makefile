@@ -23,8 +23,8 @@ cassandra: $(CASSANDRA_K8S_ADDONS_JAR)
 		--build-arg cassandra_version=$(CASSANDRA_VERSION) \
 		--build-arg cassandra_k8s_addons_jar=$(CASSANDRA_K8S_ADDONS_JAR) \
 		--build-arg openjre_image="$(OPENJRE_IMAGE)" \
-		-t $(DOCKER_REPO)/cassandra \
-		-t $(DOCKER_REPO)/cassandra:$(CASSANDRA_VERSION) \
+		-t $(DOCKER_REPO)cassandra \
+		-t $(DOCKER_REPO)cassandra:$(CASSANDRA_VERSION) \
 		.
 
 
