@@ -1,3 +1,5 @@
+-Dcassandra.config.loader=com.instaclustr.cassandra.k8s.ConcatenatedYamlConfigurationLoader
+
 -Dcassandra.jmx.remote.port=7199
 -Dcom.sun.management.jmxremote.authenticate=false
 
@@ -36,6 +38,7 @@
 
 -XX:+HeapDumpOnOutOfMemoryError
 
+# TODO: should this be set by the operator?
 -XX:MaxDirectMemorySize=18G
 
 

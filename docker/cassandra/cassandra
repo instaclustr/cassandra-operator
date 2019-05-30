@@ -6,8 +6,7 @@ shopt -s nullglob
 
 JVM_OPTS=${JVM_OPTS:=}
 
-JVM_OPTS="${JVM_OPTS} -Dcassandra.config.loader=com.instaclustr.cassandra.k8s.ConcatenatedYamlConfigurationLoader"
-JVM_OPTS="${JVM_OPTS} -Dcassandra.config=/usr/share/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml.d"
+JVM_OPTS="${JVM_OPTS} -Dcassandra.config=${CASSANDRA_HOME}/cassandra.yaml:/etc/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml.d"
 
 # provides hints to the JIT compiler
 JVM_OPTS="${JVM_OPTS} -XX:CompileCommandFile=${CASSANDRA_HOME}/hotspot_compiler"
