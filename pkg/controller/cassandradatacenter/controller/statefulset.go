@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
 	"k8s.io/api/apps/v1beta2"
@@ -15,11 +16,6 @@ import (
 	"strings"
 	"sync"
 )
-
-var sidecarClientOptions = sidecar.ClientOptions{
-	Port:   4567,
-	Secure: false,
-}
 
 func CreateOrUpdateStatefulSet(
 	reconciler *CassandraDataCenterReconciler,
@@ -57,7 +53,7 @@ func CreateOrUpdateStatefulSet(
 		currentReplicas := statefulSet.Status.Replicas // number of created pods
 
 		if currentReplicas != existingSpecReplicas {
-			log.Info("skipping StatefulSet reconciliation as it is undergoing scaling operations")
+			log.Info("skipping StatefulSet reconciliation as it is undergoing scaling operations", "current", currentReplicas, "existing", existingSpecReplicas)
 			return nil
 		}
 
@@ -72,7 +68,7 @@ func CreateOrUpdateStatefulSet(
 			return nil
 		}
 
-		clients := sidecarClients(allPods)
+		clients := sidecar.SidecarClients(allPods, sidecar.DefaultSidecarClientOptions)
 		statuses := cassandraStatuses(clients)
 
 		if erroredCassandras := errorneousCassandras(statuses); len(erroredCassandras) > 0 {
@@ -101,8 +97,12 @@ func CreateOrUpdateStatefulSet(
 
 				log.Info("No Cassandra nodes have been decommissioned. Decommissioning the newest one " + newestPod.Name)
 
-				if _, err := sidecar.NewSidecarClient(newestPod.Status.PodIP, &sidecarClientOptions).DecommissionNode(); err != nil {
-					return errors.New("Failure occurred while decommissioning a Cassandra node upon scaling a cluster down: " + err.Error())
+				if clientForNewestPod := sidecar.ClientFromPods(clients, newestPod); clientForNewestPod != nil {
+					if _, err := clientForNewestPod.DecommissionNode(); err != nil {
+						return errors.New(fmt.Sprintf("Unable to decommission node %s: %v", newestPod.Name, err))
+					}
+				} else {
+					return errors.New(fmt.Sprintf("Client for pod %s to decommission does not exist.", newestPod.Name))
 				}
 			} else if len(decommissioned) == 1 {
 
@@ -338,23 +338,9 @@ func allPodsAreRunning(pods []corev1.Pod) (bool, []string) {
 	return true, notRunningPodNames
 }
 
-func sidecarClients(pods []corev1.Pod) map[*corev1.Pod]*sidecar.Client {
+func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]sidecar.OperationMode {
 
-	podClients := make(map[*corev1.Pod]*sidecar.Client)
-
-	options := sidecarClientOptions
-
-	for _, pod := range pods {
-		key := pod
-		podClients[&key] = sidecar.NewSidecarClient(pod.Status.PodIP, &options)
-	}
-
-	return podClients
-}
-
-func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]string {
-
-	podByOperationMode := make(map[*corev1.Pod]string)
+	podByOperationMode := make(map[*corev1.Pod]sidecar.OperationMode)
 
 	var wg sync.WaitGroup
 
@@ -363,7 +349,7 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 	for pod, c := range podClients {
 		go func(pod *corev1.Pod, client *sidecar.Client) {
 			if response, err := client.GetStatus(); err != nil {
-				podByOperationMode[pod] = "ERROR"
+				podByOperationMode[pod] = sidecar.OPERATION_MODE_ERROR
 			} else {
 				podByOperationMode[pod] = response.OperationMode
 			}
@@ -377,7 +363,7 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 	return podByOperationMode
 }
 
-func cassandrasInState(statuses map[*corev1.Pod]string, state string) []*corev1.Pod {
+func cassandrasInState(statuses map[*corev1.Pod]sidecar.OperationMode, state sidecar.OperationMode) []*corev1.Pod {
 
 	var cassandrasInState []*corev1.Pod
 
@@ -390,18 +376,18 @@ func cassandrasInState(statuses map[*corev1.Pod]string, state string) []*corev1.
 	return cassandrasInState
 }
 
-func errorneousCassandras(statuses map[*corev1.Pod]string) []*corev1.Pod {
-	return cassandrasInState(statuses, "ERROR")
+func errorneousCassandras(statuses map[*corev1.Pod]sidecar.OperationMode) []*corev1.Pod {
+	return cassandrasInState(statuses, sidecar.OPERATION_MODE_ERROR)
 }
 
-func decommissionedCassandras(statuses map[*corev1.Pod]string) []*corev1.Pod {
-	return cassandrasInState(statuses, "DECOMMISSIONED")
+func decommissionedCassandras(statuses map[*corev1.Pod]sidecar.OperationMode) []*corev1.Pod {
+	return cassandrasInState(statuses, sidecar.OPERATION_MODE_DECOMMISSIONED)
 }
 
-func podsInIncorrectCassandraState(desiredReplicas int32, existingReplicas int32, statuses map[*corev1.Pod]string) []string {
+func podsInIncorrectCassandraState(desiredReplicas int32, existingReplicas int32, statuses map[*corev1.Pod]sidecar.OperationMode) []string {
 
-	scaleUpOperationModes := []string{"NORMAL"}
-	scaleDownOperationModes := []string{"NORMAL", "DECOMMISSIONED"}
+	scaleUpOperationModes := []sidecar.OperationMode{sidecar.OPERATION_MODE_NORMAL}
+	scaleDownOperationModes := []sidecar.OperationMode{sidecar.OPERATION_MODE_NORMAL, sidecar.OPERATION_MODE_DECOMMISSIONED}
 
 	var podsByIncorrectCassandraMode []string
 
@@ -430,7 +416,7 @@ func podsToString(pods []*corev1.Pod) []string {
 }
 
 // go does not have this built-in
-func contains(a []string, x string) bool {
+func contains(a []sidecar.OperationMode, x sidecar.OperationMode) bool {
 	for _, n := range a {
 		if x == n {
 			return true

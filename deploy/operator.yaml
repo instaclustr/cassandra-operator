@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cassandra-operator/
+  name: cassandra-operator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: cassandra-operator/
+      name: cassandra-operator
   template:
     metadata:
       labels:
-        name: cassandra-operator/
+        name: cassandra-operator
     spec:
-      serviceAccountName: cassandra-operator/
+      serviceAccountName: cassandra-operator
       containers:
-        - name: cassandra-operator/
+        - name: cassandra-operator
           # Replace this with the built image name
           image: REPLACE_IMAGE
           command:
-          - cassandra-operator/
+          - cassandra-operator
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -30,4 +30,4 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "cassandra-operator/"
+              value: "cassandra-operator"

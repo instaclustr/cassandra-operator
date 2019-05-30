@@ -27,6 +27,6 @@ public class OperationsResource {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }, "Decommission Background Thread").run();
+        }, "Decommission Background Thread").start();
     }
 }

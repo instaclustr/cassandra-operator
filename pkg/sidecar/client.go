@@ -3,16 +3,19 @@ package sidecar
 import (
 	"fmt"
 	"github.com/go-resty/resty"
+	corev1 "k8s.io/api/core/v1"
 	"strconv"
 	"time"
 )
 
 const (
-	ACCEPT                         = "Accept"
-	ApplicationJson                = "application/json"
+	accept                         = "Accept"
+	applicationJson                = "application/json"
 	EndpointOperationsDecommission = "operations/decommission"
 	EndpointStatus                 = "status"
 )
+
+var DefaultSidecarClientOptions = ClientOptions{Port: 4567, Secure: false,}
 
 ////////////
 //// CLIENT
@@ -48,7 +51,7 @@ func NewSidecarClient(host string, options *ClientOptions) *Client {
 	client.Host = host
 	client.Options = options
 
-	restyClient := resty.DefaultClient
+	restyClient := resty.New()
 
 	var protocol = "https"
 
@@ -73,6 +76,40 @@ func NewSidecarClient(host string, options *ClientOptions) *Client {
 	client.restyClient = restyClient
 
 	return client
+}
+
+func SidecarClients(pods []corev1.Pod, clientOptions ClientOptions) map[*corev1.Pod]*Client {
+
+	podClients := make(map[*corev1.Pod]*Client)
+
+	for _, pod := range pods {
+		key := pod
+		podClients[&key] = NewSidecarClient(pod.Status.PodIP, &clientOptions)
+	}
+
+	return podClients
+}
+
+func ClientFromPods(podsClients map[*corev1.Pod]*Client, pod corev1.Pod) *Client {
+
+	for key, value := range podsClients {
+		if key.Name == pod.Name {
+			return value
+		}
+	}
+
+	return nil
+}
+
+func ClientForPod(pods []corev1.Pod, podName string) *Client {
+
+	for _, pod := range pods {
+		if pod.Name == podName {
+			return NewSidecarClient(pod.Status.PodIP, &DefaultSidecarClientOptions)
+		}
+	}
+
+	return nil
 }
 
 //////////////
@@ -119,7 +156,7 @@ func (client *Client) DecommissionNode() (*DecommissionResponse, error) {
 	decommissionResponse := &DecommissionResponse{}
 
 	response, err := client.restyClient.R().
-		SetHeader(ACCEPT, ApplicationJson).
+		SetHeader(accept, applicationJson).
 		SetResult(decommissionResponse).
 		Post(EndpointOperationsDecommission)
 
@@ -154,8 +191,22 @@ func (e *StatusError) Error() string {
 	return convertErrorToString(e.endpoint, e.status, e.err)
 }
 
+type OperationMode string
+
+const (
+	OPERATION_MODE_STARTING       = OperationMode("STARTING")
+	OPERATION_MODE_NORMAL         = OperationMode("NORMAL")
+	OPERATION_MODE_JOINING        = OperationMode("JOINING")
+	OPERATION_MODE_LEAVING        = OperationMode("LEAVING")
+	OPERATION_MODE_DECOMMISSIONED = OperationMode("DECOMMISSIONED")
+	OPERATION_MODE_MOVING         = OperationMode("MOVING")
+	OPERATION_MODE_DRAINING       = OperationMode("DRAINING")
+	OPERATION_MODE_DRAINED        = OperationMode("DRAINED")
+	OPERATION_MODE_ERROR          = OperationMode("ERROR")
+)
+
 type StatusResponse struct {
-	OperationMode string
+	OperationMode OperationMode
 }
 
 type Statuses interface {
@@ -167,7 +218,7 @@ func (client *Client) GetStatus() (*StatusResponse, error) {
 	statusResponse := &StatusResponse{}
 
 	response, err := client.restyClient.R().
-		SetHeader(ACCEPT, ApplicationJson).
+		SetHeader(accept, applicationJson).
 		SetResult(statusResponse).
 		Get(EndpointStatus)
 
