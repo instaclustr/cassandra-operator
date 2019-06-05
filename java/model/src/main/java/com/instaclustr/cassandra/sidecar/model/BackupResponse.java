@@ -1,9 +1,11 @@
 package com.instaclustr.cassandra.sidecar.model;
 
 public class BackupResponse {
+
     private String status;
 
-    public BackupResponse() {};
+    public BackupResponse() {
+    }
 
     public BackupResponse(String status) {
         this.status = status;

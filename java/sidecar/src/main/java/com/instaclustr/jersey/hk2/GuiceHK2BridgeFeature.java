@@ -20,13 +20,12 @@ public class GuiceHK2BridgeFeature implements Feature {
 
     @Override
     public boolean configure(final FeatureContext context) {
-        final ServiceLocator serviceLocator = InjectionManagerProvider.getInjectionManager(context)
-                .getInstance(ServiceLocator.class);
+
+        final ServiceLocator serviceLocator = InjectionManagerProvider.getInjectionManager(context).getInstance(ServiceLocator.class);
 
         GuiceBridge.getGuiceBridge().initializeGuiceBridge(serviceLocator);
 
-        serviceLocator.getService(GuiceIntoHK2Bridge.class)
-                .bridgeGuiceInjector(injector);
+        serviceLocator.getService(GuiceIntoHK2Bridge.class).bridgeGuiceInjector(injector);
 
         return true;
     }

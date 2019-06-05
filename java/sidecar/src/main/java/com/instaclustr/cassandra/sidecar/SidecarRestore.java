@@ -1,25 +1,23 @@
 package com.instaclustr.cassandra.sidecar;
 
-import com.instaclustr.backup.RestoreArguments;
-import com.instaclustr.backup.task.RestoreTask;
-import com.instaclustr.backup.util.GlobalLock;
-import com.instaclustr.cassandra.sidecar.picocli.SidecarJarManifestVersionProvider;
-import com.instaclustr.picocli.JarManifestVersionProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.bridge.SLF4JBridgeHandler;
-import picocli.CommandLine;
+import static com.instaclustr.picocli.JarManifestVersionProvider.logCommandVersionInformation;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.instaclustr.picocli.JarManifestVersionProvider.logCommandVersionInformation;
+import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.task.RestoreTask;
+import com.instaclustr.backup.util.GlobalLock;
+import com.instaclustr.cassandra.sidecar.picocli.SidecarJarManifestVersionProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.bridge.SLF4JBridgeHandler;
+import picocli.CommandLine;
 
 @CommandLine.Command(name = "cassandra-restore",
         description = "Sidecar management application for Apache Cassandra running on Kubernetes.",
@@ -34,7 +32,7 @@ public class SidecarRestore implements Callable<Void> {
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
 
-    public static void main(final String[] args) throws IOException {
+    public static void main(final String[] args) {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
@@ -58,7 +56,7 @@ public class SidecarRestore implements Callable<Void> {
 
         try {
             GlobalLock globalLock = new GlobalLock("/tmp");
-            arguments.sourceNodeID = arguments.sourceNodeID  + "-"  + ordinal; //make getting the ordinal more robust
+            arguments.sourceNodeID = arguments.sourceNodeID + "-" + ordinal; //make getting the ordinal more robust
             new RestoreTask(
                     globalLock,
                     arguments
