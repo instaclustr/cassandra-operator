@@ -67,6 +67,7 @@ public class JerseyServerModule extends AbstractModule {
         objectMapper.setDefaultPropertyInclusion(JsonInclude.Include.NON_ABSENT);
         objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+        objectMapper.disable(SerializationFeature.FAIL_ON_UNWRAPPED_TYPE_IDENTIFIERS);
 
         objectMapper.registerModule(module);
         objectMapper.registerModule(new Jdk8Module());

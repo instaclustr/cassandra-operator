@@ -41,12 +41,11 @@ public class OperationsResource {
 
     @POST
     public Response createNewOperation(final OperationRequest request) {
-
-
         final Operation operation = operationsService.submitOperationRequest(request);
 
-        final URI operationLocation = UriBuilder.fromMethod(OperationsResource.class, "getOperationById").build(operation.id);
-
+        final URI operationLocation = UriBuilder.fromResource(OperationsResource.class)
+                .path(OperationsResource.class, "getOperationById")
+                .build(operation.id);
 
         return Response.created(operationLocation).entity(operation).build();
     }

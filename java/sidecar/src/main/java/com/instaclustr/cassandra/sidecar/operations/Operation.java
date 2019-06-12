@@ -1,13 +1,27 @@
 package com.instaclustr.cassandra.sidecar.operations;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import com.instaclustr.jackson.MapBackedTypeIdResolver;
 
+import javax.inject.Inject;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
-// TODO: type resolver for Operations
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@SuppressWarnings("WeakerAccess")
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, property = "type")
+@JsonTypeIdResolver(Operation.TypeIdResolver.class)
 public abstract class Operation<RequestT extends OperationRequest> implements Runnable {
+
+    static class TypeIdResolver extends MapBackedTypeIdResolver<Operation> {
+        @Inject
+        public TypeIdResolver(final Map<String, Class<? extends Operation>> typeMappings) {
+            super(typeMappings);
+        }
+    }
+
     enum State {
         PENDING, RUNNING, COMPLETED, FAILED
     }
@@ -15,8 +29,8 @@ public abstract class Operation<RequestT extends OperationRequest> implements Ru
     public final UUID id = UUID.randomUUID();
     public final Instant creationTime = Instant.now();
 
-    // TODO: include and unwrap in JSON output
-    protected final RequestT request;
+    @JsonUnwrapped // embed the request parameters in the serialized output directly
+    public final RequestT request;
 
     public State state = State.PENDING;
     public Throwable failureCause;
@@ -45,8 +59,6 @@ public abstract class Operation<RequestT extends OperationRequest> implements Ru
         } finally {
             completionTime = Instant.now();
         }
-
-
     }
 
     protected abstract void run0() throws Exception;

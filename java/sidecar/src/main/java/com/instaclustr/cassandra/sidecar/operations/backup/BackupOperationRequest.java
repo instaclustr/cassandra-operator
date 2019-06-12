@@ -7,8 +7,9 @@ import com.instaclustr.cassandra.sidecar.operations.OperationRequest;
 import java.net.URI;
 import java.util.Set;
 
+@SuppressWarnings("WeakerAccess")
 public class BackupOperationRequest extends OperationRequest {
-    public final URI providerUri;
+    public final URI destinationUri;
     public final String snapshotName;
     public final Set<String> keyspaces;
 
@@ -16,7 +17,7 @@ public class BackupOperationRequest extends OperationRequest {
     public BackupOperationRequest(@JsonProperty("destinationUri") final URI destinationUri,
                                   @JsonProperty("snapshotName") final String snapshotName,
                                   @JsonProperty("keyspaces") final Set<String> keyspaces) {
-        this.providerUri = destinationUri;
+        this.destinationUri = destinationUri;
         this.snapshotName = snapshotName;
         this.keyspaces = keyspaces;
     }

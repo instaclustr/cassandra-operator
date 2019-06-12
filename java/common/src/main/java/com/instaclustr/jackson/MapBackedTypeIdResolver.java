@@ -1,4 +1,4 @@
-package com.instaclustr.cassandra.sidecar.operations;
+package com.instaclustr.jackson;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
@@ -6,22 +6,19 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
-import com.google.inject.Injector;
-import com.instaclustr.cassandra.sidecar.operations.backup.BackupOperationRequest;
-import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissionOperationRequest;
 
-import javax.inject.Inject;
-import java.io.IOException;
 import java.util.Map;
 
-class OperationRequestTypeIdResolver extends TypeIdResolverBase {
-    private final BiMap<String, Class<? extends OperationRequest>> typeMappings;
+/**
+ * Performs bi-directional resolution of Types to TypeIds via the
+ * provided Map<String, Class<? extends T>>
+ */
+public abstract class MapBackedTypeIdResolver<T> extends TypeIdResolverBase {
+    private final BiMap<String, Class<? extends T>> typeMappings;
 
-    @Inject
-    public OperationRequestTypeIdResolver(final Map<String, Class<? extends OperationRequest>> typeMappings) {
+    protected MapBackedTypeIdResolver(final Map<String, Class<? extends T>> typeMappings) {
         this.typeMappings = ImmutableBiMap.copyOf(typeMappings);
     }
-
 
     @Override
     public String idFromValue(final Object value) {
@@ -35,7 +32,7 @@ class OperationRequestTypeIdResolver extends TypeIdResolverBase {
 
     @Override
     public JavaType typeFromId(final DatabindContext context, final String id) {
-        final Class<? extends OperationRequest> requestClass = typeMappings.get(id);
+        final Class<? extends T> requestClass = typeMappings.get(id);
 
         if (requestClass == null) {
             return null;
