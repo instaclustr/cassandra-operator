@@ -26,22 +26,4 @@ public class CassandraModule extends AbstractModule {
     public StorageServiceMBean storageServiceMBeanProvider() {
         return JMX.newMBeanProxy(mBeanServerConnection, CassandraObjectNames.STORAGE_SERVICE_MBEAN_NAME, StorageServiceMBean.class);
     }
-
-    @Provides
-    @Singleton
-    public OperationExecutor operationExecutor(StorageServiceMBean storageServiceMBean, ExecutorService executorService) {
-        return new DefaultOperationExecutor(storageServiceMBean, executorService);
-    }
-
-    @Provides
-    @Singleton
-    public TaskFactory taskFactory() {
-        return new DefaultTaskFactory();
-    }
-
-    @Provides
-    @Singleton
-    public ExecutorService operationsExecutorService() {
-        return Executors.newFixedThreadPool(1);
-    }
 }

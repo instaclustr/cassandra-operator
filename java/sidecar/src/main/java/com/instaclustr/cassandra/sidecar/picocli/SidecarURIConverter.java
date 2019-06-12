@@ -7,6 +7,7 @@ import java.net.URI;
 import picocli.CommandLine;
 
 // This converter is not in commons because there is not UriBuilder from javax.ws.rs.core
+// TODO: copy the implementation from cassandra-exporter
 public class SidecarURIConverter implements CommandLine.ITypeConverter<URI> {
 
     @Override

@@ -29,7 +29,7 @@ import com.instaclustr.cassandra.sidecar.operation.task.TaskFactory;
 @Consumes(MediaType.APPLICATION_JSON)
 public class OperationsResource {
 
-    public static final String ENDPOINT = "/operations";
+    public static final String ENDPOINT = "/operations-old";
 
     private final OperationExecutor operationExecutor;
 

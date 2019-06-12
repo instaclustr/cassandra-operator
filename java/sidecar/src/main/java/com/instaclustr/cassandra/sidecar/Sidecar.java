@@ -12,6 +12,10 @@ import java.util.concurrent.Callable;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.instaclustr.cassandra.sidecar.cassandra.CassandraModule;
+import com.instaclustr.cassandra.sidecar.operations.OperationsModule;
+import com.instaclustr.cassandra.sidecar.operations.backup.BackupsModule;
+import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupsModule;
+import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissioningModule;
 import com.instaclustr.cassandra.sidecar.picocli.SidecarJarManifestVersionProvider;
 import com.instaclustr.cassandra.sidecar.picocli.SidecarURIConverter;
 import com.instaclustr.guava.Application;
@@ -71,7 +75,12 @@ public class Sidecar implements Callable<Void> {
                 new CassandraModule(mBeanServerConnection),
 
                 new SidecarModule(),
-                new JerseyServerModule(httpServiceURI)
+                new JerseyServerModule(httpServiceURI),
+
+                new OperationsModule(),
+                new BackupsModule(),
+                new DecommissioningModule(),
+                new CleanupsModule()
         );
 
         return injector.getInstance(Application.class).call();

@@ -9,8 +9,6 @@ import javax.inject.Inject;
  * A Guava Service that manages a HttpServer
  */
 public class HttpServerService extends AbstractIdleService {
-    private static final int SERVER_SHUTDOWN_DELAY_SECONDS = 10;
-
     private final HttpServer server;
 
     @Inject
@@ -25,6 +23,6 @@ public class HttpServerService extends AbstractIdleService {
 
     @Override
     protected void shutDown() throws Exception {
-        server.stop(SERVER_SHUTDOWN_DELAY_SECONDS);
+        server.stop(0);
     }
 }

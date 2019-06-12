@@ -7,25 +7,22 @@ import java.net.URI;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.google.common.util.concurrent.Service;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.multibindings.Multibinder;
+import com.instaclustr.cassandra.sidecar.jackson.GuiceHandlerInstantiator;
 import com.instaclustr.cassandra.sidecar.model.operation.BackupOperation;
 import com.instaclustr.cassandra.sidecar.model.operation.DecommissionOperation;
 import com.instaclustr.cassandra.sidecar.model.operation.Operation;
 import com.instaclustr.cassandra.sidecar.model.operation.OperationType;
+import com.instaclustr.guice.ServiceBindings;
 import com.sun.net.httpserver.HttpServer;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.glassfish.jersey.jdkhttp.JdkHttpServerFactory;
@@ -45,9 +42,7 @@ public class JerseyServerModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        final Multibinder<Service> serviceMultibinder = Multibinder.newSetBinder(binder(), Service.class);
-
-        serviceMultibinder.addBinding().to(HttpServerService.class);
+        ServiceBindings.bindService(binder(), HttpServerService.class);
     }
 
     @Provides
@@ -60,12 +55,14 @@ public class JerseyServerModule extends AbstractModule {
 
     @Singleton
     @Provides
-    ObjectMapper provideObjectMapper() {
+    ObjectMapper provideObjectMapper(final GuiceHandlerInstantiator guiceHandlerInstantiator) {
 
         final SimpleModule module = new SimpleModule("OperationDeserializerModule");
         module.addDeserializer(Operation.class, new OperationDeserializer());
 
         final ObjectMapper objectMapper = new ObjectMapper();
+
+        objectMapper.setHandlerInstantiator(guiceHandlerInstantiator);
 
         objectMapper.setDefaultPropertyInclusion(JsonInclude.Include.NON_ABSENT);
         objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
