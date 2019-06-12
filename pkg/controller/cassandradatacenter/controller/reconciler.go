@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"github.com/go-logr/logr"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,9 +16,16 @@ var log = logf.Log.WithName("CassandraDataCenterReconciler")
 // CassandraDataCenterReconciler reconciles a CassandraDataCenter object
 type CassandraDataCenterReconciler struct {
 	// This client is a split client that reads objects from the cache and writes to the apiserver
-	client client.Client
+	client client.Client // TODO: pointer?
 	scheme *runtime.Scheme
 }
+
+type reconciliationRequestContext struct {
+	CassandraDataCenterReconciler
+	cdc *cassandraoperatorv1alpha1.CassandraDataCenter
+	logger logr.Logger // TODO: pointer?
+}
+
 
 // Reconcile reads that state of the cluster for a CassandraDataCenter object and makes changes based on the state read
 // and what is in the CassandraDataCenter.Spec
@@ -25,37 +33,41 @@ type CassandraDataCenterReconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-
-	logReconcileRequest(request)
-
 	// Fetch the CassandraDataCenter instance
-
 	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
-	err := reconciler.client.Get(context.TODO(), request.NamespacedName, cdc)
-
-	if err != nil {
+	if err := reconciler.client.Get(context.TODO(), request.NamespacedName, cdc); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
 
-	nodesService, err := CreateOrUpdateNodesService(reconciler, cdc)
+	requestLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+
+	rctx := &reconciliationRequestContext{
+		CassandraDataCenterReconciler: *reconciler,
+		cdc: cdc,
+		logger: requestLogger,
+	}
+
+	rctx.logger.Info("Reconciling CassandraDataCenter.")
+
+	nodesService, err := createOrUpdateNodesService(rctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	seedNodesService, err := CreateOrUpdateSeedNodesService(reconciler, cdc)
+	seedNodesService, err := createOrUpdateSeedNodesService(rctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	configMapVolumeMount, err := CreateOrUpdateOperatorConfigMap(reconciler, cdc, seedNodesService)
+	configVolume, err := createOrUpdateOperatorConfigMap(rctx, seedNodesService)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	statefulSet, err := CreateOrUpdateStatefulSet(reconciler, cdc, VolumeMounts{configMapVolumeMount})
+	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -63,10 +75,7 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	// TODO:
 	_, _, _ = nodesService, seedNodesService, statefulSet
 
-	return reconcile.Result{}, nil
-}
+	rctx.logger.Info("CassandraDataCenter reconciliation complete.")
 
-func logReconcileRequest(request reconcile.Request) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling CassandraDataCenter")
+	return reconcile.Result{}, nil
 }

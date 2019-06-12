@@ -26,7 +26,6 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
-
 	// Create a new controller
 	c, err := controller.New("cassandradatacenter-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -34,18 +33,19 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource CassandraDataCenter
-	err = c.Watch(&source.Kind{Type: &cassandraoperatorv1alpha1.CassandraDataCenter{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
+	if err = c.Watch(&source.Kind{Type: &cassandraoperatorv1alpha1.CassandraDataCenter{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
 
 	// Watch for changes to secondary resources and requeue the owner CassandraDataCenter
+
 	for _, t := range []runtime.Object{&corev1.Service{}, &v1beta2.StatefulSet{}, &corev1.ConfigMap{}} {
-		err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{
+		requestForOwnerHandler := &handler.EnqueueRequestForOwner{
 			IsController: true,
 			OwnerType:    &cassandraoperatorv1alpha1.CassandraDataCenter{},
-		})
-		if err != nil {
+		}
+
+		if err = c.Watch(&source.Kind{Type: t}, requestForOwnerHandler); err != nil {
 			return err
 		}
 	}
