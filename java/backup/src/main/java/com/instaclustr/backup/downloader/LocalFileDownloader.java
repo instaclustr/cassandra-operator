@@ -1,11 +1,9 @@
 package com.instaclustr.backup.downloader;
 
-import com.google.common.collect.ImmutableList;
-import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.model.RestoreArguments;
 import com.instaclustr.backup.common.LocalFileObjectReference;
 import com.instaclustr.backup.common.RemoteObjectReference;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;

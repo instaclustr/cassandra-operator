@@ -5,16 +5,14 @@ import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.transfer.Download;
 import com.amazonaws.services.s3.transfer.PersistableTransfer;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.internal.S3ProgressListener;
-import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.model.RestoreArguments;
 import com.instaclustr.backup.common.RemoteObjectReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;

@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.RateLimiter;
-import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.model.RestoreArguments;
 import com.instaclustr.backup.common.RemoteObjectReference;
 import com.instaclustr.backup.common.StorageInteractor;
 import com.instaclustr.backup.task.ManifestEntry;

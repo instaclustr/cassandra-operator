@@ -5,17 +5,13 @@ import com.google.cloud.ReadChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
-import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.model.RestoreArguments;
 import com.instaclustr.backup.common.GCPRemoteObjectReference;
 import com.instaclustr.backup.common.RemoteObjectReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;

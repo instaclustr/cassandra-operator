@@ -1,9 +1,8 @@
 package com.instaclustr.backup.task;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
-import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.model.RestoreArguments;
 import com.instaclustr.backup.common.RemoteObjectReference;
 import com.instaclustr.backup.downloader.Downloader;
 import com.instaclustr.backup.common.CloudDownloadUploadFactory;

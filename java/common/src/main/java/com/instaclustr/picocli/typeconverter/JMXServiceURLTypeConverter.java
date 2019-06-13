@@ -1,9 +1,9 @@
 package com.instaclustr.picocli.typeconverter;
 
-import picocli.CommandLine;
-
 import javax.management.remote.JMXServiceURL;
 import java.net.MalformedURLException;
+
+import picocli.CommandLine;
 
 public class JMXServiceURLTypeConverter implements CommandLine.ITypeConverter<JMXServiceURL> {
     @Override

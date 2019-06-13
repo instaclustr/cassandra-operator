@@ -1,13 +1,13 @@
 package com.instaclustr.jackson;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
-
-import java.util.Map;
 
 /**
  * Performs bi-directional resolution of Types to TypeIds via the

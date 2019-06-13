@@ -1,10 +1,5 @@
 package com.instaclustr.picocli;
 
-import com.google.common.base.Joiner;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import picocli.CommandLine;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.Enumeration;
@@ -12,7 +7,13 @@ import java.util.Optional;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
+import com.google.common.base.Joiner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import picocli.CommandLine;
+
 public abstract class JarManifestVersionProvider implements CommandLine.IVersionProvider {
+    private static final Logger logger = LoggerFactory.getLogger(JarManifestVersionProvider.class);
     private final String implementationTitle;
 
     protected JarManifestVersionProvider(final String implementationTitle) {
@@ -42,7 +43,7 @@ public abstract class JarManifestVersionProvider implements CommandLine.IVersion
             }
         }
 
-        return new String[] {
+        return new String[]{
                 String.format("%s %s", implementationTitle, implementationVersion.orElse("development build")),
                 String.format("Build time: %s", buildTime.orElse("unknown")),
                 String.format("Git commit: %s", gitCommit.orElse("unknown")),
@@ -55,7 +56,6 @@ public abstract class JarManifestVersionProvider implements CommandLine.IVersion
 
     public static void logCommandVersionInformation(final CommandLine.Model.CommandSpec commandSpec) {
         final Logger logger = LoggerFactory.getLogger(commandSpec.userObject().getClass());
-
         logger.info("{} version: {}", commandSpec.name(), Joiner.on(", ").join(commandSpec.version()));
     }
 }

@@ -1,10 +1,10 @@
 package com.instaclustr.picocli.typeconverter;
 
-import picocli.CommandLine;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import picocli.CommandLine;
 
 /***
  * A {@link CommandLine.ITypeConverter} for {@link java.nio.file.Path}s that must exist and must be regular files.

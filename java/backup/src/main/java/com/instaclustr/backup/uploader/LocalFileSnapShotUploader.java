@@ -1,11 +1,10 @@
 package com.instaclustr.backup.uploader;
 
-import com.instaclustr.backup.BackupArguments;
+import com.instaclustr.backup.model.BackupArguments;
 import com.instaclustr.backup.common.LocalFileObjectReference;
 import com.instaclustr.backup.common.RemoteObjectReference;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;

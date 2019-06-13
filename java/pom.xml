@@ -9,25 +9,41 @@
 
     <modules>
         <module>common</module>
-        <module>model</module>
         <module>sidecar</module>
         <module>k8s-addons</module>
         <module>backup</module>
     </modules>
 
     <properties>
+        <guice.version>4.2.0</guice.version>
+        <guice.bridge.version>2.5.0-b42</guice.bridge.version>
+        <jersey.version>2.28</jersey.version>
+        <picocli.version>3.9.5</picocli.version>
+        <args4j.version>2.33</args4j.version>
+        <guava.version>27.1-jre</guava.version>
+        <javax.inject.version>1</javax.inject.version>
+        <jackson.bom.version>2.9.9</jackson.bom.version>
+        <cassandra.driver.version>3.7.1</cassandra.driver.version>
+        <logback.version>1.2.3</logback.version>
+        <jul.version>1.7.16</jul.version>
+
+        <testng.version>6.14.3</testng.version>
+
+        <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
+        <maven.jar.plugin.version>3.1.1</maven.jar.plugin.version>
+        <git.command.plugin.version>2.2.4</git.command.plugin.version>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-
-        <guice.version>4.2.0</guice.version>
-
-        <jersey.version>2.28</jersey.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+
+            <!-- guice and guava -->
+
             <dependency>
                 <groupId>com.google.inject</groupId>
                 <artifactId>guice</artifactId>
@@ -40,72 +56,37 @@
                 <version>${guice.version}</version>
             </dependency>
 
-
             <dependency>
-                <groupId>io.kubernetes</groupId>
-                <artifactId>client-java</artifactId>
-                <version>4.0.0</version>
+                <groupId>com.google.inject.extensions</groupId>
+                <artifactId>guice-throwingproviders</artifactId>
+                <version>${guice.version}</version>
             </dependency>
-
 
             <dependency>
                 <groupId>info.picocli</groupId>
                 <artifactId>picocli</artifactId>
-                <version>3.9.5</version>
+                <version>${picocli.version}</version>
             </dependency>
-
 
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>27.1-jre</version>
+                <version>${guava.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.glassfish.hk2</groupId>
+                <artifactId>guice-bridge</artifactId>
+                <version>${guice.bridge.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
-                <version>1</version>
+                <version>${javax.inject.version}</version>
             </dependency>
 
-
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-classic</artifactId>
-                <version>1.2.3</version>
-            </dependency>
-
-
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>jul-to-slf4j</artifactId>
-                <version>1.7.16</version>
-            </dependency>
-
-
-            <!-- used by legacy backup code -->
-            <dependency>
-                <groupId>args4j</groupId>
-                <artifactId>args4j</artifactId>
-                <version>2.33</version>
-            </dependency>
-
-
-            <dependency>
-                <groupId>com.fasterxml.jackson</groupId>
-                <artifactId>jackson-bom</artifactId>
-                <version>2.9.9</version>
-                <scope>import</scope>
-                <type>pom</type>
-            </dependency>
-
-
-            <dependency>
-                <groupId>com.datastax.cassandra</groupId>
-                <artifactId>cassandra-driver-core</artifactId>
-                <version>3.7.1</version>
-            </dependency>
-
+            <!-- jersey & jackson -->
 
             <dependency>
                 <groupId>org.glassfish.jersey.core</groupId>
@@ -136,14 +117,61 @@
                 <artifactId>jersey-client</artifactId>
                 <version>${jersey.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.bom.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <!-- used by legacy backup code -->
+
+            <dependency>
+                <groupId>args4j</groupId>
+                <artifactId>args4j</artifactId>
+                <version>${args4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.datastax.cassandra</groupId>
+                <artifactId>cassandra-driver-core</artifactId>
+                <version>${cassandra.driver.version}</version>
+            </dependency>
+
+            <!-- logging -->
+
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jul-to-slf4j</artifactId>
+                <version>${jul.version}</version>
+            </dependency>
+
+            <!-- test deps -->
+
+            <dependency>
+                <groupId>org.testng</groupId>
+                <artifactId>testng</artifactId>
+                <version>${testng.version}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
+
     </dependencyManagement>
+
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>${maven.jar.plugin.version}</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -161,7 +189,7 @@
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
-                <version>2.2.4</version>
+                <version>${git.command.plugin.version}</version>
                 <executions>
                     <execution>
                         <goals>

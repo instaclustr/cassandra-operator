@@ -25,7 +25,6 @@
             <version>1.0-SNAPSHOT</version>
         </dependency>
 
-
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
@@ -36,18 +35,15 @@
             <artifactId>guice-assistedinject</artifactId>
         </dependency>
 
-
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
 
-
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
         </dependency>
-
 
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -80,26 +76,13 @@
         </dependency>
 
         <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jdk8</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.glassfish.hk2</groupId>
             <artifactId>guice-bridge</artifactId>
-            <version>2.5.0-b42</version>
         </dependency>
 
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <version>6.14.3</version>
-            <scope>test</scope>
         </dependency>
 
     </dependencies>
@@ -109,7 +92,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>${maven.shade.plugin.version}</version>
                 <configuration>
                     <filters>
                         <filter>
@@ -123,7 +106,7 @@
                     </filters>
                     <transformers>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                            <mainClass>com.instaclustr.cassandra.sidecar.Sidecar</mainClass>
+                            <mainClass>com.instaclustr.sidecar.cassandra.Sidecar</mainClass>
                         </transformer>
 
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
