@@ -42,10 +42,10 @@ public class HttpServerModule extends AbstractModule {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpServerModule.class);
 
-    private URI httpServerUri;
+    private final URI httpServerAddress;
 
-    public HttpServerModule(final URI httpServiceUri) {
-        this.httpServerUri = httpServiceUri;
+    public HttpServerModule(final URI httpServerAddress) {
+        this.httpServerAddress = httpServerAddress;
     }
 
     @Override
@@ -57,9 +57,9 @@ public class HttpServerModule extends AbstractModule {
     @Singleton
     HttpServer provideHttpServer(final ResourceConfig resourceConfig) {
 
-        logger.info("Sidecar HTTP server listening on {}", httpServerUri);
+        logger.info("Starting Sidecar HTTP server, listening on {}", httpServerAddress);
 
-        return JdkHttpServerFactory.createHttpServer(httpServerUri, resourceConfig, false);
+        return JdkHttpServerFactory.createHttpServer(httpServerAddress, resourceConfig, false);
     }
 
     @Provides

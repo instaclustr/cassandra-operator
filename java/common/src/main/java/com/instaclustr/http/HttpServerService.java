@@ -9,20 +9,21 @@ import com.sun.net.httpserver.HttpServer;
  * A Guava Service that manages a HttpServer
  */
 public class HttpServerService extends AbstractIdleService {
-    private final HttpServer server;
+
+    private final HttpServer httpServer;
 
     @Inject
-    public HttpServerService(final HttpServer server) {
-        this.server = server;
+    public HttpServerService(final HttpServer httpServer) {
+        this.httpServer = httpServer;
     }
 
     @Override
     protected void startUp() throws Exception {
-        server.start();
+        httpServer.start();
     }
 
     @Override
     protected void shutDown() throws Exception {
-        server.stop(0);
+        httpServer.stop(0);
     }
 }
