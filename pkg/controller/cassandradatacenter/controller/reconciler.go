@@ -22,10 +22,9 @@ type CassandraDataCenterReconciler struct {
 
 type reconciliationRequestContext struct {
 	CassandraDataCenterReconciler
-	cdc *cassandraoperatorv1alpha1.CassandraDataCenter
+	cdc    *cassandraoperatorv1alpha1.CassandraDataCenter
 	logger logr.Logger // TODO: pointer?
 }
-
 
 // Reconcile reads that state of the cluster for a CassandraDataCenter object and makes changes based on the state read
 // and what is in the CassandraDataCenter.Spec
@@ -46,8 +45,8 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 
 	rctx := &reconciliationRequestContext{
 		CassandraDataCenterReconciler: *reconciler,
-		cdc: cdc,
-		logger: requestLogger,
+		cdc:                           cdc,
+		logger:                        requestLogger,
 	}
 
 	rctx.logger.Info("Reconciling CassandraDataCenter.")

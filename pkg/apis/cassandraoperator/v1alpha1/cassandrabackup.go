@@ -7,11 +7,19 @@ import (
 // CassandraBackupSpec defines the desired state of CassandraBackup
 // +k8s:openapi-gen=true
 type CassandraBackupSpec struct {
+	// Selector label matches the pods to backup
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+	// The backup mechanism type e.g. S3, FILE
+	Type string `json:"type"`
+	// The uri for the backup target location e.g. s3 bucket, filepath
+	Target string `json:"target"`
 }
 
 // CassandraBackupStatus defines the observed state of CassandraBackup
 // +k8s:openapi-gen=true
 type CassandraBackupStatus struct {
+	// Progress shows the status of the operation
+	Progress string `json:"progress"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

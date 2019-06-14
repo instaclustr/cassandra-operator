@@ -10,8 +10,6 @@ spec:
     plural: cassandrabackups
     singular: cassandrabackup
   scope: Namespaced
-  subresources:
-    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -28,8 +26,28 @@ spec:
         metadata:
           type: object
         spec:
+          properties:
+            selector:
+              description: Selector label matches the pods to backup
+              type: object
+            target:
+              description: The uri for the backup target location e.g. s3 bucket,
+                filepath
+              type: string
+            type:
+              description: The backup mechanism type e.g. S3, FILE
+              type: string
+          required:
+          - type
+          - target
           type: object
         status:
+          properties:
+            progress:
+              description: Progress shows the status of the operation
+              type: string
+          required:
+          - progress
           type: object
   version: v1alpha1
   versions:

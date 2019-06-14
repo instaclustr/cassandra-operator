@@ -73,10 +73,33 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackupSpec defines the desired state of CassandraBackup",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"selector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Selector label matches the pods to backup",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The backup mechanism type e.g. S3, FILE",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"target": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The uri for the backup target location e.g. s3 bucket, filepath",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"type", "target"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
 	}
 }
 
@@ -85,7 +108,16 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupStatus(ref common
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackupStatus defines the observed state of CassandraBackup",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"progress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Progress shows the status of the operation",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"progress"},
 			},
 		},
 		Dependencies: []string{},

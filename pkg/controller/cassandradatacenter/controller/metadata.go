@@ -24,7 +24,6 @@ func applyDataCenterLabels(labels *map[string]string, cdc *cassandraoperatorv1al
 //	obj.SetLabels(labels)
 //}
 
-
 func DataCenterResourceMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, suffixes ...string) metav1.ObjectMeta {
 	suffix := strings.Join(append([]string{""}, suffixes...), "-")
 

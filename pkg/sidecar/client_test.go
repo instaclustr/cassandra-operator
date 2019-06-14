@@ -2,7 +2,9 @@ package sidecar
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/go-resty/resty"
+	"github.com/google/uuid"
 	"gotest.tools/assert"
 	"io/ioutil"
 	"net/http"
@@ -37,7 +39,7 @@ func TestDemarshalling(t *testing.T) {
 		},
 	}
 
-	if status, err := client.Status(); err != nil || status == nil || status.OperationMode != OPERATION_MODE_NORMAL {
+	if status, err := client.Status(); err != nil || status == nil || status.NodeState != NORMAL {
 		t.Fail()
 	}
 
@@ -53,7 +55,7 @@ func TestDemarshalling(t *testing.T) {
 						"duration": "PT1M0.613S",
 						"start": "2019-06-11T03:37:15.593Z",
 						"stop": "2019-06-11T03:38:16.206Z",
-						"operationState": "FINISHED"
+						"state": "FINISHED"
     				},
 					{
 						"type": "backup",
@@ -61,7 +63,7 @@ func TestDemarshalling(t *testing.T) {
 						"duration": "PT1M0.613S",
 						"start": "2019-06-11T03:37:15.593Z",
 						"stop": "2019-06-11T03:38:16.206Z",
-						"operationState": "RUNNING"
+						"state": "RUNNING"
     				}
 				]`))),
 			Status:     "200 OK",
@@ -71,7 +73,7 @@ func TestDemarshalling(t *testing.T) {
 
 	// get operations
 
-	ops, err := client.GetOperations();
+	ops, err := client.GetOperations()
 	if err != nil {
 		t.Error(err)
 	}
@@ -93,20 +95,20 @@ func TestDemarshalling(t *testing.T) {
 					"duration": "PT1M0.613S",
 					"start": "2019-06-11T03:37:15.593Z",
 					"stop": "2019-06-11T03:38:16.206Z",
-					"operationState": "RUNNING"
+					"state": "RUNNING"
 				}`))),
 			Status:     "200 OK",
 			StatusCode: 200,
 		},
 	}
 
-	op, err := client.GetOperation("d3262073-8101-450f-9a11-c851760abd57")
+	op, err := client.GetOperation(uuid.MustParse("d3262073-8101-450f-9a11-c851760abd57"))
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	if (*op)["operationState"] != "RUNNING" {
+	if (*op)["state"] != "RUNNING" {
 		t.Errorf("testing backing should return RUNNING state")
 	}
 }
@@ -125,8 +127,8 @@ func TestSidecarClient_GetStatus(t *testing.T) {
 		t.Errorf("Status endpoint has not returned error but its status is not set.")
 	}
 
-	if status.OperationMode != OPERATION_MODE_NORMAL {
-		t.Fatalf("Expected NORMAL operation mode but received %v", status.OperationMode)
+	if status.NodeState != NORMAL {
+		t.Fatalf("Expected NORMAL operation mode but received %v", status.NodeState)
 	}
 }
 
@@ -136,14 +138,14 @@ func TestClient_DecommissionNode(t *testing.T) {
 
 	// first decommissioning
 
-	if response, err := client.Decommission(); err != nil {
+	if operationId, err := client.Decommission(); err != nil {
 		t.Errorf(err.Error())
-	} else if response == nil {
-		t.Errorf("there is not any error from Decommission endpoint but response is nil")
-	} else if getOpResponse, err := client.GetOperation(*response); err != nil {
+	} else if operationId == nil || (*operationId) == uuid.Nil {
+		t.Errorf("there is not any error from Decommission endpoint but operationId is nil")
+	} else if getOpResponse, err := client.GetOperation(*operationId); err != nil {
 		t.Errorf(err.Error())
 	} else {
-		assert.Assert(t, (*getOpResponse)["operationState"] == "RUNNING")
+		assert.Assert(t, (*getOpResponse)["state"] == "RUNNING")
 	}
 
 	// second decommissioning on the same node
@@ -152,5 +154,49 @@ func TestClient_DecommissionNode(t *testing.T) {
 
 	if err2 == nil || response2 != nil {
 		t.Errorf("Decommissioning of already decomissioned node should fail.")
+	}
+}
+
+func TestClient_BackupNode(t *testing.T) {
+
+	client := NewSidecarClient(getHost(), &DefaultSidecarClientOptions)
+
+	request := &BackupOperation{
+		DestinationUri: "/tmp/backup_test",
+		Keyspaces:      []string{"test_keyspace"},
+		SnapshotName:   "testSnapshot",
+	}
+
+	if response, err := client.Backup(request); err != nil {
+		t.Errorf(err.Error())
+	} else if response == nil {
+		t.Errorf("there is not any error from Backup endpoint but response is nil")
+	} else if getOpResponse, err := client.GetOperation(*response); err != nil {
+		t.Errorf(err.Error())
+	} else {
+		assert.Assert(t, (*getOpResponse)["state"] == "RUNNING")
+	}
+}
+
+func TestClient_CleanupNode(t *testing.T) {
+
+	client := NewSidecarClient(getHost(), &DefaultSidecarClientOptions)
+
+	cleanups, _ := client.ListCleanups()
+	fmt.Print(cleanups[0])
+
+	request := &CleanupOperation{
+		Keyspace:      "test",
+		Tables:   []string{"mytable", "mytable2"},
+	}
+
+	if response, err := client.Cleanup(request); err != nil {
+		t.Errorf(err.Error())
+	} else if response == nil {
+		t.Errorf("there is not any error from Cleanup endpoint but response is nil")
+	} else if getOpResponse, err := client.GetOperation(*response); err != nil {
+		t.Errorf(err.Error())
+	} else {
+		assert.Assert(t, (*getOpResponse)["state"] == "COMPLETED")
 	}
 }

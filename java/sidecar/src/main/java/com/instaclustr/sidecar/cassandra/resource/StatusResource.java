@@ -26,7 +26,7 @@ public class StatusResource {
         final Status status = new Status();
 
         try {
-            status.setOperationMode(Status.OperationMode.valueOf(storageServiceMBean.getOperationMode()));
+            status.setNodeState(Status.NodeState.valueOf(storageServiceMBean.getOperationMode()));
         } catch (Exception ex) {
             status.setException(ex);
         }
@@ -40,20 +40,20 @@ public class StatusResource {
 
     static class Status {
 
-        public enum OperationMode {
+        public enum NodeState {
             STARTING, NORMAL, JOINING, LEAVING, DECOMMISSIONED, MOVING, DRAINING, DRAINED
         }
 
-        private OperationMode operationMode;
+        private NodeState nodeState;
 
         private Exception exception;
 
-        public OperationMode getOperationMode() {
-            return operationMode;
+        public NodeState getNodeState() {
+            return nodeState;
         }
 
-        public void setOperationMode(OperationMode operationMode) {
-            this.operationMode = operationMode;
+        public void setNodeState(NodeState nodeState) {
+            this.nodeState = nodeState;
         }
 
         public Exception getException() {

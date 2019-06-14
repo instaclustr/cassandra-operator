@@ -332,9 +332,9 @@ func allPodsAreRunning(pods []corev1.Pod) (bool, []string) {
 	return true, notRunningPodNames
 }
 
-func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]sidecar.OperationMode {
+func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]sidecar.NodeState {
 
-	podByOperationMode := make(map[*corev1.Pod]sidecar.OperationMode)
+	podByOperationMode := make(map[*corev1.Pod]sidecar.NodeState)
 
 	var wg sync.WaitGroup
 
@@ -343,7 +343,7 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 	for pod, c := range podClients {
 		go func(pod *corev1.Pod, client *sidecar.Client) {
 			if response, err := client.GetStatus(); err != nil {
-				podByOperationMode[pod] = sidecar.OPERATION_MODE_ERROR
+				podByOperationMode[pod] = sidecar.ERROR
 			} else {
 				podByOperationMode[pod] = response.OperationMode
 			}
@@ -357,7 +357,7 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 	return podByOperationMode
 }
 
-func cassandrasInState(statuses map[*corev1.Pod]sidecar.OperationMode, state sidecar.OperationMode) []*corev1.Pod {
+func cassandrasInState(statuses map[*corev1.Pod]sidecar.NodeState, state sidecar.NodeState) []*corev1.Pod {
 
 	var cassandrasInState []*corev1.Pod
 
@@ -370,18 +370,18 @@ func cassandrasInState(statuses map[*corev1.Pod]sidecar.OperationMode, state sid
 	return cassandrasInState
 }
 
-func errorneousCassandras(statuses map[*corev1.Pod]sidecar.OperationMode) []*corev1.Pod {
-	return cassandrasInState(statuses, sidecar.OPERATION_MODE_ERROR)
+func errorneousCassandras(statuses map[*corev1.Pod]sidecar.NodeState) []*corev1.Pod {
+	return cassandrasInState(statuses, sidecar.ERROR)
 }
 
-func decommissionedCassandras(statuses map[*corev1.Pod]sidecar.OperationMode) []*corev1.Pod {
-	return cassandrasInState(statuses, sidecar.OPERATION_MODE_DECOMMISSIONED)
+func decommissionedCassandras(statuses map[*corev1.Pod]sidecar.NodeState) []*corev1.Pod {
+	return cassandrasInState(statuses, sidecar.DECOMMISSIONED)
 }
 
-func podsInIncorrectCassandraState(desiredReplicas int32, existingReplicas int32, statuses map[*corev1.Pod]sidecar.OperationMode) []string {
+func podsInIncorrectCassandraState(desiredReplicas int32, existingReplicas int32, statuses map[*corev1.Pod]sidecar.NodeState) []string {
 
-	scaleUpOperationModes := []sidecar.OperationMode{sidecar.OPERATION_MODE_NORMAL}
-	scaleDownOperationModes := []sidecar.OperationMode{sidecar.OPERATION_MODE_NORMAL, sidecar.OPERATION_MODE_DECOMMISSIONED}
+	scaleUpOperationModes := []sidecar.NodeState{sidecar.NORMAL}
+	scaleDownOperationModes := []sidecar.NodeState{sidecar.NORMAL, sidecar.DECOMMISSIONED}
 
 	var podsByIncorrectCassandraMode []string
 
@@ -410,7 +410,7 @@ func podsToString(pods []*corev1.Pod) []string {
 }
 
 // go does not have this built-in
-func contains(a []sidecar.OperationMode, x sidecar.OperationMode) bool {
+func contains(a []sidecar.NodeState, x sidecar.NodeState) bool {
 	for _, n := range a {
 		if x == n {
 			return true

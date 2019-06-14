@@ -74,7 +74,7 @@ func checkAllNodesInNormalMode(t *testing.T, f *framework.Framework, namespace s
 		for _, client := range clients {
 			if status, err := client.GetStatus(); err != nil {
 				return false, err
-			} else if status.OperationMode != sidecar.OPERATION_MODE_NORMAL {
+			} else if status.OperationMode != sidecar.NORMAL {
 				return false, nil
 			}
 		}
@@ -83,7 +83,7 @@ func checkAllNodesInNormalMode(t *testing.T, f *framework.Framework, namespace s
 	})
 
 	if pollingErr != nil {
-		t.Fatalf("All nodes were not transitioned to state %s: %v", sidecar.OPERATION_MODE_NORMAL, pollingErr)
+		t.Fatalf("All nodes were not transitioned to state %s: %v", sidecar.NORMAL, pollingErr)
 	}
 }
 

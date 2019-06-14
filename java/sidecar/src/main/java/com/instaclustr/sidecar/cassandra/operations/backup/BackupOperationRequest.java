@@ -9,6 +9,7 @@ import com.instaclustr.operations.OperationRequest;
 
 @SuppressWarnings("WeakerAccess")
 public class BackupOperationRequest extends OperationRequest {
+    // TODO: destination type, such as S3, File, etc
     public final URI destinationUri;
     public final String snapshotName;
     public final Set<String> keyspaces;

@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func createOrUpdateNodesService(rctx *reconciliationRequestContext)  (*corev1.Service, error) {
+func createOrUpdateNodesService(rctx *reconciliationRequestContext) (*corev1.Service, error) {
 	nodesService := &corev1.Service{ObjectMeta: DataCenterResourceMetadata(rctx.cdc, "nodes")}
 
 	logger := rctx.logger.WithValues("Service.Name", nodesService.Name)
@@ -43,20 +43,20 @@ func createOrUpdateNodesService(rctx *reconciliationRequestContext)  (*corev1.Se
 	return nodesService, err
 }
 
-func createOrUpdateSeedNodesService(rctx *reconciliationRequestContext)  (*corev1.Service, error) {
+func createOrUpdateSeedNodesService(rctx *reconciliationRequestContext) (*corev1.Service, error) {
 	seedNodesService := &corev1.Service{ObjectMeta: DataCenterResourceMetadata(rctx.cdc, "seeds")}
 
 	logger := rctx.logger.WithValues("Service.Name", seedNodesService.Name)
 
 	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, seedNodesService, func(_ runtime.Object) error {
 		seedNodesService.Spec = corev1.ServiceSpec{
-				ClusterIP: "None",
-				Ports: []corev1.ServicePort{
-					{Name: "internode", Port: 7000, Protocol: corev1.ProtocolTCP},
-				},
-				Selector:                 DataCenterLabels(rctx.cdc),
-				PublishNotReadyAddresses: true,
-			}
+			ClusterIP: "None",
+			Ports: []corev1.ServicePort{
+				{Name: "internode", Port: 7000, Protocol: corev1.ProtocolTCP},
+			},
+			Selector:                 DataCenterLabels(rctx.cdc),
+			PublishNotReadyAddresses: true,
+		}
 
 		seedNodesService.Annotations = map[string]string{
 			"service.alpha.kubernetes.io/tolerate-unready-endpoints": "true",
