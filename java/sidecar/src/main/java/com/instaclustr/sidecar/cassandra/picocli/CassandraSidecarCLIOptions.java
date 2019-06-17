@@ -12,7 +12,7 @@ public class CassandraSidecarCLIOptions extends SidecarCLIOptions {
 
     private static final int DEFAULT_CASSANDRA_JMX_PORT = 7199;
 
-    static class CassandraSidecarJMXServiceURLTypeConverter extends JMXServiceURLTypeConverter {
+    public static class CassandraSidecarJMXServiceURLTypeConverter extends JMXServiceURLTypeConverter {
         @Override
         protected String getDefaultHostname() {
             return DEFAULT_CASSANDRA_JMX_HOSTNAME;

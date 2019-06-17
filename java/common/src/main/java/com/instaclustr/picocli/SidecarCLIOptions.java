@@ -11,7 +11,7 @@ public abstract class SidecarCLIOptions {
 
     private static final int DEFAULT_SIDECAR_HTTP_PORT = 4567;
 
-    static class CassandraSidecarHttpServerAddressTypeConverter extends HttpServerAddressTypeConverter {
+    public static class CassandraSidecarHttpServerAddressTypeConverter extends HttpServerAddressTypeConverter {
         @Override
         protected String getDefaultHostname() {
             return DEFAULT_SIDECAR_HTTP_HOSTNAME;
