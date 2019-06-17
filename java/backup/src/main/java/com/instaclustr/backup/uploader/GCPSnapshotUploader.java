@@ -4,7 +4,7 @@ import com.google.cloud.WriteChannel;
 import com.google.cloud.storage.*;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
-import com.instaclustr.backup.BackupArguments;
+import com.instaclustr.backup.model.BackupArguments;
 import com.instaclustr.backup.common.GCPRemoteObjectReference;
 import com.instaclustr.backup.common.RemoteObjectReference;
 import org.slf4j.Logger;
@@ -14,7 +14,6 @@ import java.io.InputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 
 public class GCPSnapshotUploader extends SnapshotUploader{

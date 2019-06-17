@@ -1,6 +1,6 @@
 package com.instaclustr.backup.uploader;
 
-import com.instaclustr.backup.BackupArguments;
+import com.instaclustr.backup.model.BackupArguments;
 import com.instaclustr.backup.common.AzureRemoteObjectReference;
 import com.instaclustr.backup.common.RemoteObjectReference;
 import com.microsoft.azure.storage.StorageException;
@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Date;

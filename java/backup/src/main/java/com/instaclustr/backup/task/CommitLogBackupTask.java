@@ -1,6 +1,6 @@
 package com.instaclustr.backup.task;
 
-import com.instaclustr.backup.CommitLogBackupArguments;
+import com.instaclustr.backup.model.CommitLogBackupArguments;
 import com.instaclustr.backup.uploader.FilesUploader;
 import com.instaclustr.backup.util.Directories;
 import com.instaclustr.backup.util.GlobalLock;

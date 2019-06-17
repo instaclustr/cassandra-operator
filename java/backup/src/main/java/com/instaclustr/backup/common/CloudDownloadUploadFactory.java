@@ -4,10 +4,8 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
-import com.google.common.base.Optional;
-import com.instaclustr.backup.BackupArguments;
-import com.instaclustr.backup.CommonBackupArguments;
-import com.instaclustr.backup.RestoreArguments;
+import com.instaclustr.backup.model.BackupArguments;
+import com.instaclustr.backup.model.RestoreArguments;
 import com.instaclustr.backup.downloader.*;
 import com.instaclustr.backup.uploader.*;
 import com.microsoft.azure.storage.StorageException;
@@ -15,8 +13,6 @@ import com.microsoft.azure.storage.blob.CloudBlobClient;
 
 import javax.naming.ConfigurationException;
 import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class CloudDownloadUploadFactory {
 

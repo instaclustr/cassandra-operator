@@ -1,9 +1,9 @@
 package com.instaclustr.backup.tasks;
 
 import com.google.common.collect.*;
-import com.instaclustr.backup.BackupArguments;
-import com.instaclustr.backup.RestoreArguments;
-import com.instaclustr.backup.StorageProvider;
+import com.instaclustr.backup.model.BackupArguments;
+import com.instaclustr.backup.model.RestoreArguments;
+import com.instaclustr.backup.model.StorageProvider;
 import com.instaclustr.backup.jmx.CassandraVersion;
 import com.instaclustr.backup.service.TestHelperService;
 import com.instaclustr.backup.task.BackupTask;
@@ -19,7 +19,6 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.Writer;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;

@@ -58,7 +58,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			statefulSet.Spec = *statefulSetSpec
 			return nil
 		}
-		
+
 		//if err := scaleStatefulSet(rctx, statefulSet, statefulSetSpec); err != nil {
 		//	return err
 		//}
