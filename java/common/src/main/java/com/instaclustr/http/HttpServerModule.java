@@ -4,7 +4,6 @@ import javax.ws.rs.core.Feature;
 import javax.ws.rs.core.FeatureContext;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
-import java.net.URI;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationConfig;
@@ -27,6 +26,7 @@ import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.instaclustr.guice.ServiceBindings;
+import com.instaclustr.picocli.SidecarCLIOptions;
 import com.sun.net.httpserver.HttpServer;
 import org.glassfish.hk2.api.ServiceLocator;
 import org.glassfish.jersey.InjectionManagerProvider;
@@ -42,12 +42,6 @@ public class HttpServerModule extends AbstractModule {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpServerModule.class);
 
-    private final URI httpServerAddress;
-
-    public HttpServerModule(final URI httpServerAddress) {
-        this.httpServerAddress = httpServerAddress;
-    }
-
     @Override
     protected void configure() {
         ServiceBindings.bindService(binder(), HttpServerService.class);
@@ -55,11 +49,11 @@ public class HttpServerModule extends AbstractModule {
 
     @Provides
     @Singleton
-    HttpServer provideHttpServer(final ResourceConfig resourceConfig) {
+    HttpServer provideHttpServer(final ResourceConfig resourceConfig, final SidecarCLIOptions cliOptions) {
 
-        logger.info("Starting Sidecar HTTP server, listening on {}", httpServerAddress);
+        logger.info("Starting Sidecar HTTP server, listening on {}", cliOptions.httpServiceAddress);
 
-        return JdkHttpServerFactory.createHttpServer(httpServerAddress, resourceConfig, false);
+        return JdkHttpServerFactory.createHttpServer(cliOptions.httpServiceAddress, resourceConfig, false);
     }
 
     @Provides

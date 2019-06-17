@@ -2,12 +2,9 @@ package com.instaclustr.sidecar.cassandra;
 
 import static com.instaclustr.picocli.JarManifestVersionProvider.logCommandVersionInformation;
 
-import javax.management.MBeanServerConnection;
-import javax.management.remote.JMXConnectorFactory;
 import java.util.concurrent.Callable;
 
 import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.instaclustr.guava.Application;
 import com.instaclustr.guava.ServiceManagerModule;
 import com.instaclustr.http.HttpServerModule;
@@ -51,22 +48,18 @@ public final class Sidecar implements Callable<Void> {
 
         logCommandVersionInformation(commandSpec);
 
-        final MBeanServerConnection mBeanServerConnection = JMXConnectorFactory.connect(cliOptions.jmxServiceURL).getMBeanServerConnection();
+        return Guice.createInjector(
 
-        final Injector injector = Guice.createInjector(
+                new SidecarModule(cliOptions),
                 new ServiceManagerModule(),
 
-                new CassandraModule(mBeanServerConnection),
-
-                new SidecarModule(),
-                new HttpServerModule(cliOptions.httpServiceAddress),
+                new CassandraModule(),
+                new HttpServerModule(),
 
                 new OperationsModule(),
                 new BackupsModule(),
                 new DecommissioningModule(),
                 new CleanupsModule()
-        );
-
-        return injector.getInstance(Application.class).call();
+        ).getInstance(Application.class).call();
     }
 }
