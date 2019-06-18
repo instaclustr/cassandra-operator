@@ -1,4 +1,4 @@
-package com.instaclustr.cassandra.sidecar.operations;
+package com.instaclustr.sidecar.operations;
 
 import com.google.inject.AbstractModule;
 import com.instaclustr.guava.ServiceBindings;

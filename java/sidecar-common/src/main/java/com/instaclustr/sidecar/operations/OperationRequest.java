@@ -1,15 +1,21 @@
-package com.instaclustr.cassandra.sidecar.operations;
+package com.instaclustr.sidecar.operations;
 
 import javax.inject.Inject;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
-import com.instaclustr.jackson.MapBackedTypeIdResolver;
+import com.instaclustr.sidecar.jackson.MapBackedTypeIdResolver;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, property = "type")
 @JsonTypeIdResolver(OperationRequest.TypeIdResolver.class)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class OperationRequest {
+
+    @JsonProperty("type")
+    public String type;
 
     static class TypeIdResolver extends MapBackedTypeIdResolver<OperationRequest> {
         @Inject
@@ -17,7 +23,4 @@ public abstract class OperationRequest {
             super(typeMappings);
         }
     }
-
-
-    // TODO: support validation?
 }

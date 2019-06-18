@@ -1,4 +1,4 @@
-package com.instaclustr.cassandra.sidecar.operations;
+package com.instaclustr.sidecar.operations;
 
 import javax.inject.Inject;
 import java.time.Instant;
@@ -8,7 +8,8 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
-import com.instaclustr.jackson.MapBackedTypeIdResolver;
+import com.google.common.base.MoreObjects;
+import com.instaclustr.sidecar.jackson.MapBackedTypeIdResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,4 +67,17 @@ public abstract class Operation<RequestT extends OperationRequest> implements Ru
     }
 
     protected abstract void run0() throws Exception;
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("id", id)
+                .add("creationTime", creationTime)
+                .add("request", request)
+                .add("state", state)
+                .add("failureCause", failureCause)
+                .add("progress", progress)
+                .add("startTime", startTime)
+                .toString();
+    }
 }

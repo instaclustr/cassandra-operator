@@ -1,6 +1,10 @@
-package com.instaclustr.cassandra.sidecar.resource;
+package com.instaclustr.sidecar.operations;
+
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 import javax.inject.Inject;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
@@ -8,20 +12,15 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.util.Collection;
 import java.util.UUID;
 
-import com.instaclustr.cassandra.sidecar.operations.Operation;
-import com.instaclustr.cassandra.sidecar.operations.OperationRequest;
-import com.instaclustr.cassandra.sidecar.operations.OperationsService;
-
 @Path("/operations")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
+@Produces(APPLICATION_JSON)
+@Consumes(APPLICATION_JSON)
 public class OperationsResource {
     private final OperationsService operationsService;
 
@@ -37,7 +36,7 @@ public class OperationsResource {
 
     @GET
     @Path("{id}")
-    public Operation getOperationById(@PathParam("id") final UUID id) {
+    public Operation getOperationById(@NotNull @PathParam("id") final UUID id) {
         final Operation operation = operationsService.operations().get(id);
 
         if (operation == null) {
@@ -48,7 +47,7 @@ public class OperationsResource {
     }
 
     @POST
-    public Response createNewOperation(final OperationRequest request) {
+    public Response createNewOperation(@Valid final OperationRequest request) {
         final Operation operation = operationsService.submitOperationRequest(request);
 
         final URI operationLocation = UriBuilder.fromResource(OperationsResource.class)

@@ -30,6 +30,8 @@ import java.util.concurrent.TimeoutException;
 
 public interface StorageServiceMBean extends NotificationEmitter
 {
+    public int getConcurrentCompactors();
+
     /**
      * Retrieve the list of live nodes in the cluster, where "liveness" is
      * determined by the failure detector of the node being queried.
@@ -222,7 +224,7 @@ public interface StorageServiceMBean extends NotificationEmitter
     /**
      * Trigger a cleanup of keys on a single keyspace
      */
-    public void forceKeyspaceCleanup(String keyspaceName, String... columnFamilies) throws IOException, ExecutionException, InterruptedException;
+    public int forceKeyspaceCleanup(int jobs, String keyspaceName, String... columnFamilies) throws IOException, ExecutionException, InterruptedException;
 
     /**
      * Scrub (deserialize + reserialize at the latest version, skipping bad rows if any) the given keyspace.
@@ -230,13 +232,15 @@ public interface StorageServiceMBean extends NotificationEmitter
      *
      * Scrubbed CFs will be snapshotted first, if disableSnapshot is false
      */
-    public void scrub(boolean disableSnapshot, boolean skipCorrupted, String keyspaceName, String... columnFamilies) throws IOException, ExecutionException, InterruptedException;
+    public int scrub(boolean disableSnapshot, boolean skipCorrupted, boolean checkData, boolean reinsertOverflowedTTL, int jobs, String keyspaceName, String... columnFamilies);
 
     /**
      * Rewrite all sstables to the latest version.
      * Unlike scrub, it doesn't skip bad rows and do not snapshot sstables first.
      */
+    @Deprecated
     public void upgradeSSTables(String keyspaceName, boolean excludeCurrentVersion, String... columnFamilies) throws IOException, ExecutionException, InterruptedException;
+    public int upgradeSSTables(String keyspaceName, boolean excludeCurrentVersion, int jobs, String... tableNames) throws IOException, ExecutionException, InterruptedException;
 
     /**
      * Flush all memtables for the given column families, or all columnfamilies for the given keyspace
@@ -458,6 +462,16 @@ public interface StorageServiceMBean extends NotificationEmitter
      * @param sourceDc Name of DC from which to select sources for streaming or null to pick any node
      */
     public void rebuild(String sourceDc);
+
+    /**
+     * Same as {@link #rebuild(String)}, but only for specified keyspace and ranges.
+     *
+     * @param sourceDc Name of DC from which to select sources for streaming or null to pick any node
+     * @param keyspace Name of the keyspace which to rebuild or null to rebuild all keyspaces.
+     * @param tokens Range of tokens to rebuild or null to rebuild all token ranges. In the format of:
+     *               "(start_token_1,end_token_1],(start_token_2,end_token_2],...(start_token_n,end_token_n]"
+     */
+    public void rebuild(String sourceDc, String keyspace, String tokens, String specificSources);
 
     /** Starts a bulk load and blocks until it completes. */
     public void bulkLoad(String directory);

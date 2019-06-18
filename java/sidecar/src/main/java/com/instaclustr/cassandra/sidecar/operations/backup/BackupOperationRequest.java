@@ -5,7 +5,8 @@ import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.instaclustr.cassandra.sidecar.operations.OperationRequest;
+import com.google.common.base.MoreObjects;
+import com.instaclustr.sidecar.operations.OperationRequest;
 
 @SuppressWarnings("WeakerAccess")
 public class BackupOperationRequest extends OperationRequest {
@@ -20,5 +21,15 @@ public class BackupOperationRequest extends OperationRequest {
         this.destinationUri = destinationUri;
         this.snapshotName = snapshotName;
         this.keyspaces = keyspaces;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("type", type)
+                .add("destinationUri", destinationUri)
+                .add("snapshotName", snapshotName)
+                .add("keyspaces", keyspaces)
+                .toString();
     }
 }

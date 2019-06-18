@@ -1,4 +1,4 @@
-package com.instaclustr.jackson;
+package com.instaclustr.sidecar.jackson;
 
 import java.util.Map;
 

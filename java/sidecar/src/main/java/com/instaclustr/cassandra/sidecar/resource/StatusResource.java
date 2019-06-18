@@ -1,16 +1,17 @@
 package com.instaclustr.cassandra.sidecar.resource;
 
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 
 @Path("/status")
-@Produces(MediaType.APPLICATION_JSON)
+@Produces(APPLICATION_JSON)
 public class StatusResource {
 
     private final StorageServiceMBean storageServiceMBean;
@@ -38,7 +39,7 @@ public class StatusResource {
         return Response.ok(status).build();
     }
 
-    static class Status {
+    public static class Status {
 
         public enum NodeState {
             STARTING, NORMAL, JOINING, LEAVING, DECOMMISSIONED, MOVING, DRAINING, DRAINED
