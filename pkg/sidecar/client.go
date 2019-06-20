@@ -6,6 +6,7 @@ import (
 	"github.com/go-resty/resty"
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -14,10 +15,13 @@ import (
 //go:generate jsonenums -type=Kind
 
 const (
-	accept             = "Accept"
-	applicationJson    = "application/json"
 	EndpointOperations = "operations"
 	EndpointStatus     = "status"
+)
+
+var (
+	accept          = http.CanonicalHeaderKey("Accept")
+	applicationJson = "application/json; charset=utf-8"
 )
 
 var DefaultSidecarClientOptions = ClientOptions{Port: 4567, Secure: false}
@@ -82,13 +86,14 @@ func NewSidecarClient(host string, options *ClientOptions) *Client {
 	return client
 }
 
-func SidecarClients(pods []corev1.Pod, clientOptions ClientOptions) map[*corev1.Pod]*Client {
+func SidecarClients(pods []corev1.Pod, clientOptions *ClientOptions) map[*corev1.Pod]*Client {
 
 	podClients := make(map[*corev1.Pod]*Client)
 
-	for _, pod := range pods {
-		key := pod
-		podClients[&key] = NewSidecarClient(pod.Status.PodIP, &clientOptions)
+	for i, pod := range pods {
+		if pod.Status.Phase == corev1.PodRunning {
+			podClients[&pods[i]] = NewSidecarClient(pod.Status.PodIP, clientOptions)
+		}
 	}
 
 	return podClients
@@ -119,6 +124,28 @@ func (e *HttpResponse) Error() string {
 	return fmt.Sprintf("Operation was errorneous: %s", e.err)
 }
 
+/// NodeStates
+
+type NodeState string
+
+const (
+	STARTING       = NodeState("STARTING")
+	NORMAL         = NodeState("NORMAL")
+	JOINING        = NodeState("JOINING")
+	LEAVING        = NodeState("LEAVING")
+	DECOMMISSIONED = NodeState("DECOMMISSIONED")
+	MOVING         = NodeState("MOVING")
+	DRAINING       = NodeState("DRAINING")
+	DRAINED        = NodeState("DRAINED")
+	ERROR          = NodeState("ERROR")
+)
+
+type Status struct {
+	NodeState NodeState `json:"nodeState"`
+}
+
+/// OPERATIONS
+
 type Kind int
 
 const (
@@ -128,56 +155,9 @@ const (
 	backup
 )
 
-type httpVerb int
-
-const (
-	GET httpVerb = iota
-	POST
-)
-
 type Operation struct {
 	Type Kind `json:"type"`
-	//Id   string `json:"id"`
 }
-
-/// RESPONSES
-
-type Status struct {
-	NodeState NodeState `json:"nodeState"`
-}
-
-type DecommissionOperationResponse struct {
-	Operation
-}
-
-type CleanupOperationResponse struct {
-	BasicResponse
-	Keyspace string   `json:"keyspace"`
-	Tables   []string `json:"tables"`
-}
-
-type BackupResponse struct {
-	BasicResponse
-	DestinationURI string   `json:"destinationUri"`
-	SnapshotName   string   `json:"snapshotName"`
-	Keyspaces      []string `json:"keyspaces"`
-}
-
-func (b *BackupResponse) String() string {
-	op, _ := json.Marshal(b)
-	return string(op)
-}
-
-func (c *CleanupOperationResponse) String() string {
-	op, _ := json.Marshal(c)
-	return string(op)
-}
-
-type UpgradeSSTablesResponse struct {
-	Operation
-}
-
-/// OPERATIONS
 
 type DecommissionOperation struct {
 	Operation
@@ -212,20 +192,6 @@ type BasicResponse struct {
 	CompletionTime time.Time `json:"completionTime"`
 }
 
-type NodeState string
-
-const (
-	STARTING       = NodeState("STARTING")
-	NORMAL         = NodeState("NORMAL")
-	JOINING        = NodeState("JOINING")
-	LEAVING        = NodeState("LEAVING")
-	DECOMMISSIONED = NodeState("DECOMMISSIONED")
-	MOVING         = NodeState("MOVING")
-	DRAINING       = NodeState("DRAINING")
-	DRAINED        = NodeState("DRAINED")
-	ERROR          = NodeState("ERROR")
-)
-
 type OperationState string
 
 const (
@@ -235,9 +201,43 @@ const (
 	FAILED    = OperationState("FAILED")
 )
 
+/// RESPONSES
+
+type DecommissionOperationResponse struct {
+	BasicResponse
+}
+
+type CleanupOperationResponse struct {
+	BasicResponse
+	Keyspace string   `json:"keyspace"`
+	Tables   []string `json:"tables"`
+}
+
+type BackupResponse struct {
+	BasicResponse
+	BackupType     string   `json:backupType`
+	DestinationURI string   `json:"destinationUri"`
+	SnapshotName   string   `json:"snapshotName"`
+	Keyspaces      []string `json:"keyspaces"`
+}
+
+func (b *BackupResponse) String() string {
+	op, _ := json.Marshal(b)
+	return string(op)
+}
+
+func (c *CleanupOperationResponse) String() string {
+	op, _ := json.Marshal(c)
+	return string(op)
+}
+
+type UpgradeSSTablesResponse struct {
+	Operation
+}
+
 func (client *Client) Status() (*Status, error) {
 
-	if r, err := client.performRequest(EndpointStatus, GET, nil); responseInvalid(r, err) {
+	if r, err := client.performRequest(EndpointStatus, http.MethodGet, nil); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		body, err := readBody(r)
@@ -261,7 +261,7 @@ func (client *Client) Decommission() (*uuid.UUID, error) {
 
 	// request := &DecommissionOperation{Operation{Type: decommission}}
 
-	if r, err := client.performRequest(EndpointOperations, POST, nil); responseInvalid(r, err) {
+	if r, err := client.performRequest(EndpointOperations, http.MethodPost, nil); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		operationId, err := parseOperationId(r)
@@ -276,7 +276,7 @@ func (client *Client) Cleanup(request *CleanupOperation) (*uuid.UUID, error) {
 
 	request.Type = cleanup
 
-	if r, err := client.performRequest(EndpointOperations, POST, request); responseInvalid(r, err) {
+	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		operationId, err := parseOperationId(r)
@@ -291,7 +291,7 @@ func (client *Client) Backup(request *BackupOperation) (*uuid.UUID, error) {
 
 	request.Type = backup
 
-	if r, err := client.performRequest(EndpointOperations, POST, request); responseInvalid(r, err) {
+	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		operationId, err := parseOperationId(r)
@@ -309,7 +309,7 @@ func (client *Client) GetOperation(id uuid.UUID) (*OperationResponse, error) {
 	}
 	endpoint := EndpointOperations + "/" + id.String()
 
-	if r, err := client.performRequest(endpoint, GET, nil); responseInvalid(r, err) {
+	if r, err := client.performRequest(endpoint, http.MethodGet, nil); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		body, err := readBody(r)
@@ -327,7 +327,7 @@ func (client *Client) GetOperation(id uuid.UUID) (*OperationResponse, error) {
 }
 
 func (client *Client) GetOperations() (*[]OperationResponse, error) {
-	if r, err := client.performRequest(EndpointOperations, GET, nil); responseInvalid(r, err) {
+	if r, err := client.performRequest(EndpointOperations, http.MethodGet, nil); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		body, err := readBody(r)
@@ -367,6 +367,9 @@ func (client *Client) ListBackups() ([]*BackupResponse, error) {
 
 	ops, _ := client.GetOperations()
 
+	if ops == nil {
+		return []*BackupResponse{}, nil
+	}
 	operations, err := FilterOperations(*ops, backup)
 
 	if err != nil {
@@ -386,7 +389,7 @@ func (client *Client) UpgradeSSTables(request *UpgradeSSTablesOperation) (*uuid.
 
 	request.Type = upgradesstables
 
-	if r, err := client.performRequest(EndpointOperations, POST, request); responseInvalid(r, err) {
+	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		operationId, err := parseOperationId(r)
@@ -397,17 +400,17 @@ func (client *Client) UpgradeSSTables(request *UpgradeSSTablesOperation) (*uuid.
 	}
 }
 
-func FilterOperations(ops Operations, _type Kind) ([]interface{}, error) {
+func FilterOperations(ops Operations, kind Kind) ([]interface{}, error) {
 
 	var result = make([]interface{}, 0)
 
 	for _, item := range ops {
 
-		if item["type"].(string) == _KindValueToName[_type] {
+		if item["type"].(string) == _KindValueToName[kind] {
 
 			var op interface{}
 
-			switch _type {
+			switch kind {
 			case cleanup:
 				op = &CleanupOperationResponse{}
 			case upgradesstables:
@@ -437,7 +440,7 @@ func responseInvalid(r interface{}, err error) bool {
 	return r == nil || err != nil
 }
 
-func (client *Client) performRequest(endpoint string, verb httpVerb, requestBody interface{}) (response *resty.Response, err error) {
+func (client *Client) performRequest(endpoint string, verb string, requestBody interface{}) (response *resty.Response, err error) {
 
 	if client.testMode {
 		return client.testResponse, nil
@@ -445,9 +448,9 @@ func (client *Client) performRequest(endpoint string, verb httpVerb, requestBody
 
 	request := client.restyClient.R().SetHeader(accept, applicationJson)
 
-	if verb == POST {
+	if verb == http.MethodPost {
 		response, err = request.SetBody(requestBody).Post(endpoint)
-	} else if verb == GET {
+	} else if verb == http.MethodGet {
 		response, err = request.Get(endpoint)
 	}
 

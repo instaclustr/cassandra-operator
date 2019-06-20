@@ -1,4 +1,4 @@
-package controller
+package cassandradatacenter
 
 import (
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"

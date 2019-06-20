@@ -1,4 +1,4 @@
-package controller
+package cassandradatacenter
 
 import (
 	"context"
@@ -16,7 +16,7 @@ var log = logf.Log.WithName("CassandraDataCenterReconciler")
 // CassandraDataCenterReconciler reconciles a CassandraDataCenter object
 type CassandraDataCenterReconciler struct {
 	// This client is a split client that reads objects from the cache and writes to the apiserver
-	client client.Client // TODO: pointer?
+	client client.Client
 	scheme *runtime.Scheme
 }
 

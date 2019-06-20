@@ -1,7 +1,12 @@
 package cassandrabackup
 
 import (
+	"context"
 	"fmt"
+	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
+	"github.com/instaclustr/cassandra-operator/pkg/controller/cassandradatacenter"
+	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -32,14 +37,56 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	reqLogger.Info("Reconciling CassandraBackup")
 
 	// backup and shit
-	// ...
 
-	//client := sidecar.NewSidecarClient()
-	//client := sidecar.Client{}
-	//arguments := &sidecar.BackupArguments{}
-	//client.CreateBackup(*arguments)
+	// Get request params
+	b := &cassandraoperatorv1alpha1.CassandraBackup{}
+	if err := r.client.Get(context.TODO(), request.NamespacedName, b); err != nil {
+		if errors.IsNotFound(err) {
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, err
+	}
 
-	fmt.Println(r.client)
+	// Get Pod Clients.
+	// TODO: This is a copy of the code from statefulset.existingPods, consider turning into lib/helper code
+	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
+	if err := r.client.Get(context.TODO(), request.NamespacedName, cdc); err != nil {
+		if errors.IsNotFound(err) {
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, err
+	}
+
+
+	pods, err := cassandradatacenter.ExistingPods(r.client, cdc)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("unable to list pods")
+	}
+
+	// Use the following for testing:
+	// pods := []v1.Pod{v1.Pod{Status:v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
+	sidecarClients := sidecar.SidecarClients(pods, &sidecar.DefaultSidecarClientOptions)
+
+
+    // Run backups
+	for _, sidecarClient := range sidecarClients {
+
+		// TODO: run this on goroutine so that all 3 are handled in parallel
+		backupRequest := &sidecar.BackupOperation{
+			DestinationUri: b.Spec.DestinationUri,
+			SnapshotName: b.Spec.SnapshotName,
+			Keyspaces: b.Spec.Keyspaces,
+		}
+
+		operationID, err := sidecarClient.Backup(backupRequest)
+		if err != nil {
+			// log error
+		}
+
+		fmt.Printf("Operation id: %v\n", operationID)
+	}
+
+	fmt.Printf("Spec: %v\n", b.Spec)
 
 	return reconcile.Result{}, nil
 }

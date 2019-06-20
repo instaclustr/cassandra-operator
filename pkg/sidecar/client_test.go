@@ -161,6 +161,9 @@ func TestClient_BackupNode(t *testing.T) {
 
 	client := NewSidecarClient(getHost(), &DefaultSidecarClientOptions)
 
+	backups, _ := client.ListBackups()
+	fmt.Println(backups[0])
+
 	request := &BackupOperation{
 		DestinationUri: "/tmp/backup_test",
 		Keyspaces:      []string{"test_keyspace"},

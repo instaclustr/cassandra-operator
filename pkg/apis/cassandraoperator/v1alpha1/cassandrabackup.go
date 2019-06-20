@@ -7,12 +7,13 @@ import (
 // CassandraBackupSpec defines the desired state of CassandraBackup
 // +k8s:openapi-gen=true
 type CassandraBackupSpec struct {
-	// Selector label matches the pods to backup
-	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 	// The backup mechanism type e.g. S3, FILE
-	Type string `json:"type"`
+	BackupType string `json:"backupType"`
 	// The uri for the backup target location e.g. s3 bucket, filepath
-	Target string `json:"target"`
+	DestinationUri string `json:"destinationUri"`
+	// The list of keyspaces to back up
+	Keyspaces []string `json:"keyspaces"`
+	SnapshotName string `json:"snapshotName"`
 }
 
 // CassandraBackupStatus defines the observed state of CassandraBackup

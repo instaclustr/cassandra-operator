@@ -72,9 +72,9 @@ func checkAllNodesInNormalMode(t *testing.T, f *framework.Framework, namespace s
 
 	pollingErr := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
 		for _, client := range clients {
-			if status, err := client.GetStatus(); err != nil {
+			if status, err := client.Status(); err != nil {
 				return false, err
-			} else if status.OperationMode != sidecar.NORMAL {
+			} else if status.NodeState != sidecar.NORMAL {
 				return false, nil
 			}
 		}
@@ -134,7 +134,7 @@ func podsSidecars(f *framework.Framework, namespace string) (map[*v1.Pod]*sideca
 		return nil, err
 	}
 
-	return sidecar.SidecarClients(pods.Items, sidecar.DefaultSidecarClientOptions), nil
+	return sidecar.SidecarClients(pods.Items, &sidecar.DefaultSidecarClientOptions), nil
 }
 
 func defaultNewCassandraDataCenterList() *operator.CassandraDataCenterList {

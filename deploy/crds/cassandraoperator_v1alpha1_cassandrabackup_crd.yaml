@@ -27,19 +27,25 @@ spec:
           type: object
         spec:
           properties:
-            selector:
-              description: Selector label matches the pods to backup
-              type: object
-            target:
+            destinationUri:
               description: The uri for the backup target location e.g. s3 bucket,
                 filepath
+              type: string
+            keyspaces:
+              description: The list of keyspaces to back up
+              items:
+                type: string
+              type: array
+            snapshotName:
               type: string
             type:
               description: The backup mechanism type e.g. S3, FILE
               type: string
           required:
           - type
-          - target
+          - destinationUri
+          - keyspaces
+          - snapshotName
           type: object
         status:
           properties:

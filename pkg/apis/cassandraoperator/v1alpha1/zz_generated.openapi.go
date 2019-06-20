@@ -74,12 +74,6 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackupSpec defines the desired state of CassandraBackup",
 				Properties: map[string]spec.Schema{
-					"selector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Selector label matches the pods to backup",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
-						},
-					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The backup mechanism type e.g. S3, FILE",
@@ -87,19 +81,38 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 							Format:      "",
 						},
 					},
-					"target": {
+					"destinationUri": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The uri for the backup target location e.g. s3 bucket, filepath",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
+					"keyspaces": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The list of keyspaces to back up",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"snapshotName": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 				},
-				Required: []string{"type", "target"},
+				Required: []string{"type", "destinationUri", "keyspaces", "snapshotName"},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+		Dependencies: []string{},
 	}
 }
 
