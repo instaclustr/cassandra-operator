@@ -57,11 +57,11 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 
 		if statefulSet.CreationTimestamp.IsZero() {
 			// creating a new StatefulSet -- just set the Spec and we're done
-			statefulSet.Spec = statefulSetSpec
+			statefulSet.Spec = *statefulSetSpec
 			return nil
 		}
 
-		return scaleStatefulSet(rctx, statefulSet, &statefulSetSpec)
+		return scaleStatefulSet(rctx, statefulSet, statefulSetSpec)
 	})
 
 	if err != nil {
@@ -73,10 +73,10 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 	return statefulSet, err
 }
 
-func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podSpec *corev1.PodSpec, dataVolumeClaim *corev1.PersistentVolumeClaim) v1beta2.StatefulSetSpec {
+func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podSpec *corev1.PodSpec, dataVolumeClaim *corev1.PersistentVolumeClaim) *v1beta2.StatefulSetSpec {
 	podLabels := DataCenterLabels(cdc)
 
-	return v1beta2.StatefulSetSpec{
+	return &v1beta2.StatefulSetSpec{
 		ServiceName: "cassandra", // TODO: correct service name? this service should already exist (apparently)
 		Replicas:    &cdc.Spec.Nodes,
 		Selector:    &metav1.LabelSelector{MatchLabels: podLabels},
@@ -379,21 +379,6 @@ func podsInIncorrectCassandraState(desiredReplicas int32, existingReplicas int32
 	}
 
 	return podsByIncorrectCassandraMode
-}
-
-func setControllerReference(
-	statefulSet *v1beta2.StatefulSet,
-	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
-	newStatefulSetSpec *v1beta2.StatefulSetSpec,
-	reconciler *CassandraDataCenterReconciler,
-) error {
-
-	statefulSet.Spec = *newStatefulSetSpec
-	if err := controllerutil.SetControllerReference(cdc, statefulSet, reconciler.scheme); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func podsToString(pods []*corev1.Pod) []string {

@@ -15,13 +15,10 @@ import (
 //go:generate jsonenums -type=Kind
 
 const (
+	accept             = "Accept"
+	applicationJson    = "application/json; charset=utf-8"
 	EndpointOperations = "operations"
 	EndpointStatus     = "status"
-)
-
-var (
-	accept          = http.CanonicalHeaderKey("Accept")
-	applicationJson = "application/json; charset=utf-8"
 )
 
 var DefaultSidecarClientOptions = ClientOptions{Port: 4567, Secure: false}
@@ -91,9 +88,7 @@ func SidecarClients(pods []corev1.Pod, clientOptions *ClientOptions) map[*corev1
 	podClients := make(map[*corev1.Pod]*Client)
 
 	for i, pod := range pods {
-		if pod.Status.Phase == corev1.PodRunning {
-			podClients[&pods[i]] = NewSidecarClient(pod.Status.PodIP, clientOptions)
-		}
+		podClients[&pods[i]] = NewSidecarClient(pod.Status.PodIP, clientOptions)
 	}
 
 	return podClients
@@ -171,6 +166,7 @@ type CleanupOperation struct {
 
 type BackupOperation struct {
 	Operation
+	BackupType     string   `json:backupType`
 	DestinationUri string   `json:"destinationUri"`
 	Keyspaces      []string `json:"keyspaces"`
 	SnapshotName   string   `json:"snapshotName"`
@@ -183,7 +179,6 @@ type UpgradeSSTablesOperation struct {
 type Operations []OperationResponse
 type OperationResponse map[string]interface{}
 type BasicResponse struct {
-	Type           Kind      `json:"type"`
 	Id             uuid.UUID `json:"id"`
 	CreationTime   time.Time `json:"creationTime"`
 	State          string    `json:"state"`
@@ -209,16 +204,12 @@ type DecommissionOperationResponse struct {
 
 type CleanupOperationResponse struct {
 	BasicResponse
-	Keyspace string   `json:"keyspace"`
-	Tables   []string `json:"tables"`
+	CleanupOperation
 }
 
 type BackupResponse struct {
 	BasicResponse
-	BackupType     string   `json:backupType`
-	DestinationURI string   `json:"destinationUri"`
-	SnapshotName   string   `json:"snapshotName"`
-	Keyspaces      []string `json:"keyspaces"`
+	BackupOperation
 }
 
 func (b *BackupResponse) String() string {
@@ -346,16 +337,17 @@ func (client *Client) GetOperations() (*[]OperationResponse, error) {
 
 func (client *Client) ListCleanups() ([]*CleanupOperationResponse, error) {
 
-	ops, _ := client.GetOperations()
+	ops, err := client.GetOperations()
+	if ops == nil || err != nil {
+		return []*CleanupOperationResponse{}, err
+	}
 
 	operations, err := FilterOperations(*ops, cleanup)
-
 	if err != nil {
-
+		//??
 	}
 
 	var cleanups []*CleanupOperationResponse
-
 	for _, op := range operations {
 		cleanups = append(cleanups, op.(*CleanupOperationResponse))
 	}
@@ -365,19 +357,17 @@ func (client *Client) ListCleanups() ([]*CleanupOperationResponse, error) {
 
 func (client *Client) ListBackups() ([]*BackupResponse, error) {
 
-	ops, _ := client.GetOperations()
-
-	if ops == nil {
+	ops, err := client.GetOperations()
+	if ops == nil || err != nil {
 		return []*BackupResponse{}, nil
 	}
+
 	operations, err := FilterOperations(*ops, backup)
-
 	if err != nil {
-
+		// ?
 	}
 
 	var backups []*BackupResponse
-
 	for _, op := range operations {
 		backups = append(backups, op.(*BackupResponse))
 	}
@@ -475,8 +465,7 @@ func parseOperationId(response *resty.Response) (uuid.UUID, error) {
 }
 
 func readBody(response *resty.Response) (*[]byte, error) {
-
-	var rawBody = response.Body()
+	rawBody := response.Body()
 	return &rawBody, nil
 }
 

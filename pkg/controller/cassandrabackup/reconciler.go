@@ -73,6 +73,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 
 		// TODO: run this on goroutine so that all 3 are handled in parallel
 		backupRequest := &sidecar.BackupOperation{
+			BackupType: b.Spec.BackupType,
 			DestinationUri: b.Spec.DestinationUri,
 			SnapshotName: b.Spec.SnapshotName,
 			Keyspaces: b.Spec.Keyspaces,

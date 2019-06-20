@@ -145,7 +145,7 @@ func TestClient_DecommissionNode(t *testing.T) {
 	} else if getOpResponse, err := client.GetOperation(*operationId); err != nil {
 		t.Errorf(err.Error())
 	} else {
-		assert.Assert(t, (*getOpResponse)["state"] == "RUNNING")
+		assert.Assert(t, (*getOpResponse)["state"] == RUNNING)
 	}
 
 	// second decommissioning on the same node
