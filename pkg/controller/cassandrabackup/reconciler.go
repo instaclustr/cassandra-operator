@@ -57,7 +57,6 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-
 	pods, err := cassandradatacenter.ExistingPods(r.client, cdc)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to list pods")
@@ -67,16 +66,15 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	// pods := []v1.Pod{v1.Pod{Status:v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
 	sidecarClients := sidecar.SidecarClients(pods, &sidecar.DefaultSidecarClientOptions)
 
-
-    // Run backups
+	// Run backups
 	for _, sidecarClient := range sidecarClients {
 
 		// TODO: run this on goroutine so that all 3 are handled in parallel
 		backupRequest := &sidecar.BackupOperation{
-			BackupType: b.Spec.BackupType,
+			BackupType:     b.Spec.BackupType,
 			DestinationUri: b.Spec.DestinationUri,
-			SnapshotName: b.Spec.SnapshotName,
-			Keyspaces: b.Spec.Keyspaces,
+			SnapshotName:   b.Spec.SnapshotName,
+			Keyspaces:      b.Spec.Keyspaces,
 		}
 
 		operationID, err := sidecarClient.Backup(backupRequest)

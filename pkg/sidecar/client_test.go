@@ -189,7 +189,7 @@ func TestClient_CleanupNode(t *testing.T) {
 	fmt.Print(cleanups[0])
 
 	request := &CleanupOperation{
-		Keyspace:      "test",
+		Keyspace: "test",
 		Tables:   []string{"mytable", "mytable2"},
 	}
 

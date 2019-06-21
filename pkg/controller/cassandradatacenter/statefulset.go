@@ -228,7 +228,7 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 	}
 
 	// Check the current replicas/pod/cassandra state
-	if valid, err := checkState(existingSpecReplicas, currentReplicas, desiredSpecReplicas, allPods, statuses); !valid{
+	if valid, err := checkState(existingSpecReplicas, currentReplicas, desiredSpecReplicas, allPods, statuses); !valid {
 		return err
 	}
 

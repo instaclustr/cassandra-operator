@@ -12,8 +12,8 @@ type CassandraBackupSpec struct {
 	// The uri for the backup target location e.g. s3 bucket, filepath
 	DestinationUri string `json:"destinationUri"`
 	// The list of keyspaces to back up
-	Keyspaces []string `json:"keyspaces"`
-	SnapshotName string `json:"snapshotName"`
+	Keyspaces    []string `json:"keyspaces"`
+	SnapshotName string   `json:"snapshotName"`
 }
 
 // CassandraBackupStatus defines the observed state of CassandraBackup
