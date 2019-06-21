@@ -250,9 +250,9 @@ func (client *Client) Decommission() (*uuid.UUID, error) {
 	// TODO: atm decommission operation doesn't need params, so will send an empty request.
 	// This may change in the future.
 
-	// request := &DecommissionOperation{Operation{Type: decommission}}
+	request := &DecommissionOperation{Operation{Type: decommission}}
 
-	if r, err := client.performRequest(EndpointOperations, http.MethodPost, nil); responseInvalid(r, err) {
+	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		operationId, err := parseOperationId(r)
