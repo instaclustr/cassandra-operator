@@ -1,5 +1,7 @@
 package com.instaclustr.sidecar.cassandra.cassandra;
 
+import com.instaclustr.jmx.ObjectNames;
+
 import javax.management.ObjectName;
 
 public final class CassandraObjectNames {

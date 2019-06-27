@@ -1,4 +1,4 @@
-package com.instaclustr.sidecar.cassandra.cassandra;
+package com.instaclustr.jmx;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
