@@ -1,4 +1,4 @@
-package com.instaclustr.operations;
+package com.instaclustr.cassandra.sidecar.operations;
 
 import javax.inject.Inject;
 import java.util.Collections;

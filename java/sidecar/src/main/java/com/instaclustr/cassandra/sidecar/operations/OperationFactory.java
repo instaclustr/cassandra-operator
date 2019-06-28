@@ -1,4 +1,4 @@
-package com.instaclustr.operations;
+package com.instaclustr.cassandra.sidecar.operations;
 
 @FunctionalInterface
 public interface OperationFactory<RequestT extends OperationRequest> {

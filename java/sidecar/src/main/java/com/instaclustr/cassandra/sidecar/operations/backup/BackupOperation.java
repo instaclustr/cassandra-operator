@@ -3,7 +3,7 @@ package com.instaclustr.cassandra.sidecar.operations.backup;
 import javax.inject.Inject;
 
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.operations.Operation;
+import com.instaclustr.cassandra.sidecar.operations.Operation;
 
 @SuppressWarnings("WeakerAccess")
 public class BackupOperation extends Operation<BackupOperationRequest> {
