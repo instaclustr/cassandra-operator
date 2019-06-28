@@ -4,7 +4,7 @@ import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.instaclustr.operations.OperationRequest;
+import com.instaclustr.cassandra.sidecar.operations.OperationRequest;
 
 public class CleanupOperationRequest extends OperationRequest {
     public final String keyspace;

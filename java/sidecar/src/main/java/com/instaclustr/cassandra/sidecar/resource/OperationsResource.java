@@ -15,9 +15,9 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.UUID;
 
-import com.instaclustr.operations.Operation;
-import com.instaclustr.operations.OperationRequest;
-import com.instaclustr.operations.OperationsService;
+import com.instaclustr.cassandra.sidecar.operations.Operation;
+import com.instaclustr.cassandra.sidecar.operations.OperationRequest;
+import com.instaclustr.cassandra.sidecar.operations.OperationsService;
 
 @Path("/operations")
 @Produces(MediaType.APPLICATION_JSON)

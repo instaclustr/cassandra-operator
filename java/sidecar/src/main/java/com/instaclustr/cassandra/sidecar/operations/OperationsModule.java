@@ -1,7 +1,7 @@
-package com.instaclustr.operations;
+package com.instaclustr.cassandra.sidecar.operations;
 
 import com.google.inject.AbstractModule;
-import com.instaclustr.guice.ServiceBindings;
+import com.instaclustr.guava.ServiceBindings;
 
 public class OperationsModule extends AbstractModule {
 

@@ -1,7 +1,7 @@
 package com.instaclustr.cassandra.sidecar.operations.cleanup;
 
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.operations.Operation;
+import com.instaclustr.cassandra.sidecar.operations.Operation;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 
 import javax.inject.Inject;

@@ -1,4 +1,4 @@
-package com.instaclustr.operations;
+package com.instaclustr.cassandra.sidecar.operations;
 
 import javax.inject.Inject;
 import java.time.Instant;
@@ -26,7 +26,7 @@ public abstract class Operation<RequestT extends OperationRequest> implements Ru
         }
     }
 
-    enum State {
+    public enum State {
         PENDING, RUNNING, COMPLETED, FAILED
     }
 

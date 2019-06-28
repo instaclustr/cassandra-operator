@@ -1,4 +1,4 @@
-package com.instaclustr.operations;
+package com.instaclustr.cassandra.sidecar.operations;
 
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;

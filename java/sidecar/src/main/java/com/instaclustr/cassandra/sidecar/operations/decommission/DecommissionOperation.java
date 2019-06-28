@@ -3,7 +3,7 @@ package com.instaclustr.cassandra.sidecar.operations.decommission;
 import javax.inject.Inject;
 
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.operations.Operation;
+import com.instaclustr.cassandra.sidecar.operations.Operation;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 
 public class DecommissionOperation extends Operation<DecommissionOperationRequest> {
