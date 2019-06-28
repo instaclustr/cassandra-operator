@@ -56,7 +56,7 @@
                     </filters>
                     <transformers>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                            <mainClass>com.instaclustr.sidecar.cassandra.Sidecar</mainClass>
+                            <mainClass>com.instaclustr.cassandra.sidecar.Sidecar</mainClass>
                         </transformer>
 
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
