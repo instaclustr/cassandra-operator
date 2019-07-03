@@ -6,6 +6,7 @@ import (
 	"fmt"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
+	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
 	"k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -307,9 +308,9 @@ func allPodsAreRunning(pods []corev1.Pod) (bool, []string) {
 	return true, notRunningPodNames
 }
 
-func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]sidecar.NodeState {
+func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]nodestate.NodeState {
 
-	podByOperationMode := make(map[*corev1.Pod]sidecar.NodeState)
+	podByOperationMode := make(map[*corev1.Pod]nodestate.NodeState)
 
 	var wg sync.WaitGroup
 
@@ -318,7 +319,7 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 	for pod, c := range podClients {
 		go func(pod *corev1.Pod, client *sidecar.Client) {
 			if response, err := client.Status(); err != nil {
-				podByOperationMode[pod] = sidecar.ERROR
+				podByOperationMode[pod] = nodestate.ERROR
 			} else {
 				podByOperationMode[pod] = response.NodeState
 			}
@@ -332,7 +333,7 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 	return podByOperationMode
 }
 
-func nodesInState(statuses map[*corev1.Pod]sidecar.NodeState, state sidecar.NodeState) []*corev1.Pod {
+func nodesInState(statuses map[*corev1.Pod]nodestate.NodeState, state nodestate.NodeState) []*corev1.Pod {
 
 	var podsInState []*corev1.Pod
 
@@ -345,21 +346,21 @@ func nodesInState(statuses map[*corev1.Pod]sidecar.NodeState, state sidecar.Node
 	return podsInState
 }
 
-func decommissionedCassandras(statuses map[*corev1.Pod]sidecar.NodeState) []*corev1.Pod {
-	return nodesInState(statuses, sidecar.DECOMMISSIONED)
+func decommissionedCassandras(statuses map[*corev1.Pod]nodestate.NodeState) []*corev1.Pod {
+	return nodesInState(statuses, nodestate.DECOMMISSIONED)
 }
 
-func badPods(desiredReplicas int32, existingReplicas int32, statuses map[*corev1.Pod]sidecar.NodeState) map[string]sidecar.NodeState {
+func badPods(desiredReplicas int32, existingReplicas int32, statuses map[*corev1.Pod]nodestate.NodeState) map[string]nodestate.NodeState {
 
-	scaleUpOperationModes := []sidecar.NodeState{sidecar.NORMAL}
-	scaleDownOperationModes := []sidecar.NodeState{sidecar.NORMAL, sidecar.DECOMMISSIONED}
+	scaleUpOperationModes := []nodestate.NodeState{nodestate.NORMAL}
+	scaleDownOperationModes := []nodestate.NodeState{nodestate.NORMAL, nodestate.DECOMMISSIONED}
 
 	opModes := scaleUpOperationModes
 	if desiredReplicas < existingReplicas {
 		opModes = scaleDownOperationModes
 	}
 
-	podsInBadState := make(map[string]sidecar.NodeState)
+	podsInBadState := make(map[string]nodestate.NodeState)
 	for pod, status := range statuses {
 		if !contains(opModes, status) {
 			podsInBadState[pod.Name] = status
@@ -372,7 +373,7 @@ func badPods(desiredReplicas int32, existingReplicas int32, statuses map[*corev1
 func checkState(
 	existingSpecReplicas, currentReplicas, desiredSpecReplicas int32,
 	allPods []corev1.Pod,
-	statuses map[*corev1.Pod]sidecar.NodeState) (valid bool, err error) {
+	statuses map[*corev1.Pod]nodestate.NodeState) (valid bool, err error) {
 
 	// check if current running # of pods match the current spec
 	if currentReplicas != existingSpecReplicas {
@@ -413,7 +414,7 @@ func podsToString(pods []*corev1.Pod) []string {
 }
 
 // go does not have this built-in
-func contains(a []sidecar.NodeState, x sidecar.NodeState) bool {
+func contains(a []nodestate.NodeState, x nodestate.NodeState) bool {
 	for _, n := range a {
 		if x == n {
 			return true

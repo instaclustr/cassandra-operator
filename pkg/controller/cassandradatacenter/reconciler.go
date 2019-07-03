@@ -11,7 +11,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-var log = logf.Log.WithName("CassandraDataCenterReconciler")
+const (
+	controllerName = "CassandraDataCenterController"
+)
+
+var log = logf.Log.WithName(controllerName)
 
 // CassandraDataCenterReconciler reconciles a CassandraDataCenter object
 type CassandraDataCenterReconciler struct {
@@ -23,7 +27,7 @@ type CassandraDataCenterReconciler struct {
 type reconciliationRequestContext struct {
 	CassandraDataCenterReconciler
 	cdc    *cassandraoperatorv1alpha1.CassandraDataCenter
-	logger logr.Logger // TODO: pointer?
+	logger logr.Logger
 }
 
 // Reconcile reads that state of the cluster for a CassandraDataCenter object and makes changes based on the state read

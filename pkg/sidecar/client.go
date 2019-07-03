@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/go-resty/resty"
 	"github.com/google/uuid"
+	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
+	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"strconv"
@@ -119,26 +121,6 @@ func (e *HttpResponse) Error() string {
 	return fmt.Sprintf("Operation was errorneous: %s", e.err)
 }
 
-/// NodeStates
-
-type NodeState string
-
-const (
-	STARTING       = NodeState("STARTING")
-	NORMAL         = NodeState("NORMAL")
-	JOINING        = NodeState("JOINING")
-	LEAVING        = NodeState("LEAVING")
-	DECOMMISSIONED = NodeState("DECOMMISSIONED")
-	MOVING         = NodeState("MOVING")
-	DRAINING       = NodeState("DRAINING")
-	DRAINED        = NodeState("DRAINED")
-	ERROR          = NodeState("ERROR")
-)
-
-type Status struct {
-	NodeState NodeState `json:"nodeState"`
-}
-
 /// OPERATIONS
 
 type Kind int
@@ -166,7 +148,6 @@ type CleanupOperation struct {
 
 type BackupOperation struct {
 	Operation
-	BackupType     string   `json:backupType`
 	DestinationUri string   `json:"destinationUri"`
 	Keyspaces      []string `json:"keyspaces"`
 	SnapshotName   string   `json:"snapshotName"`
@@ -179,22 +160,13 @@ type UpgradeSSTablesOperation struct {
 type Operations []OperationResponse
 type OperationResponse map[string]interface{}
 type BasicResponse struct {
-	Id             uuid.UUID `json:"id"`
-	CreationTime   time.Time `json:"creationTime"`
-	State          string    `json:"state"`
-	Progress       float32   `json:"progress"`
-	StartTime      time.Time `json:"startTime"`
-	CompletionTime time.Time `json:"completionTime"`
+	Id             uuid.UUID                 `json:"id"`
+	CreationTime   time.Time                 `json:"creationTime"`
+	State          operations.OperationState `json:"state"`
+	Progress       float32                   `json:"progress"`
+	StartTime      time.Time                 `json:"startTime"`
+	CompletionTime time.Time                 `json:"completionTime"`
 }
-
-type OperationState string
-
-const (
-	RUNNING   = OperationState("RUNNING")
-	PENDING   = OperationState("PENDING")
-	COMPLETED = OperationState("COMPLETED")
-	FAILED    = OperationState("FAILED")
-)
 
 /// RESPONSES
 
@@ -226,7 +198,7 @@ type UpgradeSSTablesResponse struct {
 	Operation
 }
 
-func (client *Client) Status() (*Status, error) {
+func (client *Client) Status() (*nodestate.Status, error) {
 
 	if r, err := client.performRequest(EndpointStatus, http.MethodGet, nil); responseInvalid(r, err) {
 		return nil, err
@@ -237,8 +209,8 @@ func (client *Client) Status() (*Status, error) {
 			return nil, err
 		}
 
-		if status, err := unmarshallBody(body, r, &Status{}); err == nil {
-			return status.(*Status), nil
+		if status, err := unmarshallBody(body, r, &nodestate.Status{}); err == nil {
+			return status.(*nodestate.Status), nil
 		} else {
 			return nil, err
 		}
@@ -414,9 +386,11 @@ func FilterOperations(ops Operations, kind Kind) ([]interface{}, error) {
 			}
 
 			if body, err := json.Marshal(item); err != nil {
-				return nil, err
+				// Log error
+				continue
 			} else if err := json.Unmarshal(body, op); err != nil {
-				return nil, err
+				// Log error
+				continue
 			} else {
 				result = append(result, op)
 			}

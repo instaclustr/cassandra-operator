@@ -74,13 +74,6 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackupSpec defines the desired state of CassandraBackup",
 				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The backup mechanism type e.g. S3, FILE",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 					"destinationUri": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The uri for the backup target location e.g. s3 bucket, filepath",
@@ -109,7 +102,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 						},
 					},
 				},
-				Required: []string{"type", "destinationUri", "keyspaces", "snapshotName"},
+				Required: []string{"destinationUri", "keyspaces", "snapshotName"},
 			},
 		},
 		Dependencies: []string{},
@@ -122,15 +115,22 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupStatus(ref common
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackupStatus defines the observed state of CassandraBackup",
 				Properties: map[string]spec.Schema{
-					"progress": {
+					"state": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Progress shows the status of the operation",
+							Description: "State shows the status of the operation",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
+					"progress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Progress shows the percentage of the operation done",
+							Type:        []string{"number"},
+							Format:      "float",
+						},
+					},
 				},
-				Required: []string{"progress"},
+				Required: []string{"state", "progress"},
 			},
 		},
 		Dependencies: []string{},

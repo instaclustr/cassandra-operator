@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-resty/resty"
 	"github.com/google/uuid"
+	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	"gotest.tools/assert"
 	"io/ioutil"
 	"net/http"
@@ -145,7 +146,7 @@ func TestClient_DecommissionNode(t *testing.T) {
 	} else if getOpResponse, err := client.GetOperation(*operationId); err != nil {
 		t.Errorf(err.Error())
 	} else {
-		assert.Assert(t, (*getOpResponse)["state"] == RUNNING)
+		assert.Assert(t, (*getOpResponse)["state"] == operations.RUNNING)
 	}
 
 	// second decommissioning on the same node

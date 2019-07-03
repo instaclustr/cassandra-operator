@@ -3,6 +3,15 @@ kind: CustomResourceDefinition
 metadata:
   name: cassandrabackups.cassandraoperator.instaclustr.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.state
+    description: Backup operation status
+    name: State
+    type: string
+  - JSONPath: .status.progress
+    description: Backup operation progress
+    name: Progress
+    type: number
   group: cassandraoperator.instaclustr.com
   names:
     kind: CassandraBackup
@@ -38,11 +47,7 @@ spec:
               type: array
             snapshotName:
               type: string
-            type:
-              description: The backup mechanism type e.g. S3, FILE
-              type: string
           required:
-          - type
           - destinationUri
           - keyspaces
           - snapshotName
@@ -50,9 +55,14 @@ spec:
         status:
           properties:
             progress:
-              description: Progress shows the status of the operation
+              description: Progress shows the percentage of the operation done
+              format: float
+              type: number
+            state:
+              description: State shows the status of the operation
               type: string
           required:
+          - state
           - progress
           type: object
   version: v1alpha1

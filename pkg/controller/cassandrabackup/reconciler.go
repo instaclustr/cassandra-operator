@@ -3,13 +3,22 @@ package cassandrabackup
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
+	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	"github.com/instaclustr/cassandra-operator/pkg/controller/cassandradatacenter"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"time"
+)
+
+const (
+	controllerName = "CassandraBackupController"
 )
 
 //"github.com/instaclustr/cassandra-operator/pkg/sidecar"
@@ -23,6 +32,7 @@ type ReconcileCassandraBackup struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	recorder record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a CassandraBackup object and makes changes based on the state read
@@ -63,7 +73,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	}
 
 	// Use the following for testing:
-	// pods := []v1.Pod{v1.Pod{Status:v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
+	//pods = []v1.Pod{{Status: v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
 	sidecarClients := sidecar.SidecarClients(pods, &sidecar.DefaultSidecarClientOptions)
 
 	// Run backups
@@ -71,21 +81,60 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 
 		// TODO: run this on goroutine so that all 3 are handled in parallel
 		backupRequest := &sidecar.BackupOperation{
-			BackupType:     b.Spec.BackupType,
 			DestinationUri: b.Spec.DestinationUri,
 			SnapshotName:   b.Spec.SnapshotName,
 			Keyspaces:      b.Spec.Keyspaces,
 		}
 
+		// Testing adding event to the object
+		r.recorder.Event(b, v1.EventTypeNormal, "All good", "Starting backup")
+
 		operationID, err := sidecarClient.Backup(backupRequest)
 		if err != nil {
+			fmt.Println(err)
+			continue
 			// log error
+		} else {
+			opState := operations.RUNNING
+
+			fmt.Println(b.Status.Progress)
+
+
+			go func() {
+				for opState != operations.COMPLETED {
+					fmt.Printf("Working on operation id: %v\n", operationID)
+					backup, err := getBackup(sidecarClient, *operationID)
+					if backup == nil || err != nil {
+						// log error?
+						fmt.Println(err)
+						continue
+					}
+					b.Status.Progress = backup.Progress
+					b.Status.State = string(backup.State)
+					_ = r.client.Update(context.TODO(), b)
+					opState = backup.State
+					<-time.After(time.Second)
+				}
+			}()
 		}
 
-		fmt.Printf("Operation id: %v\n", operationID)
 	}
 
 	fmt.Printf("Spec: %v\n", b.Spec)
 
 	return reconcile.Result{}, nil
+}
+
+func getBackup(client *sidecar.Client, id uuid.UUID) (backup *sidecar.BackupResponse, err error) {
+	if backups, err := client.ListBackups(); err != nil {
+		return nil, err
+	} else {
+		for _, backup := range backups {
+			if backup.Id == id {
+				return backup, nil
+			}
+		}
+	}
+
+    return
 }
