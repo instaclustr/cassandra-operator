@@ -171,11 +171,9 @@ func TestClient_BackupNode(t *testing.T) {
 		SnapshotName:   "testSnapshot",
 	}
 
-	if response, err := client.Backup(request); err != nil {
+	if operationID, err := client.Backup(request); err != nil {
 		t.Errorf(err.Error())
-	} else if response == nil {
-		t.Errorf("there is not any error from Backup endpoint but response is nil")
-	} else if getOpResponse, err := client.GetOperation(*response); err != nil {
+	} else if getOpResponse, err := client.GetOperation(operationID); err != nil {
 		t.Errorf(err.Error())
 	} else {
 		assert.Assert(t, (*getOpResponse)["state"] == "RUNNING")

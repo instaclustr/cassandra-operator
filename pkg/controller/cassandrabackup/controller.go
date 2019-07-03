@@ -4,8 +4,10 @@ import (
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -37,8 +39,21 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource CassandraBackup
-	err = c.Watch(&source.Kind{Type: &cassandraoperatorv1alpha1.CassandraBackup{}}, &handler.EnqueueRequestForObject{})
+	// TODO: do we want this
+	// Filter event types for BackupCRD
+	pred := predicate.Funcs{
+		// Always handle create events
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+		// Always ignore changes. Meaning that the backup CRD is inactionable after creation.
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return false
+		},
+	}
+
+	// Watch for creation of the primary resource CassandraBackup
+	err = c.Watch(&source.Kind{Type: &cassandraoperatorv1alpha1.CassandraBackup{}}, &handler.EnqueueRequestForObject{}, pred)
 	if err != nil {
 		return err
 	}

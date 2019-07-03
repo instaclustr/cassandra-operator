@@ -11,7 +11,7 @@ spec:
   - JSONPath: .status.progress
     description: Backup operation progress
     name: Progress
-    type: number
+    type: string
   group: cassandraoperator.instaclustr.com
   names:
     kind: CassandraBackup
@@ -36,6 +36,10 @@ spec:
           type: object
         spec:
           properties:
+            cdc:
+              description: Cassandra DC name to back up. Used to find the pods in
+                the CDC
+              type: string
             destinationUri:
               description: The uri for the backup target location e.g. s3 bucket,
                 filepath
@@ -49,6 +53,7 @@ spec:
               description: The snapshot name for the backup
               type: string
           required:
+          - cdc
           - destinationUri
           - keyspaces
           - snapshotName
@@ -58,8 +63,7 @@ spec:
             properties:
               progress:
                 description: Progress shows the percentage of the operation done
-                format: float
-                type: number
+                type: string
               state:
                 description: State shows the status of the operation
                 type: string

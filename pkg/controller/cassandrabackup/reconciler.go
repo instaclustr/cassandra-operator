@@ -11,9 +11,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"strconv"
 	"time"
 )
 
@@ -30,8 +32,8 @@ var _ reconcile.Reconciler = &ReconcileCassandraBackup{}
 type ReconcileCassandraBackup struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client   client.Client
+	scheme   *runtime.Scheme
 	recorder record.EventRecorder
 }
 
@@ -48,7 +50,6 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 
 	// Get request params
 	b := &cassandraoperatorv1alpha1.CassandraBackup{}
-	b.Status = make(map[string]*cassandraoperatorv1alpha1.CassandraBackupStatus)
 	if err := r.client.Get(context.TODO(), request.NamespacedName, b); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -56,10 +57,18 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
+	// b.Status is special because it's a map, so if not yet initialised, do it here.
+	if b.Status == nil {
+		b.Status = make(map[string]*cassandraoperatorv1alpha1.CassandraBackupStatus)
+	} else {
+		// TODO: if b.Status is not nil, does it mean the object is already in the works and there's no need to do anything?
+		// or maybe if it's not nil but there are no entries, maybe should keep going?
+	}
+
 	// Get Pod Clients.
 	// TODO: This is a copy of the code from statefulset.existingPods, consider turning into lib/helper code
 	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
-	if err := r.client.Get(context.TODO(), request.NamespacedName, cdc); err != nil {
+	if err := r.client.Get(context.TODO(), types.NamespacedName{Name: b.Spec.CDC, Namespace: b.Namespace}, cdc); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
@@ -72,7 +81,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	}
 
 	// Use the following for testing:
-	//pods = []v1.Pod{{Status: v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
+	pods = []v1.Pod{{Status: v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
 	sidecarClients := sidecar.SidecarClients(pods, &sidecar.DefaultSidecarClientOptions)
 
 	// Run backups
@@ -97,22 +106,28 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 			go func() {
 				opState := operations.RUNNING
 				for opState != operations.COMPLETED {
-					fmt.Printf("Working on operation id: %v\n", operationID)
-					backup, err := getBackup(sidecarClient, *operationID)
+					backup, err := getBackup(sidecarClient, operationID)
 					if backup == nil || err != nil {
 						// log error?
-						fmt.Println(err)
-						// TODO: for now we continue, but in production code here would probs be an error
-						continue
+						fmt.Println("Couldn't find backup")
+						return
 					}
 					b.Status[sidecarClient.Host] = &cassandraoperatorv1alpha1.CassandraBackupStatus{
-						Progress: backup.Progress,
-						State: string(backup.State),
+						Progress: fmt.Sprintf("%v%%", strconv.Itoa(int(backup.Progress*100))),
+						State:    string(backup.State),
 					}
-					//_ = r.client.Update(context.TODO(), b)
+					err = r.client.Update(context.TODO(), b)
+					if err != nil {
+						fmt.Println(err)
+					}
 					opState = backup.State
 					<-time.After(time.Second)
 				}
+
+				log.Info(fmt.Sprintf("Backup operation %v on node %v has finished", operationID, sidecarClient.Host))
+				r.recorder.Event(b, v1.EventTypeNormal, "Operation Finished", "Backup Completed")
+
+				return
 			}()
 		}
 
@@ -133,5 +148,5 @@ func getBackup(client *sidecar.Client, id uuid.UUID) (backup *sidecar.BackupResp
 			}
 		}
 	}
-    return
+	return
 }

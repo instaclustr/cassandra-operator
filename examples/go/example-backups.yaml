@@ -1,11 +1,11 @@
 apiVersion: cassandraoperator.instaclustr.com/v1alpha1
 kind: CassandraBackup
 metadata:
-  name: test-dc-cassandra
+  name: test-cassandra-backup
   labels:
     app: cassandra
 spec:
-  backupType: "S3"
-  destinationUri: "instaclustr_k8/tmp/2"
+  cdc: test-dc-cassandra
+  destinationUri: "s3://instaclustr_k8/tmp/2"
   snapshotName: "alex2"
   keyspaces: ["alex1", "alex2"]

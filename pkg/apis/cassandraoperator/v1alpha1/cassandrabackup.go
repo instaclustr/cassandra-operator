@@ -7,12 +7,14 @@ import (
 // CassandraBackupSpec defines the desired state of CassandraBackup
 // +k8s:openapi-gen=true
 type CassandraBackupSpec struct {
+	// Cassandra DC name to back up. Used to find the pods in the CDC
+	CDC string `json:"cdc"`
 	// The uri for the backup target location e.g. s3 bucket, filepath
 	DestinationUri string `json:"destinationUri"`
 	// The list of keyspaces to back up
-	Keyspaces    []string `json:"keyspaces"`
+	Keyspaces []string `json:"keyspaces"`
 	// The snapshot name for the backup
-	SnapshotName string   `json:"snapshotName"`
+	SnapshotName string `json:"snapshotName"`
 }
 
 // CassandraBackupStatus defines the observed state of CassandraBackup
@@ -21,7 +23,7 @@ type CassandraBackupStatus struct {
 	// State shows the status of the operation
 	State string `json:"state"`
 	// Progress shows the percentage of the operation done
-	Progress float32 `json:"progress"`
+	Progress string `json:"progress"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -29,13 +31,13 @@ type CassandraBackupStatus struct {
 // CassandraBackup is the Schema for the cassandrabackups API
 // +k8s:openapi-gen=true
 // +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="Backup operation state"
-// +kubebuilder:printcolumn:name="Progress",type="number",JSONPath=".status.progress",description="Backup operation progress"
+// +kubebuilder:printcolumn:name="Progress",type="string",JSONPath=".status.progress",description="Backup operation progress"
 // TODO: apply state/progress appropriately for every node, not the whole operation
 type CassandraBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CassandraBackupSpec   `json:"spec,omitempty"`
+	Spec   CassandraBackupSpec               `json:"spec,omitempty"`
 	Status map[string]*CassandraBackupStatus `json:"status,omitempty"`
 }
 

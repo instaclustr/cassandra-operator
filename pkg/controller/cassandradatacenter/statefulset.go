@@ -390,9 +390,9 @@ func checkState(
 	if existingSpecReplicas > 0 {
 		badPods := badPods(desiredSpecReplicas, existingSpecReplicas, statuses)
 		if len(badPods) > 0 {
-			log.Info("skipping StatefulSet reconciliation as some Cassandra Pods are not in the correct mode:")
+			log.Info("skipping StatefulSet reconciliation as some Cassandra Pods are not in the correct mode")
 			for pod, status := range badPods {
-				log.Info("Pod: %v, Status: %v", pod, status)
+				log.Info(fmt.Sprintf("Pod: %v, Status: %v", pod, status))
 			}
 			return false, nil
 		}

@@ -250,18 +250,18 @@ func (client *Client) Cleanup(request *CleanupOperation) (*uuid.UUID, error) {
 	}
 }
 
-func (client *Client) Backup(request *BackupOperation) (*uuid.UUID, error) {
+func (client *Client) Backup(request *BackupOperation) (uuid.UUID, error) {
 
 	request.Type = backup
 
 	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
-		return nil, err
+		return uuid.Nil, err
 	} else {
 		operationId, err := parseOperationId(r)
 		if err != nil {
-			return nil, err
+			return uuid.Nil, err
 		}
-		return &operationId, nil
+		return operationId, nil
 	}
 }
 
