@@ -1,0 +1,12 @@
+package com.instaclustr.cassandra.sidecar.operations.backup;
+
+import static com.instaclustr.cassandra.sidecar.operations.OperationBindings.installOperationBindings;
+
+import com.google.inject.AbstractModule;
+
+public class BackupsModule extends AbstractModule {
+    @Override
+    protected void configure() {
+        installOperationBindings(binder(),"backup", BackupOperationRequest.class, BackupOperation.class);
+    }
+}
