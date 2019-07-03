@@ -11,6 +11,7 @@ type CassandraBackupSpec struct {
 	DestinationUri string `json:"destinationUri"`
 	// The list of keyspaces to back up
 	Keyspaces    []string `json:"keyspaces"`
+	// The snapshot name for the backup
 	SnapshotName string   `json:"snapshotName"`
 }
 
@@ -35,7 +36,7 @@ type CassandraBackup struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   CassandraBackupSpec   `json:"spec,omitempty"`
-	Status CassandraBackupStatus `json:"status,omitempty"`
+	Status map[string]*CassandraBackupStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

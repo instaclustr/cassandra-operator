@@ -5,7 +5,7 @@ metadata:
 spec:
   additionalPrinterColumns:
   - JSONPath: .status.state
-    description: Backup operation status
+    description: Backup operation state
     name: State
     type: string
   - JSONPath: .status.progress
@@ -46,6 +46,7 @@ spec:
                 type: string
               type: array
             snapshotName:
+              description: The snapshot name for the backup
               type: string
           required:
           - destinationUri
@@ -53,17 +54,19 @@ spec:
           - snapshotName
           type: object
         status:
-          properties:
-            progress:
-              description: Progress shows the percentage of the operation done
-              format: float
-              type: number
-            state:
-              description: State shows the status of the operation
-              type: string
-          required:
-          - state
-          - progress
+          additionalProperties:
+            properties:
+              progress:
+                description: Progress shows the percentage of the operation done
+                format: float
+                type: number
+              state:
+                description: State shows the status of the operation
+                type: string
+            required:
+            - state
+            - progress
+            type: object
           type: object
   version: v1alpha1
   versions:

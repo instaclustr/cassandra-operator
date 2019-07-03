@@ -46,10 +46,9 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling CassandraBackup")
 
-	// backup and shit
-
 	// Get request params
 	b := &cassandraoperatorv1alpha1.CassandraBackup{}
+	b.Status = make(map[string]*cassandraoperatorv1alpha1.CassandraBackupStatus)
 	if err := r.client.Get(context.TODO(), request.NamespacedName, b); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -87,31 +86,30 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		}
 
 		// Testing adding event to the object
-		r.recorder.Event(b, v1.EventTypeNormal, "All good", "Starting backup")
+		r.recorder.Event(b, v1.EventTypeNormal, "Received Backup Request", "Starting backup")
 
 		operationID, err := sidecarClient.Backup(backupRequest)
 		if err != nil {
+			// log error?
 			fmt.Println(err)
 			continue
-			// log error
 		} else {
-			opState := operations.RUNNING
-
-			fmt.Println(b.Status.Progress)
-
-
 			go func() {
+				opState := operations.RUNNING
 				for opState != operations.COMPLETED {
 					fmt.Printf("Working on operation id: %v\n", operationID)
 					backup, err := getBackup(sidecarClient, *operationID)
 					if backup == nil || err != nil {
 						// log error?
 						fmt.Println(err)
+						// TODO: for now we continue, but in production code here would probs be an error
 						continue
 					}
-					b.Status.Progress = backup.Progress
-					b.Status.State = string(backup.State)
-					_ = r.client.Update(context.TODO(), b)
+					b.Status[sidecarClient.Host] = &cassandraoperatorv1alpha1.CassandraBackupStatus{
+						Progress: backup.Progress,
+						State: string(backup.State),
+					}
+					//_ = r.client.Update(context.TODO(), b)
 					opState = backup.State
 					<-time.After(time.Second)
 				}
@@ -135,6 +133,5 @@ func getBackup(client *sidecar.Client, id uuid.UUID) (backup *sidecar.BackupResp
 			}
 		}
 	}
-
     return
 }

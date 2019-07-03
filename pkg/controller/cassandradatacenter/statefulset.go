@@ -205,6 +205,18 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 		desiredSpecReplicas int32 // the new requested spec
 	)
 
+	// Get all replicas numbers
+	desiredSpecReplicas = rctx.cdc.Spec.Nodes
+	currentReplicas = existingStatefulSet.Status.Replicas
+	if existingStatefulSet.Spec.Replicas != nil {
+		existingSpecReplicas = *existingStatefulSet.Spec.Replicas
+	}
+	// TODO: do we even need to do/log anything if we're good? if not, maybe even not get here at all
+	if desiredSpecReplicas == existingSpecReplicas {
+		log.Info("Replaced namespaced StatefulSet.")
+		return nil
+	}
+
 	// Get pods, clients and statuses map
 	allPods, err := ExistingPods(rctx.client, rctx.cdc)
 	if err != nil {
@@ -214,19 +226,6 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 	statuses := cassandraStatuses(clients)
 	decommissionedNodes := decommissionedCassandras(statuses)
 
-	// Get all replicas numbers
-	if existingStatefulSet.Spec.Replicas != nil {
-		existingSpecReplicas = *existingStatefulSet.Spec.Replicas
-	}
-
-	desiredSpecReplicas = rctx.cdc.Spec.Nodes
-	currentReplicas = existingStatefulSet.Status.Replicas
-
-	// TODO: do we even need to do/log anything? if not, maybe even not get here at all
-	if desiredSpecReplicas == existingSpecReplicas {
-		log.Info("Replaced namespaced StatefulSet.")
-		return nil
-	}
 
 	// Check the current replicas/pod/cassandra state
 	if valid, err := checkState(existingSpecReplicas, currentReplicas, desiredSpecReplicas, allPods, statuses); !valid {
@@ -297,7 +296,7 @@ func allPodsAreRunning(pods []corev1.Pod) (bool, []string) {
 
 	for _, pod := range pods {
 		if pod.Status.Phase != corev1.PodRunning {
-			notRunningPodNames = append(notRunningPodNames, pod.GetObjectMeta().GetName())
+			notRunningPodNames = append(notRunningPodNames, pod.Name)
 		}
 	}
 
