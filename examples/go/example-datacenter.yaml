@@ -7,6 +7,7 @@ metadata:
 spec:
   cluster: "test-cluster"
   nodes: 3
+  racks: 2
   cassandraImage: "gcr.io/cassandra-operator/cassandra:3.11.3"
   sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
   imagePullPolicy: IfNotPresent

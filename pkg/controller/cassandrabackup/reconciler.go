@@ -75,7 +75,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	pods, err := cassandradatacenter.ExistingPods(r.client, cdc)
+	pods, err := cassandradatacenter.AllPodsInCDC(r.client, cdc)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to list pods")
 	}

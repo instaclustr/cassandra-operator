@@ -281,6 +281,12 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 							Format: "int32",
 						},
 					},
+					"racks": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
 					"cassandraImage": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -328,7 +334,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 						},
 					},
 				},
-				Required: []string{"nodes", "cassandraImage", "sidecarImage", "imagePullPolicy", "resources", "dataVolumeClaimSpec", "prometheusSupport"},
+				Required: []string{"nodes", "racks", "cassandraImage", "sidecarImage", "imagePullPolicy", "resources", "dataVolumeClaimSpec", "prometheusSupport"},
 			},
 		},
 		Dependencies: []string{

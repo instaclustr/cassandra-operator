@@ -13,6 +13,8 @@ func createOrUpdateNodesService(rctx *reconciliationRequestContext) (*corev1.Ser
 
 	logger := rctx.logger.WithValues("Service.Name", nodesService.Name)
 
+	// TODO: the nodes service is covering a set of nodes....in 1 rack? All the racks?
+
 	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, nodesService, func(_ runtime.Object) error {
 		nodesService.Spec = corev1.ServiceSpec{
 			ClusterIP: "None",
