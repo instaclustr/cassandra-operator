@@ -51,6 +51,20 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 
 	requestLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 
+
+	// TODO: Multi-racks support
+	// This is just some thoughts on the subject, which only supports starting/growing the cluster atm.
+	// Things to consider:
+	// 1. How to confine StatusSet to a specific AZ? Ideas: pods should select nodes according to labels or node isolation,
+	// read up https://kubernetes.io/docs/concepts/configuration/assign-pod-node/. Then StatusSet will automatically pick
+	// them up with the labels.
+	// 2. To handle the scaling down we need some guidance from the CRD for racks to work with, that is: we scale down
+	// pods one by one, do we only support scaling down by nodes matching racks? So, having 6 nodes in 2 racks will only allow
+	// us going to 4 nodes, but not 5?
+	// 3. Should we support custom node labels for pods allocation? Not sure we need to, but we might. If yes, will require
+	// another field in the CRD
+	// ...TBD
+
 	//Parse the object and check if it makes any sense wrt to racks
 	if ok, err := checkRacks(cdc.Spec); !ok {
 		// log error and exit
