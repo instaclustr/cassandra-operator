@@ -10,8 +10,6 @@ spec:
     plural: cassandraclusters
     singular: cassandracluster
   scope: Namespaced
-  subresources:
-    status: {}
   validation:
     openAPIV3Schema:
       properties:

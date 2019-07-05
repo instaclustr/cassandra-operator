@@ -1,4 +1,4 @@
-package controller
+package cassandradatacenter
 
 import (
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
@@ -23,7 +23,6 @@ func applyDataCenterLabels(labels *map[string]string, cdc *cassandraoperatorv1al
 //	applyDataCenterLabels(&labels, cdc)
 //	obj.SetLabels(labels)
 //}
-
 
 func DataCenterResourceMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, suffixes ...string) metav1.ObjectMeta {
 	suffix := strings.Join(append([]string{""}, suffixes...), "-")

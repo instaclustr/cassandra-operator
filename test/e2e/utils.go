@@ -3,6 +3,7 @@ package e2e
 import (
 	goctx "context"
 	operator "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
+	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
@@ -72,9 +73,9 @@ func checkAllNodesInNormalMode(t *testing.T, f *framework.Framework, namespace s
 
 	pollingErr := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
 		for _, client := range clients {
-			if status, err := client.GetStatus(); err != nil {
+			if status, err := client.Status(); err != nil {
 				return false, err
-			} else if status.OperationMode != sidecar.OPERATION_MODE_NORMAL {
+			} else if status.NodeState != nodestate.NORMAL {
 				return false, nil
 			}
 		}
@@ -83,7 +84,7 @@ func checkAllNodesInNormalMode(t *testing.T, f *framework.Framework, namespace s
 	})
 
 	if pollingErr != nil {
-		t.Fatalf("All nodes were not transitioned to state %s: %v", sidecar.OPERATION_MODE_NORMAL, pollingErr)
+		t.Fatalf("All nodes were not transitioned to state %s: %v", nodestate.NORMAL, pollingErr)
 	}
 }
 
@@ -134,7 +135,7 @@ func podsSidecars(f *framework.Framework, namespace string) (map[*v1.Pod]*sideca
 		return nil, err
 	}
 
-	return sidecar.SidecarClients(pods.Items, sidecar.DefaultSidecarClientOptions), nil
+	return sidecar.SidecarClients(pods.Items, &sidecar.DefaultSidecarClientOptions), nil
 }
 
 func defaultNewCassandraDataCenterList() *operator.CassandraDataCenterList {

@@ -1,11 +1,14 @@
 package sidecar
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty"
+	"github.com/google/uuid"
+	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
+	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	corev1 "k8s.io/api/core/v1"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -15,12 +18,12 @@ import (
 
 const (
 	accept             = "Accept"
-	applicationJson    = "application/json"
+	applicationJson    = "application/json; charset=utf-8"
 	EndpointOperations = "operations"
 	EndpointStatus     = "status"
 )
 
-var DefaultSidecarClientOptions = ClientOptions{Port: 4567, Secure: false,}
+var DefaultSidecarClientOptions = ClientOptions{Port: 4567, Secure: false}
 
 type Client struct {
 	Host    string
@@ -82,13 +85,12 @@ func NewSidecarClient(host string, options *ClientOptions) *Client {
 	return client
 }
 
-func SidecarClients(pods []corev1.Pod, clientOptions ClientOptions) map[*corev1.Pod]*Client {
+func SidecarClients(pods []corev1.Pod, clientOptions *ClientOptions) map[*corev1.Pod]*Client {
 
 	podClients := make(map[*corev1.Pod]*Client)
 
-	for _, pod := range pods {
-		key := pod
-		podClients[&key] = NewSidecarClient(pod.Status.PodIP, &clientOptions)
+	for i, pod := range pods {
+		podClients[&pods[i]] = NewSidecarClient(pod.Status.PodIP, clientOptions)
 	}
 
 	return podClients
@@ -119,6 +121,8 @@ func (e *HttpResponse) Error() string {
 	return fmt.Sprintf("Operation was errorneous: %s", e.err)
 }
 
+/// OPERATIONS
+
 type Kind int
 
 const (
@@ -128,41 +132,9 @@ const (
 	backup
 )
 
-type httpVerb int
-
-const (
-	GET httpVerb = iota
-	POST
-)
-
 type Operation struct {
-	Type Kind   `json:"type"`
-	Id   string `json:"id"`
+	Type Kind `json:"type"`
 }
-
-/// RESPONSES
-
-type Status struct {
-	OperationMode OperationMode `json:"operationMode"`
-}
-
-type DecommissionOperationResponse struct {
-	Operation
-}
-
-type CleanupOperationResponse struct {
-	Operation
-}
-
-type BackupResponse struct {
-	Operation
-}
-
-type UpgradeSSTablesResponse struct {
-	Operation
-}
-
-/// OPERATIONS
 
 type DecommissionOperation struct {
 	Operation
@@ -170,36 +142,65 @@ type DecommissionOperation struct {
 
 type CleanupOperation struct {
 	Operation
+	Keyspace string   `json:"keyspace"`
+	Tables   []string `json:"tables"`
 }
 
 type BackupOperation struct {
 	Operation
+	DestinationUri string   `json:"destinationUri"`
+	Keyspaces      []string `json:"keyspaces"`
+	SnapshotName   string   `json:"snapshotName"`
 }
 
 type UpgradeSSTablesOperation struct {
 	Operation
 }
 
-type GetOperationsResponse []GetOperationResponse
-type GetOperationResponse map[string]interface{}
+type Operations []OperationResponse
+type OperationResponse map[string]interface{}
+type BasicResponse struct {
+	Id             uuid.UUID                 `json:"id"`
+	CreationTime   time.Time                 `json:"creationTime"`
+	State          operations.OperationState `json:"state"`
+	Progress       float32                   `json:"progress"`
+	StartTime      time.Time                 `json:"startTime"`
+	CompletionTime time.Time                 `json:"completionTime"`
+}
 
-type OperationMode string
+/// RESPONSES
 
-const (
-	OPERATION_MODE_STARTING       = OperationMode("STARTING")
-	OPERATION_MODE_NORMAL         = OperationMode("NORMAL")
-	OPERATION_MODE_JOINING        = OperationMode("JOINING")
-	OPERATION_MODE_LEAVING        = OperationMode("LEAVING")
-	OPERATION_MODE_DECOMMISSIONED = OperationMode("DECOMMISSIONED")
-	OPERATION_MODE_MOVING         = OperationMode("MOVING")
-	OPERATION_MODE_DRAINING       = OperationMode("DRAINING")
-	OPERATION_MODE_DRAINED        = OperationMode("DRAINED")
-	OPERATION_MODE_ERROR          = OperationMode("ERROR")
-)
+type DecommissionOperationResponse struct {
+	BasicResponse
+}
 
-func (client *Client) Status() (*Status, error) {
+type CleanupOperationResponse struct {
+	BasicResponse
+	CleanupOperation
+}
 
-	if r, err := client.performRequest(EndpointStatus, GET, nil); requestInvalid(r, err) {
+type BackupResponse struct {
+	BasicResponse
+	BackupOperation
+}
+
+func (b *BackupResponse) String() string {
+	op, _ := json.Marshal(b)
+	return string(op)
+}
+
+func (c *CleanupOperationResponse) String() string {
+	op, _ := json.Marshal(c)
+	return string(op)
+}
+
+type UpgradeSSTablesResponse struct {
+	Operation
+}
+
+func (client *Client) Status() (*nodestate.Status, error) {
+
+	if r, err := client.performRequest(EndpointStatus, http.MethodGet, nil); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		body, err := readBody(r)
@@ -208,53 +209,70 @@ func (client *Client) Status() (*Status, error) {
 			return nil, err
 		}
 
-		if status, err := unmarshallBody(body, r, &Status{}); err == nil {
-			return status.(*Status), nil
+		if status, err := unmarshallBody(body, r, &nodestate.Status{}); err == nil {
+			return status.(*nodestate.Status), nil
 		} else {
 			return nil, err
 		}
 	}
 }
 
-func (client *Client) Decommission() (*string, error) {
+func (client *Client) Decommission() (*uuid.UUID, error) {
 
-	if r, err := client.performRequest(EndpointOperations, POST, &DecommissionOperation{Operation{Type: decommission}}); requestInvalid(r, err) {
+	// TODO: atm decommission operation doesn't need params, so will send an empty request.
+	// This may change in the future.
+
+	request := &DecommissionOperation{Operation{Type: decommission}}
+
+	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
 		return nil, err
 	} else {
-		location := parseLocation(r)
-		return &location, nil
+		operationId, err := parseOperationId(r)
+		if err != nil {
+			return nil, err
+		}
+		return &operationId, nil
 	}
 }
 
-func (client *Client) Cleanup() (*string, error) {
+func (client *Client) Cleanup(request *CleanupOperation) (*uuid.UUID, error) {
 
-	if r, err := client.performRequest(EndpointOperations, POST, CleanupOperation{Operation{Type: cleanup}}); requestInvalid(r, err) {
+	request.Type = cleanup
+
+	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
 		return nil, err
 	} else {
-		location := parseLocation(r)
-		return &location, nil
+		operationId, err := parseOperationId(r)
+		if err != nil {
+			return nil, err
+		}
+		return &operationId, nil
 	}
 }
 
-func (client *Client) Backup(request BackupOperation) (*string, error) {
+func (client *Client) Backup(request *BackupOperation) (uuid.UUID, error) {
 
 	request.Type = backup
 
-	if r, err := client.performRequest(EndpointOperations, POST, request); requestInvalid(r, err) {
-		return nil, err
+	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
+		return uuid.Nil, err
 	} else {
-		location := parseLocation(r)
-		return &location, nil
+		operationId, err := parseOperationId(r)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return operationId, nil
 	}
 }
 
-func (client *Client) GetOperation(id string) (*GetOperationResponse, error) {
+func (client *Client) GetOperation(id uuid.UUID) (*OperationResponse, error) {
 
-	splits := strings.Split(id, "/")
+	if id == uuid.Nil {
+		return nil, fmt.Errorf("getOperation must get a valid id")
+	}
+	endpoint := EndpointOperations + "/" + id.String()
 
-	operation := strings.Split(id, "/")[len(splits)-1]
-
-	if r, err := client.performRequest(EndpointOperations+"/"+operation, GET, nil); requestInvalid(r, err) {
+	if r, err := client.performRequest(endpoint, http.MethodGet, nil); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		body, err := readBody(r)
@@ -263,16 +281,16 @@ func (client *Client) GetOperation(id string) (*GetOperationResponse, error) {
 			return nil, err
 		}
 
-		if status, err := unmarshallBody(body, r, &GetOperationResponse{}); err != nil {
-			return status.(*GetOperationResponse), nil
-		} else {
+		if status, err := unmarshallBody(body, r, &OperationResponse{}); err != nil {
 			return nil, err
+		} else {
+			return status.(*OperationResponse), nil
 		}
 	}
 }
 
-func (client *Client) GetOperations() (*[]GetOperationResponse, error) {
-	if r, err := client.performRequest(EndpointOperations, GET, nil); requestInvalid(r, err) {
+func (client *Client) GetOperations() (*[]OperationResponse, error) {
+	if r, err := client.performRequest(EndpointOperations, http.MethodGet, nil); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		body, err := readBody(r)
@@ -281,72 +299,98 @@ func (client *Client) GetOperations() (*[]GetOperationResponse, error) {
 			return nil, err
 		}
 
-		if response, err := unmarshallBody(body, r, &[]GetOperationResponse{}); err == nil {
-			return response.(*[]GetOperationResponse), nil
+		if response, err := unmarshallBody(body, r, &[]OperationResponse{}); err == nil {
+			return response.(*[]OperationResponse), nil
 		} else {
 			return nil, err
 		}
 	}
 }
 
-func (client *Client) ListBackups() ([]BackupOperation, error) {
+func (client *Client) ListCleanups() ([]*CleanupOperationResponse, error) {
 
-	ops, _ := client.GetOperations()
+	ops, err := client.GetOperations()
+	if ops == nil || err != nil {
+		return []*CleanupOperationResponse{}, err
+	}
+
+	operations, err := FilterOperations(*ops, cleanup)
+	if err != nil {
+		//??
+	}
+
+	var cleanups []*CleanupOperationResponse
+	for _, op := range operations {
+		cleanups = append(cleanups, op.(*CleanupOperationResponse))
+	}
+
+	return cleanups, nil
+}
+
+func (client *Client) ListBackups() ([]*BackupResponse, error) {
+
+	ops, err := client.GetOperations()
+	if ops == nil || err != nil {
+		return []*BackupResponse{}, nil
+	}
 
 	operations, err := FilterOperations(*ops, backup)
-
 	if err != nil {
-
+		// ?
 	}
 
-	var backups []BackupOperation
-
+	var backups []*BackupResponse
 	for _, op := range operations {
-		backups = append(backups, op.(BackupOperation))
+		backups = append(backups, op.(*BackupResponse))
 	}
 
 	return backups, nil
 }
 
-func (client *Client) UpgradeSSTables(request UpgradeSSTablesOperation) (*string, error) {
+func (client *Client) UpgradeSSTables(request *UpgradeSSTablesOperation) (*uuid.UUID, error) {
 
 	request.Type = upgradesstables
 
-	if r, err := client.performRequest(EndpointOperations, POST, request); requestInvalid(r, err) {
+	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
 		return nil, err
 	} else {
-		location := parseLocation(r)
-		return &location, nil
+		operationId, err := parseOperationId(r)
+		if err != nil {
+			return nil, err
+		}
+		return &operationId, nil
 	}
 }
 
-func FilterOperations(ops GetOperationsResponse, _type Kind) ([]interface{}, error) {
+func FilterOperations(ops Operations, kind Kind) ([]interface{}, error) {
 
 	var result = make([]interface{}, 0)
 
 	for _, item := range ops {
 
-		if item["type"].(string) == _KindValueToName[_type] {
+		if item["type"].(string) == _KindValueToName[kind] {
 
 			var op interface{}
 
-			switch _type {
+			switch kind {
 			case cleanup:
-				op = &CleanupOperation{}
+				op = &CleanupOperationResponse{}
 			case upgradesstables:
-				op = &UpgradeSSTablesOperation{}
+				op = &UpgradeSSTablesResponse{}
 			case decommission:
-				op = &DecommissionOperation{}
+				op = &DecommissionOperationResponse{}
 			case backup:
-				op = &BackupOperation{}
+				op = &BackupResponse{}
 			default:
 				continue
 			}
 
 			if body, err := json.Marshal(item); err != nil {
-				return nil, err
+				// Log error
+				continue
 			} else if err := json.Unmarshal(body, op); err != nil {
-				return nil, err
+				// Log error
+				continue
 			} else {
 				result = append(result, op)
 			}
@@ -356,11 +400,11 @@ func FilterOperations(ops GetOperationsResponse, _type Kind) ([]interface{}, err
 	return result, nil
 }
 
-func requestInvalid(r interface{}, err error) bool {
+func responseInvalid(r interface{}, err error) bool {
 	return r == nil || err != nil
 }
 
-func (client *Client) performRequest(endpoint string, verb httpVerb, requestBody interface{}) (response *resty.Response, err error) {
+func (client *Client) performRequest(endpoint string, verb string, requestBody interface{}) (response *resty.Response, err error) {
 
 	if client.testMode {
 		return client.testResponse, nil
@@ -368,9 +412,9 @@ func (client *Client) performRequest(endpoint string, verb httpVerb, requestBody
 
 	request := client.restyClient.R().SetHeader(accept, applicationJson)
 
-	if verb == POST {
+	if verb == http.MethodPost {
 		response, err = request.SetBody(requestBody).Post(endpoint)
-	} else if verb == GET {
+	} else if verb == http.MethodGet {
 		response, err = request.Get(endpoint)
 	}
 
@@ -383,30 +427,20 @@ func (client *Client) performRequest(endpoint string, verb httpVerb, requestBody
 	return
 }
 
-func parseLocation(response *resty.Response) string {
-	return response.Header().Get("Location")
+func parseOperationId(response *resty.Response) (uuid.UUID, error) {
+	ids := strings.Split(response.Header().Get("Location"), "/")
+	location := ids[len(ids)-1]
+	id, err := uuid.Parse(location)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return id, nil
 }
 
 func readBody(response *resty.Response) (*[]byte, error) {
-
-	var rawBody = response.RawBody()
-
-	defer rawBody.Close()
-
-	var body []byte
-
-	if rawBody != nil {
-
-		buf := new(bytes.Buffer)
-
-		if _, err := buf.ReadFrom(rawBody); err != nil {
-			return nil, err
-		}
-
-		body = buf.Bytes()
-	}
-
-	return &body, nil
+	rawBody := response.Body()
+	return &rawBody, nil
 }
 
 func unmarshallBody(body *[]byte, response *resty.Response, responseEnvelope interface{}) (interface{}, error) {

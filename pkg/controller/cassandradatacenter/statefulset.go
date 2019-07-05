@@ -1,10 +1,12 @@
-package controller
+package cassandradatacenter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
+	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
 	"k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,10 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	//"strings"
+	"strings"
 	"sync"
 )
-
 
 const DataVolumeMountPath = "/var/lib/cassandra"
 
@@ -59,11 +60,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			return nil
 		}
 
-		//if err := scaleStatefulSet(rctx, statefulSet, statefulSetSpec); err != nil {
-		//	return err
-		//}
-
-		return nil
+		return scaleStatefulSet(rctx, statefulSet, statefulSetSpec)
 	})
 
 	if err != nil {
@@ -74,7 +71,6 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 
 	return statefulSet, err
 }
-
 
 func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podSpec *corev1.PodSpec, dataVolumeClaim *corev1.PersistentVolumeClaim) *v1beta2.StatefulSetSpec {
 	podLabels := DataCenterLabels(cdc)
@@ -88,16 +84,16 @@ func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podS
 			Spec:       *podSpec,
 		},
 		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{*dataVolumeClaim},
-		PodManagementPolicy: v1beta2.OrderedReadyPodManagement,
+		PodManagementPolicy:  v1beta2.OrderedReadyPodManagement,
 	}
 }
 
 func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumes []corev1.Volume, containers []corev1.Container, initContainers []corev1.Container) *corev1.PodSpec {
 	// TODO: should this spec be fully exposed into the CDC.Spec?
 	podSpec := &corev1.PodSpec{
-		Volumes: volumes,
-		Containers: containers,
-		InitContainers: initContainers,
+		Volumes:          volumes,
+		Containers:       containers,
+		InitContainers:   initContainers,
 		ImagePullSecrets: cdc.Spec.ImagePullSecrets,
 	}
 
@@ -121,7 +117,7 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		SecurityContext: &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{
-					"IPC_LOCK", // C* wants to mlock/mlockall
+					"IPC_LOCK",     // C* wants to mlock/mlockall
 					"SYS_RESOURCE", // permit ulimit adjustments
 				},
 			},
@@ -148,7 +144,6 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 	return container
 }
 
-
 func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, podInfoVolume *corev1.Volume) *corev1.Container {
 	return &corev1.Container{
 		Name:            "sidecar",
@@ -170,7 +165,7 @@ func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: func () *bool { b := true; return &b }(),
+			Privileged: func() *bool { b := true; return &b }(),
 		},
 		Command: []string{"bash", "-xuec"},
 		Args: []string{
@@ -202,97 +197,84 @@ func newDataVolumeClaim(dataVolumeClaimSpec *corev1.PersistentVolumeClaimSpec) *
 	}
 }
 
-//func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v1beta2.StatefulSet, newStatefulSetSpec *v1beta2.StatefulSetSpec) error {
-//
-//
-//	var existingSpecReplicas int32
-//
-//	if existingStatefulSet.Spec.Replicas == nil {
-//		existingSpecReplicas = 0
-//	} else {
-//		existingSpecReplicas = *existingStatefulSet.Spec.Replicas
-//	}
-//
-//	desiredSpecReplicas := rctx.cdc.Spec.Nodes
-//
-//	currentReplicas := existingStatefulSet.Status.Replicas // number of created pods
-//
-//	if currentReplicas != existingSpecReplicas {
-//			log.Info("skipping StatefulSet reconciliation as it is undergoing scaling operations", "current", currentReplicas, "existing", existingSpecReplicas)
-//			return nil
-//		}
-//
-//	allPods, err := existingPods(rctx.client, rctx.cdc)
-//
-//	if err != nil {
-//		return errors.New("unable to list pods")
-//	}
-//
-//	if allRun, notRunningPods := allPodsAreRunning(allPods); allRun == false && len(notRunningPods) > 0 {
-//		log.Info("Skipping reconciliation as some pods are not running yet: " + strings.Join(notRunningPods, " "))
-//		return nil
-//	}
-//
-//	clients := sidecar.SidecarClients(allPods, sidecar.DefaultSidecarClientOptions)
-//	statuses := cassandraStatuses(clients)
-//
-//	if erroredCassandras := errorneousCassandras(statuses); len(erroredCassandras) > 0 {
-//		return errors.New("skipping StatefulSet reconciliation as the status of some Cassandra nodes could not be determined")
-//	}
-//
-//	if existingStatefulSet.Spec.Replicas != nil {
-//		podsInIncorrectCassandraState := podsInIncorrectCassandraState(cdc.Spec.Nodes, existingSpecReplicas, statuses)
-//
-//		if len(podsInIncorrectCassandraState) > 0 {
-//			log.Info("skipping StatefulSet reconciliation as some Cassandra Pods are not in the correct mode: " + strings.Join(podsInIncorrectCassandraState, ","))
-//			return nil
-//		}
-//	}
-//
-//	if desiredSpecReplicas > existingSpecReplicas {
-//			cdc.Spec.Nodes = existingSpecReplicas + 1
-//			return setControllerReference(statefulSet, cdc, podSpec, dataVolumeClaim, reconciler)
-//		} else if desiredSpecReplicas < existingSpecReplicas {
-//
-//			newestPod := allPods[len(allPods)-1]
-//
-//			decommissioned := decommissionedCassandras(statuses)
-//
-//			if len(decommissioned) == 0 {
-//
-//				log.Info("No Cassandra nodes have been decommissioned. Decommissioning the newest one " + newestPod.Name)
-//
-//				if clientForNewestPod := sidecar.ClientFromPods(clients, newestPod); clientForNewestPod != nil {
-//					if _, err := clientForNewestPod.DecommissionNode(); err != nil {
-//						return errors.New(fmt.Sprintf("Unable to decommission node %s: %v", newestPod.Name, err))
-//					}
-//				} else {
-//					return errors.New(fmt.Sprintf("Client for pod %s to decommission does not exist.", newestPod.Name))
-//				}
-//			} else if len(decommissioned) == 1 {
-//
-//				log.Info("Decommissioned Cassandra node found. Scaling StatefulSet down.")
-//
-//				if decommissioned[0].Name != newestPod.Name {
-//					return errors.New("skipping StatefulSet reconciliation as the DataCenter contains one decommissioned Cassandra node, but it is not the newest, " +
-//						"decommissioned pod: " + decommissioned[0].Name + ", expecting Pod" + newestPod.Name)
-//				}
-//
-//				cdc.Spec.Nodes = existingSpecReplicas - 1
-//			} else {
-//				return errors.New("skipping StatefulSet reconciliation as the DataCenter contains more than one decommissioned Cassandra node: " +
-//					strings.Join(podsToString(decommissioned), ","))
-//			}
-//		} else {
-//			log.Info("Replaced namespaced StatefulSet.")
-//		}
-//
-//	return existingStatefulSet
-//}
+func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v1beta2.StatefulSet, newStatefulSetSpec *v1beta2.StatefulSetSpec) error {
+
+	var (
+		existingSpecReplicas, // number of replicas set in the current spec
+		currentReplicas, // currently running replicas
+		desiredSpecReplicas int32 // the new requested spec
+	)
+
+	// Get all replicas numbers
+	desiredSpecReplicas = rctx.cdc.Spec.Nodes
+	currentReplicas = existingStatefulSet.Status.Replicas
+	if existingStatefulSet.Spec.Replicas != nil {
+		existingSpecReplicas = *existingStatefulSet.Spec.Replicas
+	}
+	// TODO: do we even need to do/log anything if we're good? if not, maybe even not get here at all
+	if desiredSpecReplicas == existingSpecReplicas {
+		log.Info("Replaced namespaced StatefulSet.")
+		return nil
+	}
+
+	// Get pods, clients and statuses map
+	allPods, err := ExistingPods(rctx.client, rctx.cdc)
+	if err != nil {
+		return errors.New("unable to list pods")
+	}
+	clients := sidecar.SidecarClients(allPods, &sidecar.DefaultSidecarClientOptions)
+	statuses := cassandraStatuses(clients)
+	decommissionedNodes := decommissionedCassandras(statuses)
+
+
+	// Check the current replicas/pod/cassandra state
+	if valid, err := checkState(existingSpecReplicas, currentReplicas, desiredSpecReplicas, allPods, statuses); !valid {
+		return err
+	}
+
+	// Scale
+	if desiredSpecReplicas > existingSpecReplicas {
+
+		// Scale up
+		rctx.cdc.Spec.Nodes = existingSpecReplicas + 1
+		existingStatefulSet.Spec = *newStatefulSetSpec
+		return controllerutil.SetControllerReference(rctx.cdc, existingStatefulSet, rctx.scheme)
+
+	} else if desiredSpecReplicas < existingSpecReplicas {
+
+		// Scale down
+		newestPod := allPods[len(allPods)-1]
+		if len(decommissionedNodes) == 0 {
+			log.Info("No Cassandra nodes have been decommissioned. Decommissioning the newest one " + newestPod.Name)
+			if clientForNewestPod := sidecar.ClientFromPods(clients, newestPod); clientForNewestPod != nil {
+				if _, err := clientForNewestPod.Decommission(); err != nil {
+					return errors.New(fmt.Sprintf("Unable to decommission node %s: %v", newestPod.Name, err))
+				}
+			} else {
+				return errors.New(fmt.Sprintf("Client for pod %s to decommission does not exist.", newestPod.Name))
+			}
+		} else if len(decommissionedNodes) == 1 {
+			log.Info("Decommissioned Cassandra node found. Scaling StatefulSet down.")
+			if decommissionedNodes[0].Name != newestPod.Name {
+				return errors.New("skipping StatefulSet reconciliation as the DataCenter contains one decommissionedNodes Cassandra node, but it is not the newest, " +
+					"decommissionedNodes pod: " + decommissionedNodes[0].Name + ", expecting Pod" + newestPod.Name)
+			}
+
+			// TODO: do we need to check that existing > 0?
+			rctx.cdc.Spec.Nodes = existingSpecReplicas - 1
+		} else {
+			// TODO: are we sure about this? Even having 2 decommissioned nodes should be fine for reconciling the stateful set
+			return errors.New("skipping StatefulSet reconciliation as the DataCenter contains more than one decommissionedNodes Cassandra node: " +
+				strings.Join(podsToString(decommissionedNodes), ","))
+		}
+	}
+
+	return nil
+}
 
 // helpers
 
-func existingPods(c client.Client, cdc *cassandraoperatorv1alpha1.CassandraDataCenter) ([]corev1.Pod, error) {
+func ExistingPods(c client.Client, cdc *cassandraoperatorv1alpha1.CassandraDataCenter) ([]corev1.Pod, error) {
 
 	podList := corev1.PodList{}
 
@@ -310,31 +292,24 @@ func existingPods(c client.Client, cdc *cassandraoperatorv1alpha1.CassandraDataC
 
 func allPodsAreRunning(pods []corev1.Pod) (bool, []string) {
 
-	podsNotInRunningPhase := make([]corev1.Pod, 0)
+	var notRunningPodNames []string
 
 	for _, pod := range pods {
-		if pod.Status.Phase != "Running" {
-			podsNotInRunningPhase = append(podsNotInRunningPhase, pod)
+		if pod.Status.Phase != corev1.PodRunning {
+			notRunningPodNames = append(notRunningPodNames, pod.Name)
 		}
 	}
 
-	var notRunningPodNames []string
-
-	if len(podsNotInRunningPhase) > 0 {
-
-		for _, p := range podsNotInRunningPhase {
-			notRunningPodNames = append(notRunningPodNames, p.GetObjectMeta().GetName())
-		}
-
+	if len(notRunningPodNames) > 0 {
 		return false, notRunningPodNames
 	}
 
 	return true, notRunningPodNames
 }
 
-func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]sidecar.OperationMode {
+func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]nodestate.NodeState {
 
-	podByOperationMode := make(map[*corev1.Pod]sidecar.OperationMode)
+	podByOperationMode := make(map[*corev1.Pod]nodestate.NodeState)
 
 	var wg sync.WaitGroup
 
@@ -342,10 +317,10 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 
 	for pod, c := range podClients {
 		go func(pod *corev1.Pod, client *sidecar.Client) {
-			if response, err := client.GetStatus(); err != nil {
-				podByOperationMode[pod] = sidecar.OPERATION_MODE_ERROR
+			if response, err := client.Status(); err != nil {
+				podByOperationMode[pod] = nodestate.ERROR
 			} else {
-				podByOperationMode[pod] = response.OperationMode
+				podByOperationMode[pod] = response.NodeState
 			}
 
 			wg.Done()
@@ -357,45 +332,73 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 	return podByOperationMode
 }
 
-func cassandrasInState(statuses map[*corev1.Pod]sidecar.OperationMode, state sidecar.OperationMode) []*corev1.Pod {
+func nodesInState(statuses map[*corev1.Pod]nodestate.NodeState, state nodestate.NodeState) []*corev1.Pod {
 
-	var cassandrasInState []*corev1.Pod
+	var podsInState []*corev1.Pod
 
 	for pod, status := range statuses {
 		if status == state {
-			cassandrasInState = append(cassandrasInState, pod)
+			podsInState = append(podsInState, pod)
 		}
 	}
 
-	return cassandrasInState
+	return podsInState
 }
 
-func errorneousCassandras(statuses map[*corev1.Pod]sidecar.OperationMode) []*corev1.Pod {
-	return cassandrasInState(statuses, sidecar.OPERATION_MODE_ERROR)
+func decommissionedCassandras(statuses map[*corev1.Pod]nodestate.NodeState) []*corev1.Pod {
+	return nodesInState(statuses, nodestate.DECOMMISSIONED)
 }
 
-func decommissionedCassandras(statuses map[*corev1.Pod]sidecar.OperationMode) []*corev1.Pod {
-	return cassandrasInState(statuses, sidecar.OPERATION_MODE_DECOMMISSIONED)
-}
+func badPods(desiredReplicas int32, existingReplicas int32, statuses map[*corev1.Pod]nodestate.NodeState) map[string]nodestate.NodeState {
 
-func podsInIncorrectCassandraState(desiredReplicas int32, existingReplicas int32, statuses map[*corev1.Pod]sidecar.OperationMode) []string {
+	scaleUpOperationModes := []nodestate.NodeState{nodestate.NORMAL}
+	scaleDownOperationModes := []nodestate.NodeState{nodestate.NORMAL, nodestate.DECOMMISSIONED}
 
-	scaleUpOperationModes := []sidecar.OperationMode{sidecar.OPERATION_MODE_NORMAL}
-	scaleDownOperationModes := []sidecar.OperationMode{sidecar.OPERATION_MODE_NORMAL, sidecar.OPERATION_MODE_DECOMMISSIONED}
+	opModes := scaleUpOperationModes
+	if desiredReplicas < existingReplicas {
+		opModes = scaleDownOperationModes
+	}
 
-	var podsByIncorrectCassandraMode []string
-
+	podsInBadState := make(map[string]nodestate.NodeState)
 	for pod, status := range statuses {
-		if desiredReplicas >= existingReplicas {
-			if !contains(scaleUpOperationModes, status) {
-				podsByIncorrectCassandraMode = append(podsByIncorrectCassandraMode, pod.ObjectMeta.Name)
-			}
-		} else if !contains(scaleDownOperationModes, status) {
-			podsByIncorrectCassandraMode = append(podsByIncorrectCassandraMode, pod.ObjectMeta.Name)
+		if !contains(opModes, status) {
+			podsInBadState[pod.Name] = status
 		}
 	}
 
-	return podsByIncorrectCassandraMode
+	return podsInBadState
+}
+
+func checkState(
+	existingSpecReplicas, currentReplicas, desiredSpecReplicas int32,
+	allPods []corev1.Pod,
+	statuses map[*corev1.Pod]nodestate.NodeState) (valid bool, err error) {
+
+	// check if current running # of pods match the current spec
+	if currentReplicas != existingSpecReplicas {
+		log.Info("skipping StatefulSet reconciliation as it is undergoing scaling operations", "current", currentReplicas, "existing", existingSpecReplicas)
+		return false, nil
+	}
+
+	// check if all pods are in Running mode
+	if allRun, notRunningPods := allPodsAreRunning(allPods); allRun == false {
+		log.Info("Skipping reconciliation as some pods are not running yet: " + strings.Join(notRunningPods, " "))
+		return false, nil
+	}
+
+	// check if all Cassandras are ok to scale
+	if existingSpecReplicas > 0 {
+		badPods := badPods(desiredSpecReplicas, existingSpecReplicas, statuses)
+		if len(badPods) > 0 {
+			log.Info("skipping StatefulSet reconciliation as some Cassandra Pods are not in the correct mode")
+			for pod, status := range badPods {
+				log.Info(fmt.Sprintf("Pod: %v, Status: %v", pod, status))
+			}
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func podsToString(pods []*corev1.Pod) []string {
@@ -403,14 +406,14 @@ func podsToString(pods []*corev1.Pod) []string {
 	podNames := make([]string, 0)
 
 	for _, pod := range pods {
-		podNames = append(podNames, pod.ObjectMeta.Name)
+		podNames = append(podNames, pod.Name)
 	}
 
 	return podNames
 }
 
 // go does not have this built-in
-func contains(a []sidecar.OperationMode, x sidecar.OperationMode) bool {
+func contains(a []nodestate.NodeState, x nodestate.NodeState) bool {
 	for _, n := range a {
 		if x == n {
 			return true

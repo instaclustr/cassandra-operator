@@ -1,4 +1,4 @@
-package controller
+package cassandradatacenter
 
 import (
 	"context"
@@ -11,21 +11,24 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-var log = logf.Log.WithName("CassandraDataCenterReconciler")
+const (
+	controllerName = "CassandraDataCenterController"
+)
+
+var log = logf.Log.WithName(controllerName)
 
 // CassandraDataCenterReconciler reconciles a CassandraDataCenter object
 type CassandraDataCenterReconciler struct {
 	// This client is a split client that reads objects from the cache and writes to the apiserver
-	client client.Client // TODO: pointer?
+	client client.Client
 	scheme *runtime.Scheme
 }
 
 type reconciliationRequestContext struct {
 	CassandraDataCenterReconciler
-	cdc *cassandraoperatorv1alpha1.CassandraDataCenter
-	logger logr.Logger // TODO: pointer?
+	cdc    *cassandraoperatorv1alpha1.CassandraDataCenter
+	logger logr.Logger
 }
-
 
 // Reconcile reads that state of the cluster for a CassandraDataCenter object and makes changes based on the state read
 // and what is in the CassandraDataCenter.Spec
@@ -46,8 +49,8 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 
 	rctx := &reconciliationRequestContext{
 		CassandraDataCenterReconciler: *reconciler,
-		cdc: cdc,
-		logger: requestLogger,
+		cdc:                           cdc,
+		logger:                        requestLogger,
 	}
 
 	rctx.logger.Info("Reconciling CassandraDataCenter.")

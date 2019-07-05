@@ -3,6 +3,15 @@ kind: CustomResourceDefinition
 metadata:
   name: cassandrabackups.cassandraoperator.instaclustr.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.state
+    description: Backup operation state
+    name: State
+    type: string
+  - JSONPath: .status.progress
+    description: Backup operation progress
+    name: Progress
+    type: string
   group: cassandraoperator.instaclustr.com
   names:
     kind: CassandraBackup
@@ -10,8 +19,6 @@ spec:
     plural: cassandrabackups
     singular: cassandrabackup
   scope: Namespaced
-  subresources:
-    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -28,8 +35,42 @@ spec:
         metadata:
           type: object
         spec:
+          properties:
+            cdc:
+              description: Cassandra DC name to back up. Used to find the pods in
+                the CDC
+              type: string
+            destinationUri:
+              description: The uri for the backup target location e.g. s3 bucket,
+                filepath
+              type: string
+            keyspaces:
+              description: The list of keyspaces to back up
+              items:
+                type: string
+              type: array
+            snapshotName:
+              description: The snapshot name for the backup
+              type: string
+          required:
+          - cdc
+          - destinationUri
+          - keyspaces
+          - snapshotName
           type: object
         status:
+          additionalProperties:
+            properties:
+              progress:
+                description: Progress shows the percentage of the operation done
+                type: string
+              state:
+                description: State shows the status of the operation
+                type: string
+            required:
+            - state
+            - progress
+            type: object
           type: object
   version: v1alpha1
   versions:

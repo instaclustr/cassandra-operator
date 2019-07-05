@@ -57,7 +57,14 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackup(ref common.Refer
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.CassandraBackupStatus"),
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.CassandraBackupStatus"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -73,7 +80,44 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackupSpec defines the desired state of CassandraBackup",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"cdc": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Cassandra DC name to back up. Used to find the pods in the CDC",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"destinationUri": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The uri for the backup target location e.g. s3 bucket, filepath",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"keyspaces": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The list of keyspaces to back up",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"snapshotName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The snapshot name for the backup",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"cdc", "destinationUri", "keyspaces", "snapshotName"},
 			},
 		},
 		Dependencies: []string{},
@@ -85,7 +129,23 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupStatus(ref common
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackupStatus defines the observed state of CassandraBackup",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"state": {
+						SchemaProps: spec.SchemaProps{
+							Description: "State shows the status of the operation",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"progress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Progress shows the percentage of the operation done",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"state", "progress"},
 			},
 		},
 		Dependencies: []string{},
