@@ -8,13 +8,13 @@ import (
 
 const (
 	rackKey = "cassandra-operator.instaclustr.com/rack"
-	cdcKey = "cassandra-operator.instaclustr.com/datacenter"
+	cdcKey  = "cassandra-operator.instaclustr.com/datacenter"
 )
 
 func DataCenterLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
 	return map[string]string{
-		cdcKey: cdc.Name,
-		"app.kubernetes.io/managed-by":                  "com.instaclustr.cassandra-operator",
+		cdcKey:                         cdc.Name,
+		"app.kubernetes.io/managed-by": "com.instaclustr.cassandra-operator",
 	}
 }
 

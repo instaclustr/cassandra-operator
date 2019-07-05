@@ -12,7 +12,7 @@ type CassandraDataCenterSpec struct {
 	//Cluster interface{} `json:"cluster,omitempty"`
 	Cluster          string                    `json:"cluster,omitempty"`
 	Nodes            int32                     `json:"nodes"`
-	Racks 			 int32 					   `json:"racks"`
+	Racks            int32                     `json:"racks"`
 	CassandraImage   string                    `json:"cassandraImage"`
 	SidecarImage     string                    `json:"sidecarImage"`
 	ImagePullPolicy  v1.PullPolicy             `json:"imagePullPolicy"`

@@ -53,7 +53,7 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 
 	//Parse the object and check if it makes any sense wrt to racks
 	if ok, err := checkRacks(cdc.Spec); !ok {
-	    // log error and exit
+		// log error and exit
 		return reconcile.Result{}, err
 	}
 
@@ -93,7 +93,7 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 
 	// fine, so we don't have enough nodes running yet. Pick the rack with smallest number of nodes
 	// and update it
-	rack, err := getRack(rctx, request);
+	rack, err := getRack(rctx, request)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -104,7 +104,7 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	}
 
 	// # of pods per stateful set is replicas/racks
-	numPods := int32(cdc.Spec.Nodes/cdc.Spec.Racks)
+	numPods := int32(cdc.Spec.Nodes / cdc.Spec.Racks)
 	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume, rack, numPods)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -155,7 +155,7 @@ func getRack(rctx *reconciliationRequestContext, request reconcile.Request) (str
 	return "", fmt.Errorf("can't figure out proper rack")
 }
 
-func getSets(rctx *reconciliationRequestContext, namespacedName types.NamespacedName ) (*v1.StatefulSetList, error) {
+func getSets(rctx *reconciliationRequestContext, namespacedName types.NamespacedName) (*v1.StatefulSetList, error) {
 	sts := &v1.StatefulSetList{}
 	if err := rctx.client.List(context.TODO(), &client.ListOptions{Namespace: namespacedName.Namespace}, sts); err != nil {
 		if errors.IsNotFound(err) {
@@ -168,11 +168,10 @@ func getSets(rctx *reconciliationRequestContext, namespacedName types.Namespaced
 
 func checkRacks(spec cassandraoperatorv1alpha1.CassandraDataCenterSpec) (bool, error) {
 	// if nodes mod racks != 0, false, otherwise true
-	if spec.Nodes % spec.Racks != 0 {
+	if spec.Nodes%spec.Racks != 0 {
 		return false, fmt.Errorf("the number of racks should be able to evenly distribute all the nodes")
 	}
 
 	return true, nil
-
 
 }
