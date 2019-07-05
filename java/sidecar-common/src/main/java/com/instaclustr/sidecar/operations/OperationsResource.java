@@ -37,13 +37,7 @@ public class OperationsResource {
     @GET
     @Path("{id}")
     public Operation getOperationById(@NotNull @PathParam("id") final UUID id) {
-        final Operation operation = operationsService.operations().get(id);
-
-        if (operation == null) {
-            throw new NotFoundException();
-        }
-
-        return operation;
+        return operationsService.operation(id).orElseThrow(NotFoundException::new);
     }
 
     @POST
@@ -56,5 +50,4 @@ public class OperationsResource {
 
         return Response.created(operationLocation).entity(operation).build();
     }
-
 }

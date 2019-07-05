@@ -77,7 +77,7 @@ public abstract class AbstractOperationsValidationTest {
     }
 
     protected Pair<AtomicReference<List<SidecarClient.OperationResult<?>>>, AtomicBoolean> performOnRunningServer(final JerseyHttpServerService serverService,
-                                                                                                                final Function<SidecarClient, List<SidecarClient.OperationResult<?>>> requestExecutions) {
+                                                                                                                  final Function<SidecarClient, List<SidecarClient.OperationResult<?>>> requestExecutions) {
 
         final AtomicReference<List<SidecarClient.OperationResult<?>>> responseRefs = new AtomicReference<>(new ArrayList<>());
 

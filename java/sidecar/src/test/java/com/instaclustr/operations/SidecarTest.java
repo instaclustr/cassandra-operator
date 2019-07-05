@@ -19,11 +19,11 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.TypeLiteral;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissionOperationRequest;
-import com.instaclustr.sidecar.operations.OperationsResource;
 import com.instaclustr.sidecar.operations.Operation;
 import com.instaclustr.sidecar.operations.OperationFactory;
 import com.instaclustr.sidecar.operations.OperationRequest;
 import com.instaclustr.sidecar.operations.OperationsModule;
+import com.instaclustr.sidecar.operations.OperationsResource;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
