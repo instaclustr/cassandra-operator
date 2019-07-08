@@ -15,7 +15,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 @Path("/operations")
@@ -31,19 +34,16 @@ public class OperationsResource {
 
     @GET
     public Collection<Operation> getOperations() {
-        return operationsService.operations().values();
+        final List<Operation> operations = new ArrayList<>(operationsService.operations().values());
+        Collections.reverse(operations);
+
+        return operations;
     }
 
     @GET
     @Path("{id}")
     public Operation getOperationById(@NotNull @PathParam("id") final UUID id) {
-        final Operation operation = operationsService.operations().get(id);
-
-        if (operation == null) {
-            throw new NotFoundException();
-        }
-
-        return operation;
+        return operationsService.operation(id).orElseThrow(NotFoundException::new);
     }
 
     @POST

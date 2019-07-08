@@ -1,7 +1,6 @@
 package com.instaclustr.sidecar.operations;
 
+@FunctionalInterface
 public interface OperationFactory<RequestT extends OperationRequest> {
     Operation createOperation(final RequestT request);
-
-    //OperationRequestValidator<?, ?> createValidator();
 }

@@ -2,30 +2,28 @@ package com.instaclustr.sidecar.operations;
 
 import javax.inject.Inject;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.AbstractIdleService;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class OperationsService extends AbstractIdleService {
     private final ListeningExecutorService executorService;
 
     private final Map<Class<? extends OperationRequest>, OperationFactory> operationFactoriesByRequestType;
 
-    private final Map<UUID, Operation> operations = new HashMap<>();
+    private final Map<UUID, Operation> operations;
 
     @Inject
-    public OperationsService(final Map<Class<? extends OperationRequest>, OperationFactory> operationFactoriesByRequestType) {
+    public OperationsService(final Map<Class<? extends OperationRequest>, OperationFactory> operationFactoriesByRequestType,
+                             final @OperationsMap Map<UUID, Operation> operations) {
         this.operationFactoriesByRequestType = operationFactoriesByRequestType;
+        this.operations = operations;
 
         // TODO: custom executor implementation that allows for concurrent operations of different types
         this.executorService = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
@@ -42,18 +40,7 @@ public class OperationsService extends AbstractIdleService {
 
     public void submitOperation(final Operation operation) {
         operations.put(operation.id, operation);
-
-        final ListenableFuture<?> operationFuture = executorService.submit(operation);
-
-        // TODO: somehow "expire" completed (successful or not) operations from the map
-        // perhaps the map should be a cache of some sort
-        Futures.addCallback(operationFuture, new FutureCallback<Object>() {
-            @Override
-            public void onSuccess(@Nullable final Object result) {}
-
-            @Override
-            public void onFailure(final Throwable t) {}
-        }, MoreExecutors.newDirectExecutorService());
+        executorService.submit(operation);
     }
 
     public Operation submitOperationRequest(final OperationRequest request) {
@@ -68,5 +55,9 @@ public class OperationsService extends AbstractIdleService {
 
     public Map<UUID, Operation> operations() {
         return Collections.unmodifiableMap(operations);
+    }
+
+    public Optional<Operation> operation(final UUID id) {
+        return Optional.ofNullable(operations.get(id));
     }
 }

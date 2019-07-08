@@ -101,7 +101,7 @@ public final class Sidecar implements Callable<Void> {
                 new CassandraModule(jmxServiceURL),
                 new JerseyHttpServerModule(httpServerAddress),
 
-                new OperationsModule(),
+                new OperationsModule(3600), // TODO - make this configurable from the cmd line
                 new BackupsModule(),
                 new DecommissioningModule(),
                 new CleanupsModule(),
