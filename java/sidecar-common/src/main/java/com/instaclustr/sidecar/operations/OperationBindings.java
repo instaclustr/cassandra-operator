@@ -20,7 +20,7 @@ public final class OperationBindings {
      */
     public static <RequestT extends OperationRequest, OperationT extends Operation<RequestT>>
     void installOperationBindings(final Binder binder,
-                                  final String typeId,
+                                  final OperationType typeId,
                                   final Class<RequestT> requestClass,
                                   final Class<OperationT> operationClass) {
 
@@ -30,10 +30,8 @@ public final class OperationBindings {
                 );
 
 
-        final TypeLiteral<Class<? extends OperationRequest>> operationRequestClassType = new TypeLiteral<Class<? extends OperationRequest>>() {
-        };
-        final TypeLiteral<Class<? extends Operation>> operationClassType = new TypeLiteral<Class<? extends Operation>>() {
-        };
+        final TypeLiteral<Class<? extends OperationRequest>> operationRequestClassType = new TypeLiteral<Class<? extends OperationRequest>>() {};
+        final TypeLiteral<Class<? extends Operation>> operationClassType = new TypeLiteral<Class<? extends Operation>>() {};
 
         // get Guice to create the AssistedInject OperationFactory implementation for the Operation class
         // to allow creation Operations from their OperationRequests
@@ -45,14 +43,14 @@ public final class OperationBindings {
         MapBinder.newMapBinder(binder, operationRequestClassType, TypeLiteral.get(OperationFactory.class))
                 .addBinding(requestClass).to(operationFactoryType);
 
-        // add an entry to the Map<String, Class<? extends OperationRequest>> for the typeId.
+        // add an entry to the Map<OperationType, Class<? extends OperationRequest>> for the typeId.
         // this allows OperationRequest.TypeIdResolver to lookup the Class for a given typeId (and vice versa)
-        MapBinder.newMapBinder(binder, TypeLiteral.get(String.class), operationRequestClassType)
+        MapBinder.newMapBinder(binder, TypeLiteral.get(OperationType.class), operationRequestClassType)
                 .addBinding(typeId).toInstance(requestClass);
 
-        // add an entry to the Map<String, Class<? extends Operation>> for the typeId.
+        // add an entry to the Map<OperationType, Class<? extends Operation>> for the typeId.
         // this allows Operation.TypeIdResolver to lookup the Class for a given typeId (and vice versa)
-        MapBinder.newMapBinder(binder, TypeLiteral.get(String.class), operationClassType)
+        MapBinder.newMapBinder(binder, TypeLiteral.get(OperationType.class), operationClassType)
                 .addBinding(typeId).toInstance(operationClass);
     }
 }

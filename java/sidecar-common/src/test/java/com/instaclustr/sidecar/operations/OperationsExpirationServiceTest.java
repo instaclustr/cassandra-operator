@@ -42,6 +42,11 @@ public class OperationsExpirationServiceTest {
         }
     }
 
+    enum TestingOperationType implements OperationType {
+
+        TESTING;
+    }
+
     @BeforeTest
     public void setup() {
         final Injector injector = Guice.createInjector(
@@ -50,7 +55,7 @@ public class OperationsExpirationServiceTest {
                     @Override
                     protected void configure() {
                         installOperationBindings(binder(),
-                                                 "testingRequest",
+                                                 TestingOperationType.TESTING,
                                                  TestingRequest.class,
                                                  TestingOperation.class);
                     }

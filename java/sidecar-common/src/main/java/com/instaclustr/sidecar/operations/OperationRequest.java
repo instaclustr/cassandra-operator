@@ -15,11 +15,11 @@ import com.instaclustr.sidecar.jackson.MapBackedTypeIdResolver;
 public abstract class OperationRequest {
 
     @JsonProperty("type")
-    public String type;
+    public OperationType type;
 
     static class TypeIdResolver extends MapBackedTypeIdResolver<OperationRequest> {
         @Inject
-        public TypeIdResolver(final Map<String, Class<? extends OperationRequest>> typeMappings) {
+        public TypeIdResolver(final Map<OperationType, Class<? extends OperationRequest>> typeMappings) {
             super(typeMappings);
         }
     }

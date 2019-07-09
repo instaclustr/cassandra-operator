@@ -37,7 +37,6 @@ public class OperationsService extends AbstractIdleService {
         MoreExecutors.shutdownAndAwaitTermination(executorService, 1, TimeUnit.MINUTES);
     }
 
-
     public void submitOperation(final Operation operation) {
         operations.put(operation.id, operation);
         executorService.submit(operation);
