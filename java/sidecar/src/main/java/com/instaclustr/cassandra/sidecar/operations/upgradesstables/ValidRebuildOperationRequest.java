@@ -21,7 +21,6 @@ import com.instaclustr.sidecar.operations.OperationRequestValidator;
 })
 public @interface ValidRebuildOperationRequest {
 
-
     String message() default "{com.instaclustr.cassandra.sidecar.operations.upgradesstables.ValidRebuildOperationRequest.message}";
 
     Class<?>[] groups() default {};
@@ -34,8 +33,6 @@ public @interface ValidRebuildOperationRequest {
 
             context.disableDefaultConstraintViolation();
 
-            boolean valid = true;
-
             if (value.keyspace == null && value.specificTokens != null && !value.specificTokens.isEmpty()) {
                 context
                         .buildConstraintViolationWithTemplate("{com.instaclustr.cassandra.sidecar.operations.upgradesstables.ValidRebuildOperationRequest.keyspaceMissingForSpecificTokens}")
@@ -44,7 +41,7 @@ public @interface ValidRebuildOperationRequest {
                 return false;
             }
 
-            return valid;
+            return true;
         }
     }
 }

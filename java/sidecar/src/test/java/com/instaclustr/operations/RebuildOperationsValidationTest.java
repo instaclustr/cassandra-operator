@@ -21,8 +21,10 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.assistedinject.Assisted;
+import com.instaclustr.cassandra.sidecar.operations.CassandraOperationType;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildOperationRequest;
 import com.instaclustr.sidecar.operations.Operation;
+import com.instaclustr.sidecar.operations.OperationsModule;
 import org.apache.commons.lang3.tuple.Pair;
 import org.glassfish.jersey.server.validation.ValidationError;
 import org.testng.annotations.Test;
@@ -79,11 +81,12 @@ public class RebuildOperationsValidationTest extends AbstractOperationsValidatio
     @Override
     protected List<Module> getModules() {
         return new ArrayList<Module>() {{
+            add(new OperationsModule());
             add(new AbstractModule() {
                 @Override
                 protected void configure() {
                     installOperationBindings(binder(),
-                                             "rebuild",
+                                             CassandraOperationType.REBUILD,
                                              RebuildOperationRequest.class,
                                              TestingRebuildOperation.class);
                 }

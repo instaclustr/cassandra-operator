@@ -22,7 +22,7 @@ public abstract class Operation<RequestT extends OperationRequest> implements Ru
 
     static class TypeIdResolver extends MapBackedTypeIdResolver<Operation> {
         @Inject
-        public TypeIdResolver(final Map<String, Class<? extends Operation>> typeMappings) {
+        public TypeIdResolver(final Map<OperationType, Class<? extends Operation>> typeMappings) {
             super(typeMappings);
         }
     }
