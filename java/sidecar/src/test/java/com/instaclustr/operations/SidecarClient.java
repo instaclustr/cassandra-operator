@@ -11,6 +11,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Set;
 import java.util.UUID;
 
 import com.google.common.io.CharStreams;
@@ -87,6 +90,21 @@ public class SidecarClient implements Closeable {
 
     public OperationResult<BackupOperation> backup(final BackupOperationRequest operationRequest) {
         return performOperationSubmission(operationRequest, BackupOperation.class);
+    }
+
+    public Collection<Operation> getOperations(final Set<String> operations, final Set<Operation.State> states) {
+
+        WebTarget webTarget = operationsWebTarget;
+
+        if (operations != null && !operations.isEmpty()) {
+            webTarget = operationsWebTarget.queryParam("type", operations.toArray());
+        }
+
+        if (states != null && !operations.isEmpty()) {
+            webTarget = operationsWebTarget.queryParam("state", states.stream().map(Operation.State::toString));
+        }
+
+        return Arrays.asList(webTarget.request(APPLICATION_JSON).get(Operation[].class));
     }
 
     public static String responseEntityToString(final Response response) throws IOException {

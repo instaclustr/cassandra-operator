@@ -1,10 +1,7 @@
 package com.instaclustr.sidecar.operations;
 
-import static java.util.stream.Collectors.toSet;
-
 import java.time.Instant;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -26,18 +23,7 @@ public class OperationsExpirationService extends AbstractScheduledService {
     @Override
     protected void runOneIteration() throws Exception {
         final Instant expirationThreshold = Instant.now().minusSeconds(expirationPeriodInSeconds);
-
-        final Set<UUID> expiredOperations = operations.entrySet().stream()
-                .filter(entry -> {
-                    final Operation operation = entry.getValue();
-
-                    return (operation.state == Operation.State.COMPLETED || operation.state == Operation.State.FAILED)
-                            && operation.completionTime != null && operation.completionTime.isBefore(expirationThreshold);
-                })
-                .map(Map.Entry::getKey)
-                .collect(toSet());
-
-        operations.keySet().removeAll(expiredOperations);
+        operations.values().removeIf(value -> value.state.isTerminalState() && value.completionTime != null && value.completionTime.isBefore(expirationThreshold));
     }
 
     @Override

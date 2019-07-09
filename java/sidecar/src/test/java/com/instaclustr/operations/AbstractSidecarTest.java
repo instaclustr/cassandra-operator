@@ -1,6 +1,14 @@
 package com.instaclustr.operations;
 
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyVararg;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
+
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.net.InetSocketAddress;
@@ -11,6 +19,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Service;
 import com.google.inject.AbstractModule;
@@ -18,6 +27,13 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.instaclustr.cassandra.sidecar.operations.backup.BackupsModule;
+import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupsModule;
+import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissioningModule;
+import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildModule;
+import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubModule;
+import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesModule;
+import com.instaclustr.operations.SidecarClient.OperationResult;
 import com.instaclustr.sidecar.http.JerseyHttpServerModule;
 import com.instaclustr.sidecar.http.JerseyHttpServerService;
 import com.instaclustr.sidecar.operations.OperationsModule;
@@ -28,7 +44,7 @@ import org.mockito.Mockito;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 
-public abstract class AbstractOperationsValidationTest {
+public abstract class AbstractSidecarTest {
 
     static final String TEST_HOSTNAME = System.getProperty("SIDECAR_TEST_HOSTNAME", "localhost");
 
@@ -44,7 +60,9 @@ public abstract class AbstractOperationsValidationTest {
 
     Validator validator;
 
-    protected abstract List<Module> getModules();
+    protected List<Module> getModules() {
+        return ImmutableList.of();
+    }
 
     @BeforeTest
     public void setup() {
@@ -54,10 +72,41 @@ public abstract class AbstractOperationsValidationTest {
             add(new AbstractModule() {
                 @Override
                 protected void configure() {
+
+                    StorageServiceMBean mock = Mockito.mock(StorageServiceMBean.class);
+
+                    doNothing().when(mock).rebuild(any(), any(), any(), any());
+
+                    try {
+                        when(mock.upgradeSSTables(anyString(), anyBoolean(), anyInt(), anyVararg())).thenReturn(0);
+                    } catch (Exception ex) {
+                        // intentionally empty
+                    }
+
+                    when(mock.scrub(anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(), anyString(), anyVararg())).thenReturn(0);
+
+                    try {
+                        doNothing().when(mock).decommission();
+                    } catch (InterruptedException e) {
+                        // intentionally empty
+                    }
+
+                    try {
+                        when(mock.forceKeyspaceCleanup(anyInt(), anyString(), anyVararg())).thenReturn(0);
+                    } catch (Exception ex) {
+                        // intentionally empty
+                    }
+
                     bind(StorageServiceMBean.class).toInstance(Mockito.mock(StorageServiceMBean.class));
                 }
             });
             add(new JerseyHttpServerModule());
+            add(new BackupsModule());
+            add(new DecommissioningModule());
+            add(new CleanupsModule());
+            add(new UpgradeSSTablesModule());
+            add(new RebuildModule());
+            add(new ScrubModule());
         }};
 
         modules.addAll(getModules());
@@ -76,10 +125,10 @@ public abstract class AbstractOperationsValidationTest {
         serverService.stopAsync();
     }
 
-    protected Pair<AtomicReference<List<SidecarClient.OperationResult<?>>>, AtomicBoolean> performOnRunningServer(final JerseyHttpServerService serverService,
-                                                                                                                final Function<SidecarClient, List<SidecarClient.OperationResult<?>>> requestExecutions) {
+    protected Pair<AtomicReference<List<OperationResult<?>>>, AtomicBoolean> performOnRunningServer(final JerseyHttpServerService serverService,
+                                                                                                    final Function<SidecarClient, List<OperationResult<?>>> requestExecutions) {
 
-        final AtomicReference<List<SidecarClient.OperationResult<?>>> responseRefs = new AtomicReference<>(new ArrayList<>());
+        final AtomicReference<List<OperationResult<?>>> responseRefs = new AtomicReference<>(new ArrayList<>());
 
         final AtomicBoolean finished = new AtomicBoolean(false);
 

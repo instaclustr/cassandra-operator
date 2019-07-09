@@ -13,17 +13,18 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.TypeLiteral;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissionOperationRequest;
-import com.instaclustr.sidecar.operations.OperationsResource;
 import com.instaclustr.sidecar.operations.Operation;
 import com.instaclustr.sidecar.operations.OperationFactory;
 import com.instaclustr.sidecar.operations.OperationRequest;
 import com.instaclustr.sidecar.operations.OperationsModule;
+import com.instaclustr.sidecar.operations.OperationsResource;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
@@ -85,7 +86,7 @@ public class SidecarTest {
         Operation submittedOperation = operationsResource.getOperationById(operationID);
         assertNotNull(operationID);
 
-        final Collection<Operation> allOperations = operationsResource.getOperations();
+        final Collection<Operation> allOperations = operationsResource.getOperations(ImmutableSet.of(), ImmutableSet.of());
         assertFalse(allOperations.isEmpty());
 
 
@@ -105,7 +106,7 @@ public class SidecarTest {
         // check it is completed and completed status is returned from all operations endpoint too
         assertEquals(finishedOperation.state, Operation.State.COMPLETED);
 
-        final Collection<Operation> allOperationsAfterFinish = operationsResource.getOperations();
+        final Collection<Operation> allOperationsAfterFinish = operationsResource.getOperations(ImmutableSet.of(), ImmutableSet.of());
         assertFalse(allOperationsAfterFinish.isEmpty());
 
         assertTrue(allOperations.stream().anyMatch(op -> op.id.equals(operationID) && op.state == Operation.State.COMPLETED));

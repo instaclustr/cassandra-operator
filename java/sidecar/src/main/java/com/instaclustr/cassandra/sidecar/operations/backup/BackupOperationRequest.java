@@ -26,7 +26,6 @@ public class BackupOperationRequest extends OperationRequest {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("type", type)
                 .add("destinationUri", destinationUri)
                 .add("snapshotName", snapshotName)
                 .add("keyspaces", keyspaces)

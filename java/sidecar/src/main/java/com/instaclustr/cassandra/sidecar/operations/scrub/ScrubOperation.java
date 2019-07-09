@@ -2,7 +2,7 @@ package com.instaclustr.cassandra.sidecar.operations.scrub;
 
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.sidecar.exception.OperationFailureException;
+import com.instaclustr.sidecar.operations.OperationFailureException;
 import com.instaclustr.sidecar.operations.Operation;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 import org.slf4j.Logger;

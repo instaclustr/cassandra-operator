@@ -12,14 +12,15 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+
+import com.google.common.collect.Collections2;
 
 @Path("/operations")
 @Produces(APPLICATION_JSON)
@@ -33,9 +34,17 @@ public class OperationsResource {
     }
 
     @GET
-    public Collection<Operation> getOperations() {
-        final List<Operation> operations = new ArrayList<>(operationsService.operations().values());
-        Collections.reverse(operations);
+    public Collection<Operation> getOperations(@QueryParam("type") final Set<Class<? extends Operation>> operationTypesFilter,
+                                               @QueryParam("state") final Set<Operation.State> statesFilter) {
+        Collection<Operation> operations = operationsService.operations().values();
+
+        if (!operationTypesFilter.isEmpty()) {
+            operations = Collections2.filter(operations, input -> operationTypesFilter.contains(input.getClass()));
+        }
+
+        if (!statesFilter.isEmpty()) {
+            operations = Collections2.filter(operations, input -> statesFilter.contains(input.state));
+        }
 
         return operations;
     }

@@ -3,7 +3,7 @@ package com.instaclustr.cassandra.sidecar.operations.cleanup;
 import javax.inject.Inject;
 
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.sidecar.exception.OperationFailureException;
+import com.instaclustr.sidecar.operations.OperationFailureException;
 import com.instaclustr.sidecar.operations.Operation;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 

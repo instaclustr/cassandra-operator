@@ -14,9 +14,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 public class OperationsService extends AbstractIdleService {
     private final ListeningExecutorService executorService;
-
     private final Map<Class<? extends OperationRequest>, OperationFactory> operationFactoriesByRequestType;
-
     private final Map<UUID, Operation> operations;
 
     @Inject
