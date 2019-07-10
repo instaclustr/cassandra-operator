@@ -6,11 +6,16 @@ metadata:
     app: cassandra
 spec:
   cluster: "test-cluster"
-  nodes: 3
-  racks: 2
+  nodes: 4
+  racks: {
+   "rack1": 1,
+   "rack2": 1,
+   "rack3": 2
+  }
   cassandraImage: "gcr.io/cassandra-operator/cassandra:3.11.3"
-  sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
-  imagePullPolicy: IfNotPresent
+  sidecarImage: "192.168.56.104:5000/cassandra-sidecar:latest"
+  imagePullPolicy: Always
+  imagePullSecrets: [{name: regcred}]
   resources:
     limits:
       memory: 1Gi

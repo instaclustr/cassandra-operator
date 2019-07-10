@@ -81,7 +81,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	}
 
 	// Use the following for testing:
-	pods = []v1.Pod{{Status: v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
+	//pods = []v1.Pod{{Status: v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
 	sidecarClients := sidecar.SidecarClients(pods, &sidecar.DefaultSidecarClientOptions)
 
 	// Run backups

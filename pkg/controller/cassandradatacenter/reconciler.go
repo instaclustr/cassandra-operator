@@ -58,16 +58,10 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	// 1. How to confine StatusSet to a specific AZ? Ideas: pods should select nodes according to labels or node isolation,
 	// read up https://kubernetes.io/docs/concepts/configuration/assign-pod-node/. Then StatusSet will automatically pick
 	// them up with the labels.
-	// 2. To handle the scaling down we need some guidance from the CRD for racks to work with, that is: we scale down
-	// pods one by one, do we only support scaling down by nodes matching racks? So, having 6 nodes in 2 racks will only allow
-	// us going to 4 nodes, but not 5?
-	// 3. Should we support custom node labels for pods allocation? Not sure we need to, but we might. If yes, will require
-	// another field in the CRD
 	// ...TBD
 
-	//Parse the object and check if it makes any sense wrt to racks
+	// Parse the object and check if it makes any sense wrt to racks
 	if ok, err := checkRacks(cdc.Spec); !ok {
-		// log error and exit
 		return reconcile.Result{}, err
 	}
 
@@ -91,17 +85,13 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 		return reconcile.Result{}, err
 	}
 
-	// figure out the number of stateful sets we're expected to have (1 per rack).
-	// check the number of sets, if doesn't match -> create a new one for missing rack.
-	// if match, select the set with the lowest number of nodes, -> that's our rack.
-
-	// check if we need to do anything at all
+	// check if we need to do anything at all, that is the number of nodes matches running ones
 	allPods, err := AllPodsInCDC(rctx.client, cdc)
 	if int32(len(allPods)) == cdc.Spec.Nodes {
-		log.Info("All pods are created")
+		log.Info("All pods are running, nothing to reconcile")
 		return reconcile.Result{}, nil
 	} else if err != nil {
-		log.Error(err, "can't find all pods")
+		log.Error(err, "can't find all pods, skipping reconcile cycle")
 		return reconcile.Result{}, err
 	}
 
@@ -117,9 +107,7 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 		return reconcile.Result{}, err
 	}
 
-	// # of pods per stateful set is replicas/racks
-	numPods := int32(cdc.Spec.Nodes / cdc.Spec.Racks)
-	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume, rack, numPods)
+	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume, rack)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -141,24 +129,28 @@ func getRack(rctx *reconciliationRequestContext, request reconcile.Request) (str
 		return "", err
 	}
 
-	// check if all racks are built. if not, build a missing one.
-	rackNum := int32(len(sets.Items))
-	if rackNum != rctx.cdc.Spec.Racks {
+	// check if all required racks are built. if not, build a missing one.
+	rackNum := len(sets.Items)
+	if rackNum != len(rctx.cdc.Spec.Racks) {
 		return fmt.Sprintf("rack%v", rackNum+1), nil
 	}
 
-	// Otherwise, we have all stateful sets running. Let's see which one we should add to.
-	// number of pods is initialised to the total nodes.
+	// Otherwise, we have all stateful sets running. Let's see which one we should reconcile.
 	var rack string
-	minNodes := rctx.cdc.Spec.Nodes
 	for _, sts := range sets.Items {
+		// current rack
+		rack = sts.Labels[rackKey]
+		// # of requested pods in a rack
+		requestedPods := rctx.cdc.Spec.Racks[rack]
+		// # of currently running pods in this set
 		pods, err := AllPodsInRack(rctx.client, rctx.cdc.Namespace, sts.Labels)
 		if err != nil {
 			// TODO: log error and continue? let's break for now
-			return "", fmt.Errorf("can't figure out proper rack, err: %v", err)
+			return "", fmt.Errorf("can't figure out proper rack to reconcile, err: %v", err)
 		}
-		if minNodes > int32(len(pods)) {
-			rack = sts.Labels[rackKey]
+		if int(requestedPods) != len(pods) {
+			// Need to reconcile this one for sure
+			return rack, nil
 		}
 	}
 
@@ -166,7 +158,7 @@ func getRack(rctx *reconciliationRequestContext, request reconcile.Request) (str
 		return rack, nil
 	}
 
-	return "", fmt.Errorf("can't figure out proper rack")
+	return "", fmt.Errorf("can't figure out proper rack to reconcile")
 }
 
 func getSets(rctx *reconciliationRequestContext, namespacedName types.NamespacedName) (*v1.StatefulSetList, error) {
@@ -181,11 +173,26 @@ func getSets(rctx *reconciliationRequestContext, namespacedName types.Namespaced
 }
 
 func checkRacks(spec cassandraoperatorv1alpha1.CassandraDataCenterSpec) (bool, error) {
-	// if nodes mod racks != 0, false, otherwise true
-	if spec.Nodes%spec.Racks != 0 {
-		return false, fmt.Errorf("the number of racks should be able to evenly distribute all the nodes")
+
+	// Check that racks are provided. If not, use 1 rack.
+	if spec.Racks == nil || len(spec.Racks) == 0 {
+		spec.Racks = make(map[string]int32)
+		spec.Racks["rack1"] = spec.Nodes
+		return true, nil
 	}
 
+	// Check that the number of nodes requested matches racks distribution
+	var rackNodes int32
+	for _, nodes := range spec.Racks {
+		rackNodes = rackNodes + nodes
+	}
+
+	// If rack nodes != spec nodes, error out?
+	if rackNodes != spec.Nodes {
+		return false, fmt.Errorf("total nodes %d is larger than nodes in racks %d", spec.Nodes, rackNodes)
+	}
+
+	// Else, return ok
 	return true, nil
 
 }

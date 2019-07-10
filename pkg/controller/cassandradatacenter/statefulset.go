@@ -27,7 +27,7 @@ var sidecarClientOptions = sidecar.ClientOptions{
 	Secure: false,
 }
 
-func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume *corev1.Volume, rack string, numPods int32) (*v1beta2.StatefulSet, error) {
+func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume *corev1.Volume, rack string) (*v1beta2.StatefulSet, error) {
 
 	// Init rack-relevant info
 	statefulSet := &v1beta2.StatefulSet{ObjectMeta: StatefulSetMetadata(rctx, rack)}
@@ -54,7 +54,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
 			[]corev1.Container{*sysctlLimitsContainer})
 
-		statefulSetSpec := newStatefulSetSpec(rctx.cdc, podSpec, dataVolumeClaim, rack, numPods)
+		statefulSetSpec := newStatefulSetSpec(rctx.cdc, podSpec, dataVolumeClaim, rack)
 
 		if statefulSet.CreationTimestamp.IsZero() {
 			// creating a new StatefulSet -- just set the Spec and we're done
@@ -62,7 +62,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			return nil
 		}
 
-		return scaleStatefulSet(rctx, statefulSet, statefulSetSpec, rack, numPods)
+		return scaleStatefulSet(rctx, statefulSet, statefulSetSpec, rack)
 	})
 
 	if err != nil {
@@ -74,9 +74,12 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 	return statefulSet, err
 }
 
-func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podSpec *corev1.PodSpec, dataVolumeClaim *corev1.PersistentVolumeClaim, rack string, numPods int32) *v1beta2.StatefulSetSpec {
+func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podSpec *corev1.PodSpec, dataVolumeClaim *corev1.PersistentVolumeClaim, rack string) *v1beta2.StatefulSetSpec {
 	podLabels := DataCenterLabels(cdc)
 	AddStatefulSetLabels(&podLabels, rack)
+
+	// Get rack from the spec. Can't use the address directly
+	numPods := cdc.Spec.Racks[rack]
 
 	return &v1beta2.StatefulSetSpec{
 		ServiceName: "cassandra", // TODO: correct service name? this service should already exist (apparently)
@@ -200,7 +203,7 @@ func newDataVolumeClaim(dataVolumeClaimSpec *corev1.PersistentVolumeClaimSpec) *
 	}
 }
 
-func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v1beta2.StatefulSet, newStatefulSetSpec *v1beta2.StatefulSetSpec, rack string, numPods int32) error {
+func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v1beta2.StatefulSet, newStatefulSetSpec *v1beta2.StatefulSetSpec, rack string) error {
 
 	var (
 		existingSpecReplicas, // number of replicas set in the current spec
@@ -209,7 +212,7 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 	)
 
 	// Get all replicas numbers
-	desiredSpecReplicas = numPods
+	desiredSpecReplicas = rctx.cdc.Spec.Racks[rack]
 	currentReplicas = existingStatefulSet.Status.Replicas
 	if existingStatefulSet.Spec.Replicas != nil {
 		existingSpecReplicas = *existingStatefulSet.Spec.Replicas
@@ -240,7 +243,6 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 	if desiredSpecReplicas > existingSpecReplicas {
 
 		// Scale up
-		rctx.cdc.Spec.Nodes = existingSpecReplicas + 1
 		existingStatefulSet.Spec = *newStatefulSetSpec
 		return controllerutil.SetControllerReference(rctx.cdc, existingStatefulSet, rctx.scheme)
 
@@ -264,8 +266,7 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 					"decommissionedNodes pod: " + decommissionedNodes[0].Name + ", expecting Pod" + newestPod.Name)
 			}
 
-			// TODO: do we need to check that existing > 0?
-			rctx.cdc.Spec.Nodes = existingSpecReplicas - 1
+			existingStatefulSet.Spec = *newStatefulSetSpec
 		} else {
 			// TODO: are we sure about this? Even having 2 decommissioned nodes should be fine for reconciling the stateful set
 			return errors.New("skipping StatefulSet reconciliation as the DataCenter contains more than one decommissionedNodes Cassandra node: " +
@@ -310,11 +311,7 @@ func allPodsAreRunning(pods []corev1.Pod) (bool, []string) {
 		}
 	}
 
-	if len(notRunningPodNames) > 0 {
-		return false, notRunningPodNames
-	}
-
-	return true, notRunningPodNames
+	return len(notRunningPodNames) > 0, notRunningPodNames
 }
 
 func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]nodestate.NodeState {
@@ -402,7 +399,7 @@ func checkState(
 		if len(badPods) > 0 {
 			log.Info("skipping StatefulSet reconciliation as some Cassandra Pods are not in the correct mode")
 			for pod, status := range badPods {
-				log.Info(fmt.Sprintf("Pod: %v, Status: %v", pod, status))
+				log.Info(fmt.Sprintf("Pod: '%v', Status: '%v'", pod, status))
 			}
 			return false, nil
 		}
@@ -413,8 +410,7 @@ func checkState(
 
 func podsToString(pods []*corev1.Pod) []string {
 
-	podNames := make([]string, 0)
-
+	var podNames []string
 	for _, pod := range pods {
 		podNames = append(podNames, pod.Name)
 	}

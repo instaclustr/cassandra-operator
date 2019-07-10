@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-resty/resty"
 	"github.com/google/uuid"
+	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
 	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	"gotest.tools/assert"
 	"io/ioutil"
@@ -34,13 +35,13 @@ func TestDemarshalling(t *testing.T) {
 
 	client.testResponse = &resty.Response{
 		RawResponse: &http.Response{
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(`{ "operationMode": "NORMAL"}`))),
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(`{ "nodeState": "NORMAL"}`))),
 			Status:     "200 OK",
 			StatusCode: 200,
 		},
 	}
 
-	if status, err := client.Status(); err != nil || status == nil || status.NodeState != NORMAL {
+	if status, err := client.Status(); err != nil || status == nil || status.NodeState != nodestate.NORMAL {
 		t.Fail()
 	}
 
@@ -128,7 +129,7 @@ func TestSidecarClient_GetStatus(t *testing.T) {
 		t.Errorf("Status endpoint has not returned error but its status is not set.")
 	}
 
-	if status.NodeState != NORMAL {
+	if status.NodeState != nodestate.NORMAL {
 		t.Fatalf("Expected NORMAL operation mode but received %v", status.NodeState)
 	}
 }
