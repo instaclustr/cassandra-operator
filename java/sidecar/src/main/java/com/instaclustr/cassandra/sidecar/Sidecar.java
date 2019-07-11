@@ -2,29 +2,31 @@ package com.instaclustr.cassandra.sidecar;
 
 import static com.instaclustr.picocli.JarManifestVersionProvider.logCommandVersionInformation;
 
+import javax.management.remote.JMXServiceURL;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Callable;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Stage;
-import com.instaclustr.guava.Application;
-import com.instaclustr.guava.ServiceManagerModule;
-import com.instaclustr.cassandra.sidecar.http.JerseyHttpServerModule;
-import com.instaclustr.cassandra.sidecar.operations.OperationsModule;
 import com.instaclustr.cassandra.sidecar.cassandra.CassandraModule;
 import com.instaclustr.cassandra.sidecar.operations.backup.BackupsModule;
 import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupsModule;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissioningModule;
+import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildModule;
+import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubModule;
+import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesModule;
 import com.instaclustr.cassandra.sidecar.picocli.SidecarJarManifestVersionProvider;
+import com.instaclustr.guava.Application;
+import com.instaclustr.guava.ServiceManagerModule;
 import com.instaclustr.picocli.typeconverter.JMXServiceURLTypeConverter;
 import com.instaclustr.picocli.typeconverter.ServerInetSocketAddressTypeConverter;
+import com.instaclustr.sidecar.http.JerseyHttpServerModule;
+import com.instaclustr.sidecar.operations.OperationsModule;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Spec;
-
-import javax.management.remote.JMXServiceURL;
 
 @Command(name = "cassandra-sidecar",
         mixinStandardHelpOptions = true,
@@ -37,7 +39,7 @@ public final class Sidecar implements Callable<Void> {
     private static final int DEFAULT_SIDECAR_HTTP_PORT = 4567;
     private static final int DEFAULT_CASSANDRA_JMX_PORT = 7199;
 
-    public static class HttpServerInetSocketAddressTypeConverter extends ServerInetSocketAddressTypeConverter {
+    public static final class HttpServerInetSocketAddressTypeConverter extends ServerInetSocketAddressTypeConverter {
         @Override
         protected int defaultPort() {
             return DEFAULT_SIDECAR_HTTP_PORT;
@@ -56,12 +58,10 @@ public final class Sidecar implements Callable<Void> {
                     "Defaults to '${DEFAULT-VALUE}'")
     public InetSocketAddress httpServerAddress;
 
-
-
-    public static class CassandraJMXServiceURLTypeConverter extends JMXServiceURLTypeConverter {
+    public static final class CassandraJMXServiceURLTypeConverter extends JMXServiceURLTypeConverter {
         @Override
         protected int defaultPort() {
-            return 7199;
+            return DEFAULT_CASSANDRA_JMX_PORT;
         }
     }
 
@@ -75,7 +75,6 @@ public final class Sidecar implements Callable<Void> {
                     "PORT, when specified, must be a valid port number. The default port " + DEFAULT_CASSANDRA_JMX_PORT + " will be substituted if omitted." +
                     "Defaults to '${DEFAULT-VALUE}'")
     public JMXServiceURL jmxServiceURL;
-
 
     @Spec
     private CommandLine.Model.CommandSpec commandSpec;
@@ -102,10 +101,13 @@ public final class Sidecar implements Callable<Void> {
                 new CassandraModule(jmxServiceURL),
                 new JerseyHttpServerModule(httpServerAddress),
 
-                new OperationsModule(),
+                new OperationsModule(3600), // TODO - make this configurable from the cmd line
                 new BackupsModule(),
                 new DecommissioningModule(),
-                new CleanupsModule()
+                new CleanupsModule(),
+                new UpgradeSSTablesModule(),
+                new RebuildModule(),
+                new ScrubModule()
         );
 
         return injector.getInstance(Application.class).call();

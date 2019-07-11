@@ -140,11 +140,11 @@ func TestClient_DecommissionNode(t *testing.T) {
 
 	// first decommissioning
 
-	if operationId, err := client.Decommission(); err != nil {
+	if operationId, err := client.StartOperation(&DecommissionRequest{}); err != nil {
 		t.Errorf(err.Error())
-	} else if operationId == nil || (*operationId) == uuid.Nil {
-		t.Errorf("there is not any error from Decommission endpoint but operationId is nil")
-	} else if getOpResponse, err := client.GetOperation(*operationId); err != nil {
+	} else if operationId == uuid.Nil {
+		t.Errorf("there is not any error from decommission endpoint but operationId is nil")
+	} else if getOpResponse, err := client.GetOperation(operationId); err != nil {
 		t.Errorf(err.Error())
 	} else {
 		assert.Assert(t, (*getOpResponse)["state"] == operations.RUNNING)
@@ -152,9 +152,9 @@ func TestClient_DecommissionNode(t *testing.T) {
 
 	// second decommissioning on the same node
 
-	response2, err2 := client.Decommission()
+	operationId, err := client.StartOperation(&DecommissionRequest{})
 
-	if err2 == nil || response2 != nil {
+	if err == nil || operationId != uuid.Nil {
 		t.Errorf("Decommissioning of already decomissioned node should fail.")
 	}
 }
@@ -166,13 +166,13 @@ func TestClient_BackupNode(t *testing.T) {
 	backups, _ := client.ListBackups()
 	fmt.Println(backups[0])
 
-	request := &BackupOperation{
+	request := &BackupRequest{
 		DestinationUri: "/tmp/backup_test",
 		Keyspaces:      []string{"test_keyspace"},
 		SnapshotName:   "testSnapshot",
 	}
 
-	if operationID, err := client.Backup(request); err != nil {
+	if operationID, err := client.StartOperation(request); err != nil {
 		t.Errorf(err.Error())
 	} else if getOpResponse, err := client.GetOperation(operationID); err != nil {
 		t.Errorf(err.Error())
@@ -188,16 +188,16 @@ func TestClient_CleanupNode(t *testing.T) {
 	cleanups, _ := client.ListCleanups()
 	fmt.Print(cleanups[0])
 
-	request := &CleanupOperation{
+	request := &CleanupRequest{
 		Keyspace: "test",
 		Tables:   []string{"mytable", "mytable2"},
 	}
 
-	if response, err := client.Cleanup(request); err != nil {
+	if operationId, err := client.StartOperation(request); err != nil {
 		t.Errorf(err.Error())
-	} else if response == nil {
-		t.Errorf("there is not any error from Cleanup endpoint but response is nil")
-	} else if getOpResponse, err := client.GetOperation(*response); err != nil {
+	} else if operationId == uuid.Nil {
+		t.Errorf("there is not any error from cleanup endpoint but operationId is nil")
+	} else if getOpResponse, err := client.GetOperation(operationId); err != nil {
 		t.Errorf(err.Error())
 	} else {
 		assert.Assert(t, (*getOpResponse)["state"] == "COMPLETED")

@@ -88,7 +88,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	for _, sidecarClient := range sidecarClients {
 
 		// TODO: run this on goroutine so that all 3 are handled in parallel
-		backupRequest := &sidecar.BackupOperation{
+		backupRequest := &sidecar.BackupRequest{
 			DestinationUri: b.Spec.DestinationUri,
 			SnapshotName:   b.Spec.SnapshotName,
 			Keyspaces:      b.Spec.Keyspaces,
@@ -97,7 +97,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		// Testing adding event to the object
 		r.recorder.Event(b, v1.EventTypeNormal, "Received Backup Request", "Starting backup")
 
-		operationID, err := sidecarClient.Backup(backupRequest)
+		operationID, err := sidecarClient.StartOperation(backupRequest)
 		if err != nil {
 			// log error?
 			fmt.Println(err)
@@ -107,9 +107,9 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 				opState := operations.RUNNING
 				for opState != operations.COMPLETED {
 					backup, err := getBackup(sidecarClient, operationID)
-					if backup == nil || err != nil {
+					if err != nil {
 						// log error?
-						fmt.Println("Couldn't find backup")
+						reqLogger.Error(err, "couldn't find backup")
 						return
 					}
 					b.Status[sidecarClient.Host] = &cassandraoperatorv1alpha1.CassandraBackupStatus{
@@ -124,8 +124,8 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 					<-time.After(time.Second)
 				}
 
-				log.Info(fmt.Sprintf("Backup operation %v on node %v has finished", operationID, sidecarClient.Host))
-				r.recorder.Event(b, v1.EventTypeNormal, "Operation Finished", "Backup Completed")
+				log.Info(fmt.Sprintf("backup operation %v on node %v has finished", operationID, sidecarClient.Host))
+				r.recorder.Event(b, v1.EventTypeNormal, "Operation Finished", "Backup completed")
 
 				return
 			}()
@@ -139,14 +139,14 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 }
 
 func getBackup(client *sidecar.Client, id uuid.UUID) (backup *sidecar.BackupResponse, err error) {
-	if backups, err := client.ListBackups(); err != nil {
+
+	if op, err := client.GetOperation(id); err != nil {
 		return nil, err
+	} else if b, err := sidecar.ParseOperation(*op, sidecar.GetType("backup")); err != nil {
+		return nil, err
+	} else if backup, ok := b.(*sidecar.BackupResponse); !ok {
+		return nil, fmt.Errorf("can't parse operation to backup")
 	} else {
-		for _, backup := range backups {
-			if backup.Id == id {
-				return backup, nil
-			}
-		}
+		return backup, nil
 	}
-	return
 }

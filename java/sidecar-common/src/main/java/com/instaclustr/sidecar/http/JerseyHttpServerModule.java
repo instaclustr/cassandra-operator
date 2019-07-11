@@ -1,9 +1,10 @@
-package com.instaclustr.cassandra.sidecar.http;
+package com.instaclustr.sidecar.http;
 
 import javax.ws.rs.core.Feature;
 import javax.ws.rs.core.FeatureContext;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
+import java.net.InetSocketAddress;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,25 +18,27 @@ import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoSet;
-import com.instaclustr.guava.ServiceBindings;
-import com.instaclustr.jackson.GuiceJacksonHandlerInstantiator;
+import com.instaclustr.sidecar.jackson.GuiceJacksonHandlerInstantiator;
+import com.instaclustr.sidecar.validation.ValidationConfigurationContextResolver;
 import org.glassfish.hk2.api.ServiceLocator;
 import org.glassfish.jersey.InjectionManagerProvider;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.server.ServerProperties;
 import org.jvnet.hk2.guice.bridge.api.GuiceBridge;
 import org.jvnet.hk2.guice.bridge.api.GuiceIntoHK2Bridge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
-
 public class JerseyHttpServerModule extends AbstractModule {
-    private final InetSocketAddress httpServerAddress;
+    private InetSocketAddress httpServerAddress;
 
     public JerseyHttpServerModule(final InetSocketAddress httpServerAddress) {
-
         this.httpServerAddress = httpServerAddress;
+    }
+
+    public JerseyHttpServerModule() {
+        // for testing
     }
 
     @Override
@@ -49,7 +52,6 @@ public class JerseyHttpServerModule extends AbstractModule {
         return new JerseyHttpServerService(httpServerAddress, resourceConfig);
     }
 
-
     @Provides
     @Singleton
     ResourceConfig provideResourceConfig(final GuiceHK2BridgeFeature guiceHK2BridgeFeature,
@@ -59,7 +61,9 @@ public class JerseyHttpServerModule extends AbstractModule {
                 .packages("com.instaclustr")
                 .register(customObjectMapperFeature)
                 .register(debugMapper)
-                .register(guiceHK2BridgeFeature);
+                .register(guiceHK2BridgeFeature)
+                .register(ValidationConfigurationContextResolver.class)
+                .property(ServerProperties.BV_SEND_ERROR_IN_RESPONSE, true);
     }
 
     @Singleton

@@ -1,15 +1,11 @@
 package com.instaclustr.picocli.typeconverter;
 
-import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
-import com.google.common.net.InetAddresses;
-import picocli.CommandLine;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import picocli.CommandLine;
 
 /**
  * A {@link picocli.CommandLine.ITypeConverter} for {@link InetSocketAddress}es.

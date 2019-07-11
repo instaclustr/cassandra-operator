@@ -1,8 +1,8 @@
 package com.instaclustr.cassandra.sidecar.cassandra;
 
-import com.instaclustr.jmx.ObjectNames;
-
 import javax.management.ObjectName;
+
+import com.instaclustr.jmx.ObjectNames;
 
 public final class CassandraObjectNames {
     public static final ObjectName GOSSIPER_MBEAN_NAME = ObjectNames.create("org.apache.cassandra.net:type=Gossiper");

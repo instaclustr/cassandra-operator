@@ -9,6 +9,7 @@
 
     <modules>
         <module>common</module>
+        <module>sidecar-common</module>
         <module>sidecar</module>
         <module>k8s-addons</module>
         <module>backup</module>
@@ -114,8 +115,8 @@
             </dependency>
 
             <dependency>
-                <groupId>org.glassfish.jersey.core</groupId>
-                <artifactId>jersey-client</artifactId>
+                <groupId>org.glassfish.jersey.ext</groupId>
+                <artifactId>jersey-bean-validation</artifactId>
                 <version>${jersey.version}</version>
             </dependency>
 
@@ -125,6 +126,12 @@
                 <version>${jackson.bom.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-client</artifactId>
+                <version>${jersey.version}</version>
             </dependency>
 
             <!-- used by legacy backup code -->
