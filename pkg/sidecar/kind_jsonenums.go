@@ -13,6 +13,8 @@ var (
 		"upgradesstables": upgradesstables,
 		"decommission":    decommission,
 		"backup":          backup,
+		"rebuild":         rebuild,
+		"scrub":           scrub,
 	}
 
 	_KindValueToName = map[Kind]string{
@@ -20,6 +22,8 @@ var (
 		upgradesstables: "upgradesstables",
 		decommission:    "decommission",
 		backup:          "backup",
+		rebuild:         "rebuild",
+		scrub:           "scrub",
 	}
 )
 
@@ -31,6 +35,8 @@ func init() {
 			interface{}(upgradesstables).(fmt.Stringer).String(): upgradesstables,
 			interface{}(decommission).(fmt.Stringer).String():    decommission,
 			interface{}(backup).(fmt.Stringer).String():          backup,
+			interface{}(rebuild).(fmt.Stringer).String():         rebuild,
+			interface{}(scrub).(fmt.Stringer).String():           scrub,
 		}
 	}
 }

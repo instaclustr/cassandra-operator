@@ -6,15 +6,13 @@ import (
 	"github.com/go-resty/resty"
 	"github.com/google/uuid"
 	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
-	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"strconv"
 	"strings"
 	"time"
 )
-
-//go:generate jsonenums -type=Kind
 
 const (
 	accept             = "Accept"
@@ -22,6 +20,8 @@ const (
 	EndpointOperations = "operations"
 	EndpointStatus     = "status"
 )
+
+var log = logf.Log.WithName("SidecarClient")
 
 var DefaultSidecarClientOptions = ClientOptions{Port: 4567, Secure: false}
 
@@ -121,83 +121,6 @@ func (e *HttpResponse) Error() string {
 	return fmt.Sprintf("Operation was errorneous: %s", e.err)
 }
 
-/// OPERATIONS
-
-type Kind int
-
-const (
-	cleanup Kind = iota
-	upgradesstables
-	decommission
-	backup
-)
-
-type Operation struct {
-	Type Kind `json:"type"`
-}
-
-type DecommissionOperation struct {
-	Operation
-}
-
-type CleanupOperation struct {
-	Operation
-	Keyspace string   `json:"keyspace"`
-	Tables   []string `json:"tables"`
-}
-
-type BackupOperation struct {
-	Operation
-	DestinationUri string   `json:"destinationUri"`
-	Keyspaces      []string `json:"keyspaces"`
-	SnapshotName   string   `json:"snapshotName"`
-}
-
-type UpgradeSSTablesOperation struct {
-	Operation
-}
-
-type Operations []OperationResponse
-type OperationResponse map[string]interface{}
-type BasicResponse struct {
-	Id             uuid.UUID                 `json:"id"`
-	CreationTime   time.Time                 `json:"creationTime"`
-	State          operations.OperationState `json:"state"`
-	Progress       float32                   `json:"progress"`
-	StartTime      time.Time                 `json:"startTime"`
-	CompletionTime time.Time                 `json:"completionTime"`
-}
-
-/// RESPONSES
-
-type DecommissionOperationResponse struct {
-	BasicResponse
-}
-
-type CleanupOperationResponse struct {
-	BasicResponse
-	CleanupOperation
-}
-
-type BackupResponse struct {
-	BasicResponse
-	BackupOperation
-}
-
-func (b *BackupResponse) String() string {
-	op, _ := json.Marshal(b)
-	return string(op)
-}
-
-func (c *CleanupOperationResponse) String() string {
-	op, _ := json.Marshal(c)
-	return string(op)
-}
-
-type UpgradeSSTablesResponse struct {
-	Operation
-}
-
 func (client *Client) Status() (*nodestate.Status, error) {
 
 	if r, err := client.performRequest(EndpointStatus, http.MethodGet, nil); responseInvalid(r, err) {
@@ -214,54 +137,6 @@ func (client *Client) Status() (*nodestate.Status, error) {
 		} else {
 			return nil, err
 		}
-	}
-}
-
-func (client *Client) Decommission() (*uuid.UUID, error) {
-
-	// TODO: atm decommission operation doesn't need params, so will send an empty request.
-	// This may change in the future.
-
-	request := &DecommissionOperation{Operation{Type: decommission}}
-
-	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
-		return nil, err
-	} else {
-		operationId, err := parseOperationId(r)
-		if err != nil {
-			return nil, err
-		}
-		return &operationId, nil
-	}
-}
-
-func (client *Client) Cleanup(request *CleanupOperation) (*uuid.UUID, error) {
-
-	request.Type = cleanup
-
-	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
-		return nil, err
-	} else {
-		operationId, err := parseOperationId(r)
-		if err != nil {
-			return nil, err
-		}
-		return &operationId, nil
-	}
-}
-
-func (client *Client) Backup(request *BackupOperation) (uuid.UUID, error) {
-
-	request.Type = backup
-
-	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
-		return uuid.Nil, err
-	} else {
-		operationId, err := parseOperationId(r)
-		if err != nil {
-			return uuid.Nil, err
-		}
-		return operationId, nil
 	}
 }
 
@@ -289,7 +164,7 @@ func (client *Client) GetOperation(id uuid.UUID) (*OperationResponse, error) {
 	}
 }
 
-func (client *Client) GetOperations() (*[]OperationResponse, error) {
+func (client *Client) GetOperations() (*Operations, error) {
 	if r, err := client.performRequest(EndpointOperations, http.MethodGet, nil); responseInvalid(r, err) {
 		return nil, err
 	} else {
@@ -299,105 +174,63 @@ func (client *Client) GetOperations() (*[]OperationResponse, error) {
 			return nil, err
 		}
 
-		if response, err := unmarshallBody(body, r, &[]OperationResponse{}); err == nil {
-			return response.(*[]OperationResponse), nil
+		if response, err := unmarshallBody(body, r, &Operations{}); err == nil {
+			return response.(*Operations), nil
 		} else {
 			return nil, err
 		}
 	}
 }
 
-func (client *Client) ListCleanups() ([]*CleanupOperationResponse, error) {
+func FilterOperations(ops Operations, kind Kind) (result []interface{}, err error) {
 
-	ops, err := client.GetOperations()
-	if ops == nil || err != nil {
-		return []*CleanupOperationResponse{}, err
-	}
-
-	operations, err := FilterOperations(*ops, cleanup)
-	if err != nil {
-		//??
-	}
-
-	var cleanups []*CleanupOperationResponse
-	for _, op := range operations {
-		cleanups = append(cleanups, op.(*CleanupOperationResponse))
-	}
-
-	return cleanups, nil
-}
-
-func (client *Client) ListBackups() ([]*BackupResponse, error) {
-
-	ops, err := client.GetOperations()
-	if ops == nil || err != nil {
-		return []*BackupResponse{}, nil
-	}
-
-	operations, err := FilterOperations(*ops, backup)
-	if err != nil {
-		// ?
-	}
-
-	var backups []*BackupResponse
-	for _, op := range operations {
-		backups = append(backups, op.(*BackupResponse))
-	}
-
-	return backups, nil
-}
-
-func (client *Client) UpgradeSSTables(request *UpgradeSSTablesOperation) (*uuid.UUID, error) {
-
-	request.Type = upgradesstables
-
-	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
-		return nil, err
-	} else {
-		operationId, err := parseOperationId(r)
-		if err != nil {
-			return nil, err
-		}
-		return &operationId, nil
-	}
-}
-
-func FilterOperations(ops Operations, kind Kind) ([]interface{}, error) {
-
-	var result = make([]interface{}, 0)
+	result = make([]interface{}, 0)
+	var op interface{}
 
 	for _, item := range ops {
-
-		if item["type"].(string) == _KindValueToName[kind] {
-
-			var op interface{}
-
-			switch kind {
-			case cleanup:
-				op = &CleanupOperationResponse{}
-			case upgradesstables:
-				op = &UpgradeSSTablesResponse{}
-			case decommission:
-				op = &DecommissionOperationResponse{}
-			case backup:
-				op = &BackupResponse{}
-			default:
-				continue
-			}
-
-			if body, err := json.Marshal(item); err != nil {
-				// Log error
-				continue
-			} else if err := json.Unmarshal(body, op); err != nil {
-				// Log error
-				continue
-			} else {
-				result = append(result, op)
-			}
+		if op, err = ParseOperation(item, kind); err != nil {
+			log.Error(err, "Error parsing operation", &map[string]interface{}{"Operation": op})
+			continue
 		}
+		result = append(result, op)
 	}
 
 	return result, nil
+}
+
+func ParseOperation(operation OperationResponse, kind Kind) (interface{}, error) {
+	var op interface{}
+	// TODO: hopefully useless when backups are properly done
+	if operation["progress"] == "NaN" {
+		operation["progress"] = 0.0
+	}
+	if operation["type"].(string) == _KindValueToName[kind] {
+
+		switch kind {
+		case cleanup:
+			op = &CleanupOperationResponse{}
+		case upgradesstables:
+			op = &UpgradeSSTablesResponse{}
+		case decommission:
+			op = &DecommissionOperationResponse{}
+		case backup:
+			op = &BackupResponse{}
+		case rebuild:
+			op = &RebuildResponse{}
+		case scrub:
+			op = &ScrubResponse{}
+		case noop:
+			return nil, fmt.Errorf("no op")
+		}
+
+		if body, err := json.Marshal(operation); err != nil {
+			return nil, err
+		} else if err := json.Unmarshal(body, op); err != nil {
+			return nil, err
+		}
+
+	}
+	return op, nil
 }
 
 func responseInvalid(r interface{}, err error) bool {
@@ -459,4 +292,17 @@ func unmarshallBody(body *[]byte, response *resty.Response, responseEnvelope int
 	}
 
 	return responseEnvelope, nil
+}
+
+func (client *Client) StartOperation(request OperationRequest) (uuid.UUID, error) {
+	request.Init()
+	if r, err := client.performRequest(EndpointOperations, http.MethodPost, request); responseInvalid(r, err) {
+		return uuid.Nil, err
+	} else {
+		operationId, err := parseOperationId(r)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return operationId, nil
+	}
 }

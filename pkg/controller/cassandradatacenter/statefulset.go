@@ -247,7 +247,7 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 		if len(decommissionedNodes) == 0 {
 			log.Info("No Cassandra nodes have been decommissioned. Decommissioning the newest one " + newestPod.Name)
 			if clientForNewestPod := sidecar.ClientFromPods(clients, newestPod); clientForNewestPod != nil {
-				if _, err := clientForNewestPod.Decommission(); err != nil {
+				if _, err := clientForNewestPod.StartOperation(&sidecar.DecommissionRequest{}); err != nil {
 					return errors.New(fmt.Sprintf("Unable to decommission node %s: %v", newestPod.Name, err))
 				}
 			} else {
@@ -402,13 +402,10 @@ func checkState(
 }
 
 func podsToString(pods []*corev1.Pod) []string {
-
 	podNames := make([]string, 0)
-
 	for _, pod := range pods {
 		podNames = append(podNames, pod.Name)
 	}
-
 	return podNames
 }
 
