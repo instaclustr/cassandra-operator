@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
@@ -39,11 +40,12 @@ public abstract class Operation<RequestT extends OperationRequest> implements Ru
         }
     }
 
-    public final UUID id = UUID.randomUUID();
-    public final Instant creationTime = Instant.now();
+    public UUID id = UUID.randomUUID();
+    public Instant creationTime = Instant.now();
 
     @JsonUnwrapped // embed the request parameters in the serialized output directly
-    public final RequestT request;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY) // added so unwrap works ok with JsonCreator
+    public RequestT request;
 
     public State state = State.PENDING;
     public Throwable failureCause;
@@ -51,6 +53,22 @@ public abstract class Operation<RequestT extends OperationRequest> implements Ru
     public Instant startTime, completionTime;
 
     protected Operation(final RequestT request) {
+        this.request = request;
+    }
+
+    protected Operation(final UUID id,
+                        final Instant creationTime,
+                        final State state,
+                        final Throwable failureCause,
+                        final float progress,
+                        final Instant startTime,
+                        final RequestT request) {
+        this.id = id;
+        this.creationTime = creationTime;
+        this.state = state;
+        this.failureCause = failureCause;
+        this.progress = progress;
+        this.startTime = startTime;
         this.request = request;
     }
 

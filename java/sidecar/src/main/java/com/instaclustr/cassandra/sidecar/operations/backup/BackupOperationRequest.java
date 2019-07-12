@@ -15,9 +15,9 @@ public class BackupOperationRequest extends OperationRequest {
     public final Set<String> keyspaces;
 
     @JsonCreator
-    public BackupOperationRequest(@JsonProperty("destinationUri") final URI destinationUri,
-                                  @JsonProperty("snapshotName") final String snapshotName,
-                                  @JsonProperty("keyspaces") final Set<String> keyspaces) {
+    private BackupOperationRequest(@JsonProperty("destinationUri") final URI destinationUri,
+                                   @JsonProperty("snapshotName") final String snapshotName,
+                                   @JsonProperty("keyspaces") final Set<String> keyspaces) {
         this.destinationUri = destinationUri;
         this.snapshotName = snapshotName;
         this.keyspaces = keyspaces;

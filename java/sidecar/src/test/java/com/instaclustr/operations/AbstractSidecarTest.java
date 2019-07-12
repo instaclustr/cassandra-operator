@@ -41,8 +41,8 @@ import jmx.org.apache.cassandra.service.StorageServiceMBean;
 import org.apache.commons.lang3.tuple.Pair;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.mockito.Mockito;
-import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 
 public abstract class AbstractSidecarTest {
 
@@ -58,13 +58,15 @@ public abstract class AbstractSidecarTest {
 
     JerseyHttpServerService serverService;
 
+    SidecarClient sidecarClient;
+
     Validator validator;
 
     protected List<Module> getModules() {
         return ImmutableList.of();
     }
 
-    @BeforeTest
+    @BeforeMethod
     public void setup() {
 
         List<Module> modules = new ArrayList<Module>() {{
@@ -117,16 +119,18 @@ public abstract class AbstractSidecarTest {
 
         serverService = new JerseyHttpServerService(new InetSocketAddress(TEST_HOSTNAME, TEST_PORT), resourceConfig);
 
+        sidecarClient = new SidecarClient.Builder().withHostname(TEST_HOSTNAME).withPort(TEST_PORT).build(resourceConfig);
+
         validator = Validation.byDefaultProvider().configure().buildValidatorFactory().getValidator();
     }
 
-    @AfterTest
+    @AfterMethod
     public void teardown() {
+        sidecarClient.close();
         serverService.stopAsync();
     }
 
-    protected Pair<AtomicReference<List<OperationResult<?>>>, AtomicBoolean> performOnRunningServer(final JerseyHttpServerService serverService,
-                                                                                                    final Function<SidecarClient, List<OperationResult<?>>> requestExecutions) {
+    protected Pair<AtomicReference<List<OperationResult<?>>>, AtomicBoolean> performOnRunningServer(final Function<SidecarClient, List<OperationResult<?>>> requestExecutions) {
 
         final AtomicReference<List<OperationResult<?>>> responseRefs = new AtomicReference<>(new ArrayList<>());
 
@@ -135,15 +139,16 @@ public abstract class AbstractSidecarTest {
         serverService.addListener(new Service.Listener() {
             @Override
             public void running() {
-
-                try (SidecarClient client = new SidecarClient.Builder().withHostname(TEST_HOSTNAME).withPort(TEST_PORT).build(resourceConfig)) {
-                    responseRefs.set(requestExecutions.apply(client));
+                try {
+                    responseRefs.set(requestExecutions.apply(sidecarClient));
                 } finally {
                     finished.set(true);
                 }
 
             }
         }, MoreExecutors.directExecutor());
+
+        serverService.startAsync();
 
         return Pair.of(responseRefs, finished);
     }

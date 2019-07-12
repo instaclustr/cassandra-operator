@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.CharStreams;
 import com.instaclustr.cassandra.sidecar.operations.backup.BackupOperation;
 import com.instaclustr.cassandra.sidecar.operations.backup.BackupOperationRequest;
@@ -36,6 +37,7 @@ import org.glassfish.jersey.server.ResourceConfig;
 
 public class SidecarClient implements Closeable {
 
+    private final String rootUrl;
     private final Client client;
     private final WebTarget statusWebTarget;
     private final WebTarget operationsWebTarget;
@@ -43,7 +45,7 @@ public class SidecarClient implements Closeable {
     private SidecarClient(final Builder builder, final ResourceConfig resourceConfig) {
         client = ClientBuilder.newBuilder().withConfig(resourceConfig).build();
 
-        final String rootUrl = String.format("http://%s:%s", builder.hostname, builder.port);
+        rootUrl = String.format("http://%s:%s", builder.hostname, builder.port);
 
         statusWebTarget = client.target(String.format("%s/status", rootUrl));
         operationsWebTarget = client.target(String.format("%s/operations", rootUrl));
@@ -92,16 +94,20 @@ public class SidecarClient implements Closeable {
         return performOperationSubmission(operationRequest, BackupOperation.class);
     }
 
+    public Collection<Operation> getOperations() {
+        return getOperations(ImmutableSet.of(), ImmutableSet.of());
+    }
+
     public Collection<Operation> getOperations(final Set<String> operations, final Set<Operation.State> states) {
 
-        WebTarget webTarget = operationsWebTarget;
+        WebTarget webTarget = client.target(String.format("%s/operations", rootUrl));
 
         if (operations != null && !operations.isEmpty()) {
-            webTarget = operationsWebTarget.queryParam("type", operations.toArray());
+            webTarget = webTarget.queryParam("type", operations.toArray());
         }
 
-        if (states != null && !operations.isEmpty()) {
-            webTarget = operationsWebTarget.queryParam("state", states.stream().map(Operation.State::toString));
+        if (states != null && !states.isEmpty()) {
+            webTarget = webTarget.queryParam("state", states.stream().map(Operation.State::name).toArray());
         }
 
         return Arrays.asList(webTarget.request(APPLICATION_JSON).get(Operation[].class));

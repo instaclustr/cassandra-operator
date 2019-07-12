@@ -1,8 +1,10 @@
 package com.instaclustr.operations;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
+import static org.awaitility.Awaitility.await;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -20,7 +22,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.glassfish.jersey.server.validation.ValidationError;
 import org.testng.annotations.Test;
 
-public class RebuildOperationsValidationTest extends AbstractSidecarTest {
+public class OperationsValidationTest extends AbstractSidecarTest {
 
     @Test
     public void validateRebuildRequests() {
@@ -55,12 +57,9 @@ public class RebuildOperationsValidationTest extends AbstractSidecarTest {
             return Stream.of(request1).map(client::rebuild).collect(toList());
         };
 
-        final Pair<AtomicReference<List<SidecarClient.OperationResult<?>>>, AtomicBoolean> result = performOnRunningServer(serverService, invalidRequests);
+        final Pair<AtomicReference<List<SidecarClient.OperationResult<?>>>, AtomicBoolean> result = performOnRunningServer(invalidRequests);
 
-        serverService.startAsync();
-
-        while (!result.getRight().get()) {
-        }
+        await().atMost(1, MINUTES).until(() -> result.getRight().get());
 
         result.getLeft().get().forEach(r -> assertEquals(r.response.getStatus(), BAD_REQUEST.getStatusCode()));
 
