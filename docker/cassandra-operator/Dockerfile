@@ -1,9 +1,19 @@
-FROM debian:stretch
+FROM golang AS builder
 
-RUN mkdir -p /opt/{bin,lib/cassandra-operator}
+# Create a user so that operator can run as non-root
+RUN useradd -u 999 cassandra-operator
 
-COPY cassandra-operator.sh /opt/bin/cassandra-operator
+COPY . /code
+WORKDIR /code
 
-ENV PATH = $PATH:/opt/bin
+# Build binary
+RUN cd cmd/manager \
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-w' -o /tmp/cassandra-operator
 
-CMD cassandra-operator
+# Build final image
+FROM scratch
+
+COPY --from=builder /tmp/cassandra-operator .
+COPY --from=builder /etc/passwd /etc/passwd
+USER 999
+CMD ["./cassandra-operator"]
