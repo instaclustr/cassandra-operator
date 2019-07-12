@@ -18,7 +18,7 @@ spec:
           # Replace this with the built image name
           image: REPLACE_IMAGE
           command:
-          - cassandra-operator
+          - ./cassandra-operator
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
