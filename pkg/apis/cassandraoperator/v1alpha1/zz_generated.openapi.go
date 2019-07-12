@@ -283,15 +283,8 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 					},
 					"racks": {
 						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"integer"},
-										Format: "int32",
-									},
-								},
-							},
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"cassandraImage": {

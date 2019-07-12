@@ -51,7 +51,6 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 
 	requestLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 
-
 	// TODO: Multi-racks support
 	// This is just some thoughts on the subject, which only supports starting/growing the cluster atm.
 	// Things to consider:
@@ -60,9 +59,8 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	// them up with the labels.
 	// ...TBD
 
-	// Parse the object and check if it makes any sense wrt to racks
-	if ok, err := checkRacks(cdc.Spec); !ok {
-		return reconcile.Result{}, err
+	if cdc.Spec.Nodes < cdc.Spec.Racks {
+		return reconcile.Result{}, fmt.Errorf("number of nodes %v is smaller than the number of racks %v", cdc.Spec.Nodes, cdc.Spec.Racks)
 	}
 
 	rctx := &reconciliationRequestContext{
@@ -95,19 +93,18 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 		return reconcile.Result{}, err
 	}
 
-	// fine, so we don't have enough nodes running yet. Pick the rack with smallest number of nodes
-	// and update it
-	rack, err := getRack(rctx, request)
+	// fine, so we have a mismatch. Will seek to reconcile.
+	rackSpec, err := getRackSpec(rctx, request, int32(len(allPods)))
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	configVolume, err := createOrUpdateOperatorConfigMap(rctx, seedNodesService, rack)
+	configVolume, err := createOrUpdateOperatorConfigMap(rctx, seedNodesService, rackSpec)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume, rack)
+	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume, rackSpec)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -120,48 +117,56 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	return reconcile.Result{}, nil
 }
 
-func getRack(rctx *reconciliationRequestContext, request reconcile.Request) (string, error) {
+func getRackSpec(rctx *reconciliationRequestContext, request reconcile.Request, numPods int32) (*Rack, error) {
 
-	// Get all stateful sets
-	sets, err := getSets(rctx, request.NamespacedName)
-	if err != nil {
-		log.Error(err, "Can't find Stateful Sets")
-		return "", err
+	// This currently works with the following logic:
+	// 1. Build a struct of racks with distribution numbers.
+	// 2. Check if all racks (stateful sets) have been created. If not, create a new missing one, and pass it the number
+	// of the nodes it's supposed to have.
+	// 3. If all racks are present, iterate and check if the expected distribution replicas match the status, if not - reconcile.
+
+	// TODO: For now, call racks "rack#num", where #num starts with 1. Later, figure out the node placement mechanics and
+	//  the way to get a consistent ordering for this distribution
+	racksDistribution := make(map[string]int32)
+	var i int32
+	for i < rctx.cdc.Spec.Racks {
+		rack := fmt.Sprintf("rack%v", i+1)
+		nodes := rctx.cdc.Spec.Nodes / rctx.cdc.Spec.Racks
+		if i < (rctx.cdc.Spec.Nodes % rctx.cdc.Spec.Racks) {
+			nodes = nodes + 1
+		}
+		racksDistribution[rack] = nodes
+		i++
 	}
 
-	// check if all required racks are built. if not, build a missing one.
-	rackNum := len(sets.Items)
-	if rackNum != len(rctx.cdc.Spec.Racks) {
-		return fmt.Sprintf("rack%v", rackNum+1), nil
+	// Get all stateful sets
+	sets, err := getStatefulSets(rctx, request.NamespacedName)
+	if err != nil {
+		log.Error(err, "Can't find Stateful Sets")
+		return nil, err
+	}
+
+	// check if all required racks are built. If not, create a missing one.
+	rackNum := int32(len(sets.Items))
+	if rackNum != rctx.cdc.Spec.Racks {
+		rack := fmt.Sprintf("rack%v", rackNum+1)
+		return &Rack{Name: rack, Replicas: racksDistribution[rack]}, nil
 	}
 
 	// Otherwise, we have all stateful sets running. Let's see which one we should reconcile.
-	var rack string
 	for _, sts := range sets.Items {
-		// current rack
-		rack = sts.Labels[rackKey]
-		// # of requested pods in a rack
-		requestedPods := rctx.cdc.Spec.Racks[rack]
-		// # of currently running pods in this set
-		pods, err := AllPodsInRack(rctx.client, rctx.cdc.Namespace, sts.Labels)
-		if err != nil {
-			// TODO: log error and continue? let's break for now
-			return "", fmt.Errorf("can't figure out proper rack to reconcile, err: %v", err)
-		}
-		if int(requestedPods) != len(pods) {
-			// Need to reconcile this one for sure
-			return rack, nil
+		rack := sts.Labels[rackKey]
+		if racksDistribution[rack] != sts.Status.Replicas {
+			// reconcile
+			return &Rack{Name: rack, Replicas: racksDistribution[rack]}, nil
 		}
 	}
 
-	if len(rack) > 0 {
-		return rack, nil
-	}
+	return nil, fmt.Errorf("couldn't find a rack to reconcile")
 
-	return "", fmt.Errorf("can't figure out proper rack to reconcile")
 }
 
-func getSets(rctx *reconciliationRequestContext, namespacedName types.NamespacedName) (*v1.StatefulSetList, error) {
+func getStatefulSets(rctx *reconciliationRequestContext, namespacedName types.NamespacedName) (*v1.StatefulSetList, error) {
 	sts := &v1.StatefulSetList{}
 	if err := rctx.client.List(context.TODO(), &client.ListOptions{Namespace: namespacedName.Namespace}, sts); err != nil {
 		if errors.IsNotFound(err) {
@@ -172,27 +177,7 @@ func getSets(rctx *reconciliationRequestContext, namespacedName types.Namespaced
 	return sts, nil
 }
 
-func checkRacks(spec cassandraoperatorv1alpha1.CassandraDataCenterSpec) (bool, error) {
-
-	// Check that racks are provided. If not, use 1 rack.
-	if spec.Racks == nil || len(spec.Racks) == 0 {
-		spec.Racks = make(map[string]int32)
-		spec.Racks["rack1"] = spec.Nodes
-		return true, nil
-	}
-
-	// Check that the number of nodes requested matches racks distribution
-	var rackNodes int32
-	for _, nodes := range spec.Racks {
-		rackNodes = rackNodes + nodes
-	}
-
-	// If rack nodes != spec nodes, error out?
-	if rackNodes != spec.Nodes {
-		return false, fmt.Errorf("total nodes %d is larger than nodes in racks %d", spec.Nodes, rackNodes)
-	}
-
-	// Else, return ok
-	return true, nil
-
+type Rack struct {
+	Name     string
+	Replicas int32
 }

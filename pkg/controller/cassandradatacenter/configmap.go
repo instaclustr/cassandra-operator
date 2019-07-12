@@ -17,8 +17,8 @@ const (
 	GIBIBYTE = 1 << 30
 )
 
-func createOrUpdateOperatorConfigMap(rctx *reconciliationRequestContext, seedNodesService *corev1.Service, rack string) (*corev1.Volume, error) {
-	configMap := &corev1.ConfigMap{ObjectMeta: StatefulSetMetadata(rctx, rack, "operator-config")}
+func createOrUpdateOperatorConfigMap(rctx *reconciliationRequestContext, seedNodesService *corev1.Service, rack *Rack) (*corev1.Volume, error) {
+	configMap := &corev1.ConfigMap{ObjectMeta: StatefulSetMetadata(rctx, rack.Name, "operator-config")}
 
 	logger := rctx.logger.WithValues("ConfigMap.Name", configMap.Name)
 
@@ -31,7 +31,7 @@ func createOrUpdateOperatorConfigMap(rctx *reconciliationRequestContext, seedNod
 
 		addCassandraYamlOverrides(rctx.cdc, seedNodesService, addFileFn)
 
-		addCassandraGossipingPropertyFileSnitchProperties(rctx.cdc, rack, addFileFn)
+		addCassandraGossipingPropertyFileSnitchProperties(rctx.cdc, rack.Name, addFileFn)
 
 		addCassandraJVMOptions(rctx.cdc, addFileFn)
 
