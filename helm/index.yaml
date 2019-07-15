@@ -3,10 +3,10 @@ entries:
   cassandra:
   - apiVersion: v1
     appVersion: "0.1"
-    created: 2018-12-19T16:25:03.851292105-05:00
+    created: "2019-07-15T14:21:10.900752-04:00"
     description: A Helm chart for creating Cassandra clusters using the Cassandra
       operator
-    digest: 5a98a0b43c255b003ad3d70eac400dd0d807e8b58bd36b88a629e1883363072c
+    digest: 05ffe7d9ecd674a1044c2a3c24d0779d00a9f01edeb138ee62e86d687fe9f5a9
     name: cassandra
     urls:
     - cassandra-0.1.0.tgz
@@ -14,11 +14,11 @@ entries:
   cassandra-operator:
   - apiVersion: v1
     appVersion: "1.0"
-    created: 2018-12-19T16:25:03.851617241-05:00
+    created: "2019-07-15T14:21:10.90107-04:00"
     description: A Helm chart for Kubernetes
-    digest: 015601e598019be0f95aec54f30d7722b3fea7fe322cfc1e92569d85b88e9385
+    digest: 224e518bc20a57f11d1a8c6b105192a704a9eab4e4d3b04bb42c8a4a950fc778
     name: cassandra-operator
     urls:
     - cassandra-operator-0.1.0.tgz
     version: 0.1.0
-generated: 2018-12-19T16:25:03.850097321-05:00
+generated: "2019-07-15T14:21:10.899834-04:00"
