@@ -81,7 +81,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	}
 
 	// Use the following for testing:
-	pods = []v1.Pod{{Status: v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
+	// pods = []v1.Pod{{Status: v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
 	sidecarClients := sidecar.SidecarClients(pods, &sidecar.DefaultSidecarClientOptions)
 
 	// Run backups
@@ -95,21 +95,22 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		}
 
 		// Testing adding event to the object
+		// TODO - maybe log that backup request itself?
 		r.recorder.Event(b, v1.EventTypeNormal, "Received Backup Request", "Starting backup")
 
 		operationID, err := sidecarClient.StartOperation(backupRequest)
 		if err != nil {
-			// log error?
-			fmt.Println(err)
+			reqLogger.Error(err, "Could not submit backup request")
 			continue
 		} else {
 			go func() {
 				opState := operations.RUNNING
-				for opState != operations.COMPLETED {
+				// TODO - what if getBackup will return FAILED for ever? This loop would never end ...
+				// TODO - maybe extract this to separate method so we can eventualy log error from this loop too?
+				for opState != operations.COMPLETED && opState != operations.FAILED {
 					backup, err := getBackup(sidecarClient, operationID)
 					if err != nil {
-						// log error?
-						reqLogger.Error(err, "couldn't find backup")
+						reqLogger.Error(err, fmt.Sprintf("couldn't find backup %v on node %v", operationID, sidecarClient.Host));
 						return
 					}
 					b.Status[sidecarClient.Host] = &cassandraoperatorv1alpha1.CassandraBackupStatus{
@@ -118,14 +119,19 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 					}
 					err = r.client.Update(context.TODO(), b)
 					if err != nil {
-						fmt.Println(err)
+						reqLogger.Error(err, "could not update backup crd")
 					}
 					opState = backup.State
 					<-time.After(time.Second)
 				}
 
-				log.Info(fmt.Sprintf("backup operation %v on node %v has finished", operationID, sidecarClient.Host))
-				r.recorder.Event(b, v1.EventTypeNormal, "Operation Finished", "Backup completed")
+				if opState == operations.FAILED {
+					log.Info(fmt.Sprintf("backup operation %v on node %v has failed", operationID, sidecarClient.Host))
+					r.recorder.Event(b, v1.EventTypeNormal, "Operation Failed", fmt.Sprintf("Backup on node %v has failed", sidecarClient.Host))
+				} else if opState == operations.COMPLETED {
+					log.Info(fmt.Sprintf("backup operation %v on node %v has finished successfully", operationID, sidecarClient.Host))
+					r.recorder.Event(b, v1.EventTypeNormal, "Operation Finished", fmt.Sprintf("Backup completed on node %v has finished successfully", sidecarClient.Host))
+				}
 
 				return
 			}()
@@ -133,11 +139,13 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 
 	}
 
+	// TODO - logging is maybe better?
 	fmt.Printf("Spec: %v\n", b.Spec)
 
 	return reconcile.Result{}, nil
 }
 
+// TODO - maybe move this to operations.go?
 func getBackup(client *sidecar.Client, id uuid.UUID) (backup *sidecar.BackupResponse, err error) {
 
 	if op, err := client.GetOperation(id); err != nil {
