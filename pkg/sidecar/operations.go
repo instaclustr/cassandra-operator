@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
+	"strings"
 	"time"
 )
 
@@ -23,12 +24,44 @@ const (
 	scrub
 )
 
-func GetType(s string) Kind {
-	kind, ok := _KindNameToValue[s]
-	if !ok {
-		return noop
+//func GetType(s string) Kind {
+//	kind, ok := _KindNameToValue[s]
+//	if !ok {
+//		return noop
+//	}
+//	return kind
+//}
+
+type OperationsFilter struct {
+	Types  []Kind
+	States []operations.OperationState
+}
+
+func (o OperationsFilter) buildFilteredEndpoint(endpoint string) string {
+	var filterT, filterS string
+	if len(o.Types) > 0 {
+		var kinds []string
+		for _, kind := range o.Types {
+			kinds = append(kinds, _KindValueToName[kind])
+		}
+		filterT = "type=" + strings.Join(kinds, ",")
 	}
-	return kind
+
+	if len(o.States) > 0 {
+		var states []string
+		for _, state := range o.States {
+			states = append(states, string(state))
+		}
+		filterS = "state=" + strings.Join(states, ",")
+	}
+
+	filter := strings.Join([]string{filterT, filterS}, "&")
+	if len(filter) > 0 {
+		return endpoint + "?" + filter
+	}
+
+	return endpoint
+
 }
 
 type OperationRequest interface {
@@ -143,34 +176,32 @@ func (c *CleanupOperationResponse) String() string {
 }
 
 func (client *Client) ListCleanups() ([]*CleanupOperationResponse, error) {
-
-	ops, err := client.GetOperations()
-	if ops == nil || err != nil {
-		return []*CleanupOperationResponse{}, err
-	}
-
-	operations, err := FilterOperations(*ops, cleanup)
-	if err != nil {
-		return []*CleanupOperationResponse{}, err
-	}
-
 	var cleanups []*CleanupOperationResponse
-	for _, op := range operations {
-		cleanups = append(cleanups, op.(*CleanupOperationResponse))
+	operations, err := client.GetFilteredOperations(&OperationsFilter{Types: []Kind{cleanup}})
+	if operations == nil || err != nil {
+		return cleanups, err
+	}
+
+	for _, op := range *operations {
+		cleanOp, err := ParseOperation(op, cleanup)
+		if err != nil {
+			return []*CleanupOperationResponse{}, err
+		}
+		cleanups = append(cleanups, cleanOp.(*CleanupOperationResponse))
 	}
 
 	return cleanups, nil
 }
 
-func (client *Client) FindBackup(id uuid.UUID) (backup *BackupResponse, err error) {
+func (client *Client) FindBackup(id uuid.UUID) (backupResponse *BackupResponse, err error) {
 	if op, err := client.GetOperation(id); err != nil {
 		return nil, err
-	} else if b, err := ParseOperation(*op, GetType("backup")); err != nil {
+	} else if b, err := ParseOperation(*op, backup); err != nil {
 		return nil, err
-	} else if backup, ok := b.(*BackupResponse); !ok {
+	} else if backupResponse, ok := b.(*BackupResponse); !ok {
 		return nil, fmt.Errorf("can't parse operation to backup")
 	} else {
-		return backup, nil
+		return backupResponse, nil
 	}
 }
 

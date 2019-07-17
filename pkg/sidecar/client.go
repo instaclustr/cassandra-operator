@@ -165,7 +165,15 @@ func (client *Client) GetOperation(id uuid.UUID) (*OperationResponse, error) {
 }
 
 func (client *Client) GetOperations() (*Operations, error) {
-	if r, err := client.performRequest(EndpointOperations, http.MethodGet, nil); responseInvalid(r, err) {
+	return client.GetFilteredOperations(nil)
+}
+
+func (client *Client) GetFilteredOperations(filter *OperationsFilter) (*Operations, error) {
+	endpoint := EndpointOperations
+	if filter != nil {
+		endpoint = filter.buildFilteredEndpoint(endpoint)
+	}
+	if r, err := client.performRequest(endpoint, http.MethodGet, nil); responseInvalid(r, err) {
 		return nil, err
 	} else {
 		body, err := readBody(r)
