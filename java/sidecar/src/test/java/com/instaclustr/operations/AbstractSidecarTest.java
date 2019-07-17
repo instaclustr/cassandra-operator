@@ -27,7 +27,7 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.instaclustr.cassandra.sidecar.operations.backup.BackupsModule;
+import com.instaclustr.cassandra.backup.guice.BackupRestoreModule;
 import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupsModule;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissioningModule;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildModule;
@@ -70,7 +70,7 @@ public abstract class AbstractSidecarTest {
     public void setup() {
 
         List<Module> modules = new ArrayList<Module>() {{
-            add(new OperationsModule());
+            add(new OperationsModule(3600));
             add(new AbstractModule() {
                 @Override
                 protected void configure() {
@@ -103,12 +103,12 @@ public abstract class AbstractSidecarTest {
                 }
             });
             add(new JerseyHttpServerModule());
-            add(new BackupsModule());
             add(new DecommissioningModule());
             add(new CleanupsModule());
             add(new UpgradeSSTablesModule());
             add(new RebuildModule());
             add(new ScrubModule());
+            add(new BackupRestoreModule());
         }};
 
         modules.addAll(getModules());

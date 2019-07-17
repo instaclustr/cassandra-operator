@@ -49,7 +49,6 @@ public class ScrubOperation extends Operation<ScrubOperationRequest> {
         storageServiceMBean = null;
     }
 
-
     @Override
     protected void run0() throws Exception {
 
