@@ -102,7 +102,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 				// TODO - what if getBackup will return FAILED for ever? This loop would never end ...
 				// TODO - maybe extract this to separate method so we can eventualy log error from this loop too?
 				for opState != operations.COMPLETED && opState != operations.FAILED {
-					backup, err := getBackup(sidecarClient, operationID)
+					backup, err := sidecarClient.FindBackup(operationID)
 					if err != nil {
 						reqLogger.Error(err, fmt.Sprintf("couldn't find backup operation %v on node %v", operationID, sidecarClient.Host));
 						return

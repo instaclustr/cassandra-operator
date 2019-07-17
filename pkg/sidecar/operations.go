@@ -2,6 +2,7 @@ package sidecar
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	"time"
@@ -159,6 +160,18 @@ func (client *Client) ListCleanups() ([]*CleanupOperationResponse, error) {
 	}
 
 	return cleanups, nil
+}
+
+func (client *Client) FindBackup(id uuid.UUID) (backup *BackupResponse, err error) {
+	if op, err := client.GetOperation(id); err != nil {
+		return nil, err
+	} else if b, err := ParseOperation(*op, GetType("backup")); err != nil {
+		return nil, err
+	} else if backup, ok := b.(*BackupResponse); !ok {
+		return nil, fmt.Errorf("can't parse operation to backup")
+	} else {
+		return backup, nil
+	}
 }
 
 // backup Operations
