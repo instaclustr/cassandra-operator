@@ -59,10 +59,6 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	// them up with the labels.
 	// ...TBD
 
-	if cdc.Spec.Nodes < cdc.Spec.Racks {
-		return reconcile.Result{}, fmt.Errorf("number of nodes %v is smaller than the number of racks %v", cdc.Spec.Nodes, cdc.Spec.Racks)
-	}
-
 	rctx := &reconciliationRequestContext{
 		CassandraDataCenterReconciler: *reconciler,
 		cdc:                           cdc,
@@ -94,7 +90,7 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	}
 
 	// fine, so we have a mismatch. Will seek to reconcile.
-	rackSpec, err := getRackSpec(rctx, request, int32(len(allPods)))
+	rackSpec, err := getRackSpec(rctx, request)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -117,7 +113,7 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	return reconcile.Result{}, nil
 }
 
-func getRackSpec(rctx *reconciliationRequestContext, request reconcile.Request, numPods int32) (*Rack, error) {
+func getRackSpec(rctx *reconciliationRequestContext, request reconcile.Request) (*Rack, error) {
 
 	// This currently works with the following logic:
 	// 1. Build a struct of racks with distribution numbers.
@@ -129,14 +125,13 @@ func getRackSpec(rctx *reconciliationRequestContext, request reconcile.Request, 
 	//  the way to get a consistent ordering for this distribution
 	racksDistribution := make(map[string]int32)
 	var i int32
-	for i < rctx.cdc.Spec.Racks {
+	for ; i < rctx.cdc.Spec.Racks; i++ {
 		rack := fmt.Sprintf("rack%v", i+1)
 		nodes := rctx.cdc.Spec.Nodes / rctx.cdc.Spec.Racks
 		if i < (rctx.cdc.Spec.Nodes % rctx.cdc.Spec.Racks) {
 			nodes = nodes + 1
 		}
 		racksDistribution[rack] = nodes
-		i++
 	}
 
 	// Get all stateful sets
