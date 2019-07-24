@@ -2,6 +2,7 @@ package e2e
 
 import (
 	goctx "context"
+	"fmt"
 	operator "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
@@ -11,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"testing"
@@ -22,6 +24,10 @@ const (
 	timeout              = time.Second * 600
 	cleanupRetryInterval = time.Second * 3
 	cleanupTimeout       = time.Second * 60
+
+	testCassandraImage   = "OPERATOR_TEST_CASSANDRA_IMAGE"
+	testSidecarImage     = "OPERATOR_TEST_SIDECAR_IMAGE"
+	pullSecret           = "OPERATOR_TEST_PULL_SECRET"
 )
 
 func initialise(t *testing.T) (*framework.TestCtx, *framework.Framework, *framework.CleanupOptions, string) {
@@ -76,6 +82,7 @@ func checkAllNodesInNormalMode(t *testing.T, f *framework.Framework, namespace s
 			if status, err := client.Status(); err != nil {
 				return false, err
 			} else if status.NodeState != nodestate.NORMAL {
+				fmt.Printf("Node is in status %v, waiting to get it to %v\n", status.NodeState, nodestate.NORMAL)
 				return false, nil
 			}
 		}
@@ -129,7 +136,8 @@ func waitForStatefulset(t *testing.T, f *framework.Framework, statefulSetName st
 
 func podsSidecars(f *framework.Framework, namespace string) (map[*v1.Pod]*sidecar.Client, error) {
 
-	pods, err := f.KubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	operatorSelector := map[string]string{"app.kubernetes.io/managed-by": "com.instaclustr.cassandra-operator"}
+	pods, err := f.KubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: labels.Set(operatorSelector).String()})
 
 	if err != nil {
 		return nil, err
@@ -147,13 +155,13 @@ func defaultNewCassandraDataCenterList() *operator.CassandraDataCenterList {
 	}
 }
 
-func defaultNewCassandraDataCenter(name string, namespace string, nodes int) *operator.CassandraDataCenter {
+func defaultNewCassandraDataCenter(name string, namespace string, nodes int32) *operator.CassandraDataCenter {
 
 	// should be done via flags but seems to be not supported yet https://github.com/operator-framework/operator-sdk/issues/1476
 
-	cassandraImageName := parseEnvProperty("OPERATOR_TEST_CASSANDRA_IMAGE", "gcr.io/cassandra-operator/cassandra:3.11.3")
-	sidecarImageName := parseEnvProperty("OPERATOR_TEST_SIDECAR_IMAGE", "gcr.io/cassandra-operator/cassandra-sidecar:latest")
-	pullSecret := parseEnvProperty("OPERATOR_TEST_PULL_SECRET", "")
+	cassandraImageName := parseEnvProperty(testCassandraImage, "gcr.io/cassandra-operator/cassandra:3.11.3")
+	sidecarImageName := parseEnvProperty(testSidecarImage, "gcr.io/cassandra-operator/cassandra-sidecar:latest")
+	pullSecret := parseEnvProperty(pullSecret, "")
 
 	disk, _ := resource.ParseQuantity("500Mi")
 	memory, _ := resource.ParseQuantity("1Gi")
@@ -168,12 +176,12 @@ func defaultNewCassandraDataCenter(name string, namespace string, nodes int) *op
 			Namespace: namespace,
 		},
 		Spec: operator.CassandraDataCenterSpec{
-			Nodes:             int32(nodes),
+			Nodes:             nodes,
 			CassandraImage:    cassandraImageName,
 			SidecarImage:      sidecarImageName,
 			Cluster:           "test-cluster",
 			PrometheusSupport: false,
-			ImagePullPolicy:   v1.PullIfNotPresent,
+			ImagePullPolicy:   v1.PullAlways,
 			DataVolumeClaimSpec: v1.PersistentVolumeClaimSpec{
 				AccessModes: []v1.PersistentVolumeAccessMode{
 					"ReadWriteOnce",
@@ -209,7 +217,6 @@ func defaultNewCassandraDataCenter(name string, namespace string, nodes int) *op
 func parseEnvProperty(name string, defaultValue string) string {
 
 	value := os.Getenv(name)
-
 	if value == "" {
 		return defaultValue
 	}

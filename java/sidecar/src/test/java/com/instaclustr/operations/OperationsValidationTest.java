@@ -1,15 +1,15 @@
 package com.instaclustr.operations;
 
-import static com.instaclustr.sidecar.operations.OperationBindings.installOperationBindings;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
+import static org.awaitility.Awaitility.await;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 import javax.validation.ConstraintViolation;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -17,19 +17,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Inject;
-import com.google.inject.Module;
-import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.cassandra.sidecar.operations.CassandraOperationType;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildOperationRequest;
-import com.instaclustr.sidecar.operations.Operation;
-import com.instaclustr.sidecar.operations.OperationsModule;
 import org.apache.commons.lang3.tuple.Pair;
 import org.glassfish.jersey.server.validation.ValidationError;
 import org.testng.annotations.Test;
 
-public class RebuildOperationsValidationTest extends AbstractOperationsValidationTest {
+public class OperationsValidationTest extends AbstractSidecarTest {
 
     @Test
     public void validateRebuildRequests() {
@@ -64,12 +57,9 @@ public class RebuildOperationsValidationTest extends AbstractOperationsValidatio
             return Stream.of(request1).map(client::rebuild).collect(toList());
         };
 
-        final Pair<AtomicReference<List<SidecarClient.OperationResult<?>>>, AtomicBoolean> result = performOnRunningServer(serverService, invalidRequests);
+        final Pair<AtomicReference<List<SidecarClient.OperationResult<?>>>, AtomicBoolean> result = performOnRunningServer(invalidRequests);
 
-        serverService.startAsync();
-
-        while (!result.getRight().get()) {
-        }
+        await().atMost(1, MINUTES).until(() -> result.getRight().get());
 
         result.getLeft().get().forEach(r -> assertEquals(r.response.getStatus(), BAD_REQUEST.getStatusCode()));
 
@@ -77,34 +67,4 @@ public class RebuildOperationsValidationTest extends AbstractOperationsValidatio
 
         assertEquals(validationErrors[0].getMessage(), "Cannot set specificTokens without specifying a keyspace");
     }
-
-    @Override
-    protected List<Module> getModules() {
-        return new ArrayList<Module>() {{
-            add(new OperationsModule());
-            add(new AbstractModule() {
-                @Override
-                protected void configure() {
-                    installOperationBindings(binder(),
-                                             CassandraOperationType.REBUILD,
-                                             RebuildOperationRequest.class,
-                                             TestingRebuildOperation.class);
-                }
-            });
-        }};
-    }
-
-    private static final class TestingRebuildOperation extends Operation<RebuildOperationRequest> {
-
-        @Inject
-        protected TestingRebuildOperation(@Assisted final RebuildOperationRequest request) {
-            super(request);
-        }
-
-        @Override
-        protected void run0() throws Exception {
-            System.out.println("rebuild run");
-        }
-    }
-
 }

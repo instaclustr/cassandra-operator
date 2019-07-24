@@ -1,6 +1,8 @@
 package com.instaclustr.sidecar.jackson;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
@@ -8,16 +10,15 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
-import com.instaclustr.sidecar.operations.OperationType;
 
 /**
  * Performs bi-directional resolution of Types to TypeIds via the
  * provided Map<String, Class<? extends T>>
  */
 public abstract class MapBackedTypeIdResolver<T> extends TypeIdResolverBase {
-    private final BiMap<OperationType, Class<? extends T>> typeMappings;
+    private final BiMap<String, Class<? extends T>> typeMappings;
 
-    protected MapBackedTypeIdResolver(final Map<OperationType, Class<? extends T>> typeMappings) {
+    protected MapBackedTypeIdResolver(final Map<String, Class<? extends T>> typeMappings) {
         this.typeMappings = ImmutableBiMap.copyOf(typeMappings);
     }
 
@@ -28,29 +29,26 @@ public abstract class MapBackedTypeIdResolver<T> extends TypeIdResolverBase {
 
     @Override
     public String idFromValueAndType(final Object value, final Class<?> suggestedType) {
-        return typeMappings.inverse().get(suggestedType).toString();
+        return typeMappings.inverse().get(suggestedType);
+    }
+
+    public Class<? extends T> classFromId(final String id) {
+        return typeMappings.get(id);
+    }
+
+    public Set<String> typeIds() {
+        return Collections.unmodifiableSet(typeMappings.keySet());
     }
 
     @Override
     public JavaType typeFromId(final DatabindContext context, final String id) {
+        final Class<? extends T> clazz = classFromId(id);
 
-        if (id == null) {
+        if (clazz == null) {
             return null;
         }
 
-        final OperationType operationType = typeMappings.keySet().stream().filter(type -> type.toString().toLowerCase().equals(id.toLowerCase())).findFirst().orElse(null);
-
-        if (operationType == null) {
-            return null;
-        }
-
-        final Class<? extends T> requestClass = typeMappings.get(operationType);
-
-        if (requestClass == null) {
-            return null;
-        }
-
-        return context.getTypeFactory().constructType(requestClass);
+        return context.getTypeFactory().constructType(clazz);
     }
 
     @Override

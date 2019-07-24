@@ -2,8 +2,6 @@ package com.instaclustr.sidecar.http;
 
 import javax.ws.rs.core.Feature;
 import javax.ws.rs.core.FeatureContext;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ExceptionMapper;
 import java.net.InetSocketAddress;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -27,8 +25,6 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.ServerProperties;
 import org.jvnet.hk2.guice.bridge.api.GuiceBridge;
 import org.jvnet.hk2.guice.bridge.api.GuiceIntoHK2Bridge;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class JerseyHttpServerModule extends AbstractModule {
     private InetSocketAddress httpServerAddress;
@@ -55,12 +51,10 @@ public class JerseyHttpServerModule extends AbstractModule {
     @Provides
     @Singleton
     ResourceConfig provideResourceConfig(final GuiceHK2BridgeFeature guiceHK2BridgeFeature,
-                                         final CustomObjectMapperFeature customObjectMapperFeature,
-                                         final DebugMapper debugMapper) {
+                                         final CustomObjectMapperFeature customObjectMapperFeature) {
         return new ResourceConfig()
                 .packages("com.instaclustr")
                 .register(customObjectMapperFeature)
-                .register(debugMapper)
                 .register(guiceHK2BridgeFeature)
                 .register(ValidationConfigurationContextResolver.class)
                 .property(ServerProperties.BV_SEND_ERROR_IN_RESPONSE, true);
@@ -126,13 +120,4 @@ public class JerseyHttpServerModule extends AbstractModule {
         }
     }
 
-    static class DebugMapper implements ExceptionMapper<Throwable> {
-        private static final Logger logger = LoggerFactory.getLogger(DebugMapper.class);
-
-        @Override
-        public Response toResponse(final Throwable t) {
-            logger.error("Encountered exception", t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
 }

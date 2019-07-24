@@ -4,7 +4,6 @@ import javax.inject.Inject;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 import com.instaclustr.sidecar.jackson.MapBackedTypeIdResolver;
@@ -14,12 +13,9 @@ import com.instaclustr.sidecar.jackson.MapBackedTypeIdResolver;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class OperationRequest {
 
-    @JsonProperty("type")
-    public OperationType type;
-
     static class TypeIdResolver extends MapBackedTypeIdResolver<OperationRequest> {
         @Inject
-        public TypeIdResolver(final Map<OperationType, Class<? extends OperationRequest>> typeMappings) {
+        public TypeIdResolver(final Map<String, Class<? extends OperationRequest>> typeMappings) {
             super(typeMappings);
         }
     }

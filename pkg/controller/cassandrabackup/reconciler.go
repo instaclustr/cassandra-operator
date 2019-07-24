@@ -3,7 +3,6 @@ package cassandrabackup
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	"github.com/instaclustr/cassandra-operator/pkg/controller/cassandradatacenter"
@@ -57,16 +56,12 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	// b.Status is special because it's a map, so if not yet initialised, do it here.
+	// b.Status is special because it's a map of host statuses, so if not yet initialised, do it here.
 	if b.Status == nil {
 		b.Status = make(map[string]*cassandraoperatorv1alpha1.CassandraBackupStatus)
-	} else {
-		// TODO: if b.Status is not nil, does it mean the object is already in the works and there's no need to do anything?
-		// or maybe if it's not nil but there are no entries, maybe should keep going?
 	}
 
 	// Get Pod Clients.
-	// TODO: This is a copy of the code from statefulset.existingPods, consider turning into lib/helper code
 	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
 	if err := r.client.Get(context.TODO(), types.NamespacedName{Name: b.Spec.CDC, Namespace: b.Namespace}, cdc); err != nil {
 		if errors.IsNotFound(err) {
@@ -81,7 +76,6 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	}
 
 	// Use the following for testing:
-	//pods = []v1.Pod{{Status: v1.PodStatus{Phase: v1.PodRunning, PodIP: "127.0.0.1"}}}
 	sidecarClients := sidecar.SidecarClients(pods, &sidecar.DefaultSidecarClientOptions)
 
 	// Run backups
@@ -94,22 +88,22 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 			Keyspaces:      b.Spec.Keyspaces,
 		}
 
-		// Testing adding event to the object
+		// TODO - maybe log that backup request itself?
 		r.recorder.Event(b, v1.EventTypeNormal, "Received Backup Request", "Starting backup")
 
 		operationID, err := sidecarClient.StartOperation(backupRequest)
 		if err != nil {
-			// log error?
-			fmt.Println(err)
+			reqLogger.Error(err, "Could not submit backup request")
 			continue
 		} else {
 			go func() {
 				opState := operations.RUNNING
-				for opState != operations.COMPLETED {
-					backup, err := getBackup(sidecarClient, operationID)
+				// TODO - what if getBackup will return FAILED for ever? This loop would never end ...
+				// TODO - maybe extract this to separate method so we can eventualy log error from this loop too?
+				for opState != operations.COMPLETED && opState != operations.FAILED {
+					backup, err := sidecarClient.FindBackup(operationID)
 					if err != nil {
-						// log error?
-						reqLogger.Error(err, "couldn't find backup")
+						reqLogger.Error(err, fmt.Sprintf("couldn't find backup operation %v on node %v", operationID, sidecarClient.Host));
 						return
 					}
 					b.Status[sidecarClient.Host] = &cassandraoperatorv1alpha1.CassandraBackupStatus{
@@ -118,35 +112,28 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 					}
 					err = r.client.Update(context.TODO(), b)
 					if err != nil {
-						fmt.Println(err)
+						reqLogger.Error(err, "could not update backup crd")
 					}
 					opState = backup.State
 					<-time.After(time.Second)
 				}
 
-				log.Info(fmt.Sprintf("backup operation %v on node %v has finished", operationID, sidecarClient.Host))
-				r.recorder.Event(b, v1.EventTypeNormal, "Operation Finished", "Backup completed")
+				if opState == operations.FAILED {
+					log.Info(fmt.Sprintf("backup operation %v on node %v has failed", operationID, sidecarClient.Host))
+					r.recorder.Event(b, v1.EventTypeWarning, "Operation Failed", fmt.Sprintf("Backup on node %v has failed", sidecarClient.Host))
+				} else if opState == operations.COMPLETED {
+					log.Info(fmt.Sprintf("backup operation %v on node %v has finished successfully", operationID, sidecarClient.Host))
+					r.recorder.Event(b, v1.EventTypeNormal, "Operation Finished", fmt.Sprintf("Backup completed on node %v has finished successfully", sidecarClient.Host))
+				}
 
-				return
 			}()
 		}
 
 	}
 
-	fmt.Printf("Spec: %v\n", b.Spec)
+	// TODO - logging is maybe better?
+	reqLogger.Info(fmt.Sprintf("Spec: %v\n", b.Spec))
 
 	return reconcile.Result{}, nil
 }
 
-func getBackup(client *sidecar.Client, id uuid.UUID) (backup *sidecar.BackupResponse, err error) {
-
-	if op, err := client.GetOperation(id); err != nil {
-		return nil, err
-	} else if b, err := sidecar.ParseOperation(*op, sidecar.GetType("backup")); err != nil {
-		return nil, err
-	} else if backup, ok := b.(*sidecar.BackupResponse); !ok {
-		return nil, fmt.Errorf("can't parse operation to backup")
-	} else {
-		return backup, nil
-	}
-}

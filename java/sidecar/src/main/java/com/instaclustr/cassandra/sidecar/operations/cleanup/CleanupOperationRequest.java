@@ -72,7 +72,6 @@ public class CleanupOperationRequest extends OperationRequest {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("type", type)
                 .add("tables", tables)
                 .add("keyspace", keyspace)
                 .add("jobs", jobs)

@@ -82,7 +82,6 @@ public class UpgradeSSTablesOperationRequest extends OperationRequest {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("type", type)
                 .add("keyspace", keyspace)
                 .add("tables", tables)
                 .add("jobs", jobs)
