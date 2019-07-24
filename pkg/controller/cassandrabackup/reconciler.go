@@ -3,7 +3,6 @@ package cassandrabackup
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	"github.com/instaclustr/cassandra-operator/pkg/controller/cassandradatacenter"
@@ -138,16 +137,3 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	return reconcile.Result{}, nil
 }
 
-// TODO - maybe move this to operations.go?
-func getBackup(client *sidecar.Client, id uuid.UUID) (backup *sidecar.BackupResponse, err error) {
-
-	if op, err := client.GetOperation(id); err != nil {
-		return nil, err
-	} else if b, err := sidecar.ParseOperation(*op, sidecar.GetType("backup")); err != nil {
-		return nil, err
-	} else if backup, ok := b.(*sidecar.BackupResponse); !ok {
-		return nil, fmt.Errorf("can't parse operation to backup")
-	} else {
-		return backup, nil
-	}
-}

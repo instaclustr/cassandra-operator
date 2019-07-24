@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
-	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
 	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
+	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
 	"k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -226,7 +226,6 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 	statuses := cassandraStatuses(clients)
 	decommissionedNodes := decommissionedCassandras(statuses)
 
-
 	// Check the current replicas/pod/cassandra state
 	if valid, err := checkState(existingSpecReplicas, currentReplicas, desiredSpecReplicas, allPods, statuses); !valid {
 		return err
@@ -236,7 +235,6 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 	if desiredSpecReplicas > existingSpecReplicas {
 
 		// Scale up
-		rctx.cdc.Spec.Nodes = existingSpecReplicas + 1
 		existingStatefulSet.Spec = *newStatefulSetSpec
 		return controllerutil.SetControllerReference(rctx.cdc, existingStatefulSet, rctx.scheme)
 
@@ -260,8 +258,7 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 					"decommissionedNodes pod: " + decommissionedNodes[0].Name + ", expecting Pod" + newestPod.Name)
 			}
 
-			// TODO: do we need to check that existing > 0?
-			rctx.cdc.Spec.Nodes = existingSpecReplicas - 1
+			existingStatefulSet.Spec = *newStatefulSetSpec
 		} else {
 			// TODO: are we sure about this? Even having 2 decommissioned nodes should be fine for reconciling the stateful set
 			return errors.New("skipping StatefulSet reconciliation as the DataCenter contains more than one decommissionedNodes Cassandra node: " +
