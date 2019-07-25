@@ -25,9 +25,9 @@ const (
 	cleanupRetryInterval = time.Second * 3
 	cleanupTimeout       = time.Second * 60
 
-	testCassandraImage   = "OPERATOR_TEST_CASSANDRA_IMAGE"
-	testSidecarImage     = "OPERATOR_TEST_SIDECAR_IMAGE"
-	pullSecret           = "OPERATOR_TEST_PULL_SECRET"
+	testCassandraImage = "OPERATOR_TEST_CASSANDRA_IMAGE"
+	testSidecarImage   = "OPERATOR_TEST_SIDECAR_IMAGE"
+	pullSecret         = "OPERATOR_TEST_PULL_SECRET"
 )
 
 func initialise(t *testing.T) (*framework.TestCtx, *framework.Framework, *framework.CleanupOptions, string) {
@@ -82,7 +82,7 @@ func checkAllNodesInNormalMode(t *testing.T, f *framework.Framework, namespace s
 			if status, err := client.Status(); err != nil {
 				return false, err
 			} else if status.NodeState != nodestate.NORMAL {
-				fmt.Printf("Node is in status %v, waiting to get it to %v\n", status.NodeState, nodestate.NORMAL)
+				fmt.Printf("Node '%v' is in status '%v', waiting to get it to %v\n", client.Host, status.NodeState, nodestate.NORMAL)
 				return false, nil
 			}
 		}
@@ -95,9 +95,7 @@ func checkAllNodesInNormalMode(t *testing.T, f *framework.Framework, namespace s
 	}
 }
 
-func waitForStatefulset(t *testing.T, f *framework.Framework, statefulSetName string, cassandraDC *operator.CassandraDataCenter) {
-
-	namespace := cassandraDC.ObjectMeta.Namespace
+func waitForStatefulset(t *testing.T, f *framework.Framework, namespace, statefulSetName string, expectedReplicas int32) {
 
 	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
 		statefulSet, err := f.KubeClient.AppsV1().StatefulSets(namespace).Get(statefulSetName, metav1.GetOptions{})
@@ -112,7 +110,6 @@ func waitForStatefulset(t *testing.T, f *framework.Framework, statefulSetName st
 
 		replicas := statefulSet.Status.Replicas
 		readyReplicas := statefulSet.Status.ReadyReplicas
-		expectedReplicas := cassandraDC.Spec.Nodes
 
 		if replicas != expectedReplicas {
 			t.Logf("All replicas of %s statefulset in namespace %s are started but some of them are not ready - (%d/%d)", statefulSetName, namespace, readyReplicas, expectedReplicas)
@@ -155,7 +152,7 @@ func defaultNewCassandraDataCenterList() *operator.CassandraDataCenterList {
 	}
 }
 
-func defaultNewCassandraDataCenter(name string, namespace string, nodes int32) *operator.CassandraDataCenter {
+func defaultNewCassandraDataCenter(name string, namespace string, nodes, racks int32) *operator.CassandraDataCenter {
 
 	// should be done via flags but seems to be not supported yet https://github.com/operator-framework/operator-sdk/issues/1476
 
@@ -177,6 +174,7 @@ func defaultNewCassandraDataCenter(name string, namespace string, nodes int32) *
 		},
 		Spec: operator.CassandraDataCenterSpec{
 			Nodes:             nodes,
+			Racks:             racks,
 			CassandraImage:    cassandraImageName,
 			SidecarImage:      sidecarImageName,
 			Cluster:           "test-cluster",

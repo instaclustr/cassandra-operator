@@ -22,9 +22,9 @@ const DataVolumeMountPath = "/var/lib/cassandra"
 
 const SidecarApiPort = 4567
 
-var sidecarClientOptions = sidecar.ClientOptions{
-	Port:   SidecarApiPort,
-	Secure: false,
+type Rack struct {
+	Name     string
+	Replicas int32
 }
 
 func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume *corev1.Volume, rack *Rack) (*v1beta2.StatefulSet, error) {

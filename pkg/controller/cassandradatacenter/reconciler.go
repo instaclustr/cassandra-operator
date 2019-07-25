@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
+	"github.com/instaclustr/cassandra-operator/pkg/common/cluster"
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -123,16 +124,7 @@ func getRackSpec(rctx *reconciliationRequestContext, request reconcile.Request) 
 
 	// TODO: For now, call racks "rack#num", where #num starts with 1. Later, figure out the node placement mechanics and
 	//  the way to get a consistent ordering for this distribution
-	racksDistribution := make(map[string]int32)
-	var i int32
-	for ; i < rctx.cdc.Spec.Racks; i++ {
-		rack := fmt.Sprintf("rack%v", i+1)
-		nodes := rctx.cdc.Spec.Nodes / rctx.cdc.Spec.Racks
-		if i < (rctx.cdc.Spec.Nodes % rctx.cdc.Spec.Racks) {
-			nodes = nodes + 1
-		}
-		racksDistribution[rack] = nodes
-	}
+	racksDistribution := cluster.BuildRacksDistribution(rctx.cdc.Spec.Nodes, rctx.cdc.Spec.Racks)
 
 	// Get all stateful sets
 	sets, err := getStatefulSets(rctx, request.NamespacedName)
@@ -172,7 +164,3 @@ func getStatefulSets(rctx *reconciliationRequestContext, namespacedName types.Na
 	return sts, nil
 }
 
-type Rack struct {
-	Name     string
-	Replicas int32
-}

@@ -1,14 +1,16 @@
 package e2e
 
 import (
+	"fmt"
 	"github.com/instaclustr/cassandra-operator/pkg/apis"
 	"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
+	"github.com/instaclustr/cassandra-operator/pkg/common/cluster"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"testing"
 )
 
 const (
-	name            = "test-dc-cassandra"
+	cdcName         = "test-dc-cassandra"
 	statefulSetName = "cassandra-test-dc-cassandra"
 )
 
@@ -22,16 +24,15 @@ func TestCassandra(t *testing.T) {
 	t.Run("scaling down", CassandraScalingDown)
 }
 
-func deployCassandra(t *testing.T, nodes int32) (*framework.TestCtx, *framework.Framework, *v1alpha1.CassandraDataCenter, string){
+func deployCassandra(t *testing.T, nodes, racks int32) (*framework.TestCtx, *framework.Framework, *v1alpha1.CassandraDataCenter, string) {
 
 	t.Log("Running test " + t.Name())
 
 	ctx, f, cleanupOptions, namespace := initialise(t)
 
-	cassandraDC := defaultNewCassandraDataCenter(name, namespace, 3)
-
+	cassandraDC := defaultNewCassandraDataCenter(cdcName, namespace, nodes, racks)
 	createCassandraDataCenter(t, f, cleanupOptions, cassandraDC)
-	waitForStatefulset(t, f, statefulSetName, cassandraDC)
+	checkStatefulSets(t, f, namespace, nodes, racks)
 	checkAllNodesInNormalMode(t, f, namespace)
 
 	return ctx, f, cassandraDC, namespace
@@ -49,18 +50,31 @@ func CassandraScalingDown(t *testing.T) {
 
 func scaleCluster(t *testing.T, from, to int32) {
 
-	ctx, f, cassandraDC, namespace := deployCassandra(t, from)
+	// Let's make it easy
+	racks := int32(3)
+
+	fmt.Printf("Deploying cluster with %v nodes into %v racks\n", from, racks)
+	ctx, f, cassandraDC, namespace := deployCassandra(t, from, racks)
 
 	// scale, from "from" to "to" nodes
 
-	t.Logf("Scaling from %v to %v\n", from, to)
+	fmt.Printf("Done deployment, scaling from %v to %v\n", from, to)
 	cassandraDC.Spec.Nodes = to
 	updateCassandraDataCenter(t, f, cassandraDC)
 
-	// wait until scaling is done and check all nodes are in normal
-	waitForStatefulset(t, f, statefulSetName, cassandraDC)
+	// wait until scaling is done and check all racks and nodes are in normal state
+	checkStatefulSets(t, f, cassandraDC.Namespace, to, racks)
 	checkAllNodesInNormalMode(t, f, namespace)
 
 	// Cleanup after test
 	ctx.Cleanup()
+}
+
+func checkStatefulSets(t *testing.T, f *framework.Framework, namespace string, nodes, racks int32) {
+	rackDistribution := cluster.BuildRacksDistribution(nodes, racks)
+	fmt.Println(rackDistribution)
+	for i := int32(0); i < racks; i++ {
+		rack := fmt.Sprintf("rack%v", i+1)
+		waitForStatefulset(t, f, namespace, statefulSetName+"-"+rack, rackDistribution[rack])
+	}
 }
