@@ -35,4 +35,4 @@ This will by default build an images for the projects gcr.io development image r
 The default tag is the git short hash.
 e.g. `gcr.io/cassandra-operator/cassandra-operator-dev:0cf96c3` 
 
-This behavior can be overrode by defining `NO_DEV`, `REPO` and `TAG` environment variables. 
+This behavior can be overridden by defining `NO_DEV`, `REGISTRY` and `TAG` environment variables. 

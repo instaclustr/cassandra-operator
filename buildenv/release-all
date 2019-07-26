@@ -7,7 +7,7 @@ set -o pipefail
 cd `dirname "$BASH_SOURCE"`/..
 
 function defer {
-	if [[ $REPO == gcr.io/* ]]; then
+	if [[ $REGISTRY == gcr.io/* ]]; then
 		docker logout gcr.io
 		export DONT_LOGIN="false"
 	fi
@@ -16,17 +16,17 @@ function defer {
 trap defer EXIT
 
 # We source this a bunch of times just to make stuff work. TODO: this needs a clean up
-REPO="${REPO:-gcr.io/cassandra-operator}"
+REGISTRY="${REGISTRY:-gcr.io/cassandra-operator}"
 
 
-if [[ $REPO == gcr.io/* ]]; then
+if [[ $REGISTRY == gcr.io/* ]]; then
 	gcloud docker -a
 fi
 
 export DONT_LOGIN="true"
 
-docker push "${REPO}/base-openjre:latest"
-docker push "${REPO}/cassandra-operator:latest"
-docker push "${REPO}/cassandra-sidecar:latest"
-docker push "${REPO}/cassandra:latest"
-docker push "${REPO}/cassandra:3.11.3"
+docker push "${REGISTRY}/base-openjre:latest"
+docker push "${REGISTRY}/cassandra-operator:latest"
+docker push "${REGISTRY}/cassandra-sidecar:latest"
+docker push "${REGISTRY}/cassandra:latest"
+docker push "${REGISTRY}/cassandra:3.11.3"

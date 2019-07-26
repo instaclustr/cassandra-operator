@@ -24,10 +24,10 @@ source ./buildenv/repo
 
 echo "Pushing Cassandra versions in version list"
 while IFS="" read -r line || [[ -n "$line" ]]; do
-    echo "Pushing ${REPO}:${line}"
-    docker push "${REPO}:${line}"  1>/dev/null
+    echo "Pushing ${REGISTRY}:${line}"
+    docker push "${REGISTRY}:${line}"  1>/dev/null
 done < buildenv/CASSANDRA_VERSIONS
 
 
-#docker push "${REPO}:${TAG}"  1>/dev/null
-#docker push "${REPO}:latest"  1>/dev/null
+#docker push "${REGISTRY}:${TAG}"  1>/dev/null
+#docker push "${REGISTRY}:latest"  1>/dev/null
