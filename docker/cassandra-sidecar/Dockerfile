@@ -12,5 +12,5 @@ COPY cassandra-sidecar.sh /opt/bin/cassandra-sidecar
 
 ENV PATH = $PATH:/opt/bin
 
-CMD cassandra-sidecar
+CMD ["cassandra-sidecar"]
 
