@@ -1,5 +1,7 @@
 FROM golang AS builder
 
+ARG version
+
 COPY . /go/src/github.com/instaclustr/cassandra-operator
 WORKDIR /go/src/github.com/instaclustr/cassandra-operator
 
@@ -15,7 +17,9 @@ RUN dep ensure -v -vendor-only
 
 # Build binary
 RUN cd cmd/manager \
-    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-w' -o /tmp/cassandra-operator
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+        -ldflags "-w -X main.version=${version}" \
+        -o /tmp/cassandra-operator
 
 FROM scratch
 
