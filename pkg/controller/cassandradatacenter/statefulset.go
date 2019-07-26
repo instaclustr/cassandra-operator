@@ -39,7 +39,6 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		}
 
 		dataVolumeClaim := newDataVolumeClaim(&rctx.cdc.Spec.DataVolumeClaimSpec)
-
 		podInfoVolume := newPodInfoVolume()
 
 		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume)
@@ -101,13 +100,16 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumes []co
 }
 
 func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume *corev1.Volume) *corev1.Container {
-	const OperatorConfigVolumeMountPath = "/tmp/operator-config"
+	const (
+		OperatorConfigVolumeMountPath = "/tmp/operator-config"
+		UserConfigVolumePath = "/etc/cassandra/cassandra.yaml.d/003-user-overrides.yaml"
+	)
 
 	container := &corev1.Container{
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
-		Args:            []string{OperatorConfigVolumeMountPath},
+		Args:            []string{OperatorConfigVolumeMountPath, UserConfigVolumePath},
 		Ports: []corev1.ContainerPort{
 			{Name: "internode", ContainerPort: 7000},
 			{Name: "cql", ContainerPort: 9042},
@@ -137,6 +139,10 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		},
 	}
 
+	if cdc.Spec.UserConfigMap.Size() != 0 {
+		container.VolumeMounts = append(container.VolumeMounts,	corev1.VolumeMount{Name: cdc.Spec.UserConfigMap.Name, MountPath: UserConfigVolumePath})
+	}
+
 	if cdc.Spec.PrometheusSupport == true {
 		container.Ports = append(container.Ports, corev1.ContainerPort{Name: "promql", ContainerPort: 9500})
 	}
@@ -145,7 +151,7 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 }
 
 func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, podInfoVolume *corev1.Volume) *corev1.Container {
-	return &corev1.Container{
+	container := &corev1.Container{
 		Name:            "sidecar",
 		Image:           cdc.Spec.SidecarImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
@@ -157,6 +163,14 @@ func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dat
 			{Name: podInfoVolume.Name, MountPath: "/etc/pod-info"},
 		},
 	}
+
+	if len(cdc.Spec.BackupSecrets) != 0 {
+		container.EnvFrom = []corev1.EnvFromSource{
+			{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cdc.Spec.BackupSecrets}}},
+		}
+	}
+
+	return container
 }
 
 func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) *corev1.Container {

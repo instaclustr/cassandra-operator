@@ -37,6 +37,7 @@ func createOrUpdateOperatorConfigMap(rctx *reconciliationRequestContext, seedNod
 
 		addPrometheusSupport(rctx.cdc, addFileFn)
 
+
 		if err := controllerutil.SetControllerReference(rctx.cdc, configMap, rctx.scheme); err != nil {
 			return err
 		}

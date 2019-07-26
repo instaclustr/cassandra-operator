@@ -27,6 +27,10 @@ spec:
           type: object
         spec:
           properties:
+            backupSecrets:
+              type: string
+            cassandraConfig:
+              type: object
             cassandraImage:
               type: string
             cluster:
