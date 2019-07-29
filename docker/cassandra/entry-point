@@ -12,4 +12,7 @@ do
 done
 )
 
+# Update the rack settings from env
+sed -i'' "s/rack=.*$/rack=${CASSANDRA_RACK}/g" /etc/cassandra/cassandra-rackdc.properties
+
 exec /usr/sbin/cassandra

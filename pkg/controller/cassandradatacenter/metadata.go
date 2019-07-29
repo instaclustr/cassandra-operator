@@ -18,7 +18,13 @@ func DataCenterLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[st
 	}
 }
 
-func AddStatefulSetLabels(labels *map[string]string, rack string) {
+func StatefulSetLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack string) map[string]string {
+	cdcLabels := DataCenterLabels(cdc)
+	addStatefulSetLabels(&cdcLabels, rack)
+	return cdcLabels
+}
+
+func addStatefulSetLabels(labels *map[string]string, rack string) {
 	(*labels)[rackKey] = rack
 }
 
@@ -47,10 +53,7 @@ func DataCenterResourceMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCent
 
 func StatefulSetMetadata(rctx *reconciliationRequestContext, rack string, suffixes ...string) metav1.ObjectMeta {
 	suffix := strings.Join(append([]string{""}, suffixes...), "-")
-
-	labels := DataCenterLabels(rctx.cdc)
-	AddStatefulSetLabels(&labels, rack)
-
+	labels := StatefulSetLabels(rctx.cdc, rack)
 	return metav1.ObjectMeta{
 		Namespace: rctx.cdc.Namespace,
 		Name:      "cassandra-" + rctx.cdc.Name + "-" + rack + suffix,

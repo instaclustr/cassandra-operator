@@ -2,14 +2,10 @@ package cassandradatacenter
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-logr/logr"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
-	"github.com/instaclustr/cassandra-operator/pkg/common/cluster"
-	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -30,6 +26,7 @@ type CassandraDataCenterReconciler struct {
 
 type reconciliationRequestContext struct {
 	CassandraDataCenterReconciler
+	reconcile.Request
 	cdc    *cassandraoperatorv1alpha1.CassandraDataCenter
 	logger logr.Logger
 }
@@ -62,6 +59,7 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 
 	rctx := &reconciliationRequestContext{
 		CassandraDataCenterReconciler: *reconciler,
+		Request:                       request,
 		cdc:                           cdc,
 		logger:                        requestLogger,
 	}
@@ -80,28 +78,12 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 		return reconcile.Result{}, err
 	}
 
-	// check if we need to do anything at all, that is the number of nodes matches running ones
-	allPods, err := AllPodsInCDC(rctx.client, cdc)
-	if int32(len(allPods)) == cdc.Spec.Nodes {
-		log.Info("All pods are running, nothing to reconcile")
-		return reconcile.Result{}, nil
-	} else if err != nil {
-		log.Error(err, "can't find all pods, skipping reconcile cycle")
-		return reconcile.Result{}, err
-	}
-
-	// fine, so we have a mismatch. Will seek to reconcile.
-	rackSpec, err := getRackSpec(rctx, request)
+	configVolume, err := createOrUpdateOperatorConfigMap(rctx, seedNodesService)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	configVolume, err := createOrUpdateOperatorConfigMap(rctx, seedNodesService, rackSpec)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume, rackSpec)
+	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -112,55 +94,5 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	rctx.logger.Info("CassandraDataCenter reconciliation complete.")
 
 	return reconcile.Result{}, nil
-}
-
-func getRackSpec(rctx *reconciliationRequestContext, request reconcile.Request) (*Rack, error) {
-
-	// This currently works with the following logic:
-	// 1. Build a struct of racks with distribution numbers.
-	// 2. Check if all racks (stateful sets) have been created. If not, create a new missing one, and pass it the number
-	// of the nodes it's supposed to have.
-	// 3. If all racks are present, iterate and check if the expected distribution replicas match the status, if not - reconcile.
-
-	// TODO: For now, call racks "rack#num", where #num starts with 1. Later, figure out the node placement mechanics and
-	//  the way to get a consistent ordering for this distribution
-	racksDistribution := cluster.BuildRacksDistribution(rctx.cdc.Spec.Nodes, rctx.cdc.Spec.Racks)
-
-	// Get all stateful sets
-	sets, err := getStatefulSets(rctx, request.NamespacedName)
-	if err != nil {
-		log.Error(err, "Can't find Stateful Sets")
-		return nil, err
-	}
-
-	// check if all required racks are built. If not, create a missing one.
-	rackNum := int32(len(sets.Items))
-	if rackNum != rctx.cdc.Spec.Racks {
-		rack := fmt.Sprintf("rack%v", rackNum+1)
-		return &Rack{Name: rack, Replicas: racksDistribution[rack]}, nil
-	}
-
-	// Otherwise, we have all stateful sets running. Let's see which one we should reconcile.
-	for _, sts := range sets.Items {
-		rack := sts.Labels[rackKey]
-		if racksDistribution[rack] != sts.Status.Replicas {
-			// reconcile
-			return &Rack{Name: rack, Replicas: racksDistribution[rack]}, nil
-		}
-	}
-
-	return nil, fmt.Errorf("couldn't find a rack to reconcile")
-
-}
-
-func getStatefulSets(rctx *reconciliationRequestContext, namespacedName types.NamespacedName) (*v1.StatefulSetList, error) {
-	sts := &v1.StatefulSetList{}
-	if err := rctx.client.List(context.TODO(), &client.ListOptions{Namespace: namespacedName.Namespace}, sts); err != nil {
-		if errors.IsNotFound(err) {
-			return &v1.StatefulSetList{}, nil
-		}
-		return &v1.StatefulSetList{}, err
-	}
-	return sts, nil
 }
 
