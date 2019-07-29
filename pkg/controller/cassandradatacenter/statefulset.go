@@ -91,10 +91,11 @@ func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podS
 func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumes []corev1.Volume, containers []corev1.Container, initContainers []corev1.Container) *corev1.PodSpec {
 	// TODO: should this spec be fully exposed into the CDC.Spec?
 	podSpec := &corev1.PodSpec{
-		Volumes:          volumes,
-		Containers:       containers,
-		InitContainers:   initContainers,
-		ImagePullSecrets: cdc.Spec.ImagePullSecrets,
+		Volumes:            volumes,
+		Containers:         containers,
+		InitContainers:     initContainers,
+		ImagePullSecrets:   cdc.Spec.ImagePullSecrets,
+		ServiceAccountName: cdc.Spec.ServiceAccountName,
 	}
 
 	return podSpec

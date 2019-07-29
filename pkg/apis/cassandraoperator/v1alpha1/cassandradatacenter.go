@@ -22,6 +22,9 @@ type CassandraDataCenterSpec struct {
 	DataVolumeClaimSpec v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec"`
 
 	PrometheusSupport bool `json:"prometheusSupport"`
+
+	// ServiceAccount to assign to pods created by the operator
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 // CassandraDataCenterStatus defines the observed state of CassandraDataCenter
