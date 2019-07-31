@@ -12,19 +12,30 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"path"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"sync"
 )
 
-const DataVolumeMountPath = "/var/lib/cassandra"
+const (
+	DataVolumeMountPath = "/var/lib/cassandra"
+	OperatorConfigVolumeMountPath = "/tmp/operator-config"
+	UserConfigVolumeMountPath     = "/tmp/user-config"
+)
 
 const SidecarApiPort = 4567
+
+const GOOGLE_APPLICATION_CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 
 var sidecarClientOptions = sidecar.ClientOptions{
 	Port:   SidecarApiPort,
 	Secure: false,
+}
+
+func boolRef(b bool) *bool {
+	return &b
 }
 
 func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume *corev1.Volume) (*v1beta2.StatefulSet, error) {
@@ -40,9 +51,11 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 
 		dataVolumeClaim := newDataVolumeClaim(&rctx.cdc.Spec.DataVolumeClaimSpec)
 		podInfoVolume := newPodInfoVolume()
+		backupSecretVolume := newBackupSecretVolume(rctx)
+		userConfigVolume := newUserConfigVolume(rctx)
 
-		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume)
-		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, podInfoVolume)
+		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, userConfigVolume)
+		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, podInfoVolume, backupSecretVolume)
 
 		sysctlLimitsContainer := newSysctlLimitsContainer(rctx.cdc)
 
@@ -50,6 +63,14 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			[]corev1.Volume{*podInfoVolume, *configVolume},
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
 			[]corev1.Container{*sysctlLimitsContainer})
+
+		if backupSecretVolume != nil {
+			podSpec.Volumes = append(podSpec.Volumes, *backupSecretVolume)
+		}
+
+		if userConfigVolume != nil {
+			podSpec.Volumes = append(podSpec.Volumes, *userConfigVolume)
+		}
 
 		statefulSetSpec := newStatefulSetSpec(rctx.cdc, podSpec, dataVolumeClaim)
 
@@ -99,17 +120,12 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumes []co
 	return podSpec
 }
 
-func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume *corev1.Volume) *corev1.Container {
-	const (
-		OperatorConfigVolumeMountPath = "/tmp/operator-config"
-		UserConfigVolumePath = "/etc/cassandra/cassandra.yaml.d/003-user-overrides.yaml"
-	)
-
+func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume *corev1.Volume, userConfigVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
-		Args:            []string{OperatorConfigVolumeMountPath, UserConfigVolumePath},
+		Args:            []string{OperatorConfigVolumeMountPath},
 		Ports: []corev1.ContainerPort{
 			{Name: "internode", ContainerPort: 7000},
 			{Name: "cql", ContainerPort: 9042},
@@ -139,8 +155,9 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		},
 	}
 
-	if cdc.Spec.UserConfigMap.Size() != 0 {
-		container.VolumeMounts = append(container.VolumeMounts,	corev1.VolumeMount{Name: cdc.Spec.UserConfigMap.Name, MountPath: UserConfigVolumePath})
+	if userConfigVolume != nil {
+		container.Args = append(container.Args, UserConfigVolumeMountPath)
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: userConfigVolume.Name, MountPath: UserConfigVolumeMountPath})
 	}
 
 	if cdc.Spec.PrometheusSupport == true {
@@ -150,7 +167,7 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 	return container
 }
 
-func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, podInfoVolume *corev1.Volume) *corev1.Container {
+func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, podInfoVolume *corev1.Volume, backupSecretVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "sidecar",
 		Image:           cdc.Spec.SidecarImage,
@@ -164,10 +181,26 @@ func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dat
 		},
 	}
 
-	if len(cdc.Spec.BackupSecrets) != 0 {
-		container.EnvFrom = []corev1.EnvFromSource{
-			{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cdc.Spec.BackupSecrets}}},
+	if len(cdc.Spec.Env) > 0 {
+		container.Env = cdc.Spec.Env
+	}
+
+	if backupSecretVolume != nil {
+		// find GOOGLE_APPLICATION_CREDENTIALS in env:
+		google_creds_path := "/etc/gcp"
+		for _, env := range cdc.Spec.Env {
+			if env.Name == GOOGLE_APPLICATION_CREDENTIALS {
+				google_creds_path = path.Dir(env.Value)
+			}
 		}
+
+		if google_creds_path == "/etc/gcp" {
+			// environment not set, log it, but it may be not an issue
+			log.Info("Warning: backupSecretVolume is set, but GOOGLE_APPLICATION_CREDENTIALS env is missing")
+		}
+
+		// Use it for the mount
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: backupSecretVolume.Name, MountPath: google_creds_path})
 	}
 
 	return container
@@ -179,12 +212,38 @@ func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: func() *bool { b := true; return &b }(),
+			Privileged: boolRef(cdc.Spec.PrivilegedSupported),
 		},
 		Command: []string{"bash", "-xuec"},
 		Args: []string{
 			`sysctl -w vm.max_map_count=1048575 || true`,
 		},
+	}
+}
+
+func newUserConfigVolume(rctx *reconciliationRequestContext) *corev1.Volume {
+
+	// check if set
+	if len(rctx.cdc.Spec.UserConfigMapVolumeSource.Name) == 0 {
+		return nil
+	}
+
+	return &corev1.Volume{
+		Name: rctx.cdc.Spec.UserConfigMapVolumeSource.Name,
+		VolumeSource: corev1.VolumeSource{ConfigMap: &rctx.cdc.Spec.UserConfigMapVolumeSource},
+	}
+}
+
+func newBackupSecretVolume(rctx *reconciliationRequestContext) *corev1.Volume {
+
+	// check if set
+	if len(rctx.cdc.Spec.BackupSecretVolume.SecretName) == 0 {
+		return nil
+	}
+
+	return &corev1.Volume{
+		Name: rctx.cdc.Spec.BackupSecretVolume.SecretName,
+		VolumeSource: corev1.VolumeSource{Secret: &rctx.cdc.Spec.BackupSecretVolume},
 	}
 }
 

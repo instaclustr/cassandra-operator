@@ -10,17 +10,19 @@ import (
 type CassandraDataCenterSpec struct {
 	// Cluster is either a string or v1.LocalObjectReference
 	//Cluster interface{} `json:"cluster,omitempty"`
-	Cluster             string                       `json:"cluster,omitempty"`
-	Nodes               int32                        `json:"nodes"`
-	CassandraImage      string                       `json:"cassandraImage"`
-	SidecarImage        string                       `json:"sidecarImage"`
-	ImagePullPolicy     v1.PullPolicy                `json:"imagePullPolicy"`
-	ImagePullSecrets    []v1.LocalObjectReference    `json:"imagePullSecrets,omitempty"`
-	BackupSecrets       string                       `json:"backupSecrets,omitempty"`
-	UserConfigMap       v1.ConfigMapVolumeSource     `json:"userConfigMap,omitempty"`
-	Resources           v1.ResourceRequirements      `json:"resources"`
-	DataVolumeClaimSpec v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec"`
-	PrometheusSupport   bool                         `json:"prometheusSupport"`
+	Cluster                   string                       `json:"cluster,omitempty"`
+	Nodes                     int32                        `json:"nodes"`
+	CassandraImage            string                       `json:"cassandraImage"`
+	SidecarImage              string                       `json:"sidecarImage"`
+	ImagePullPolicy           v1.PullPolicy                `json:"imagePullPolicy"`
+	ImagePullSecrets          []v1.LocalObjectReference    `json:"imagePullSecrets,omitempty"`
+	BackupSecretVolume        v1.SecretVolumeSource        `json:"backupSecretVolume,omitempty"`
+	UserConfigMapVolumeSource v1.ConfigMapVolumeSource     `json:"userConfigMapVolumeSource,omitempty"`
+	Resources                 v1.ResourceRequirements      `json:"resources"`
+	DataVolumeClaimSpec       v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec"`
+	PrivilegedSupported       bool                         `json:"privilegedSupported,omitempty"`
+	PrometheusSupport         bool                         `json:"prometheusSupport"`
+	Env                       []v1.EnvVar                  `json:"env,omitempty"`
 }
 
 // CassandraDataCenterStatus defines the observed state of CassandraDataCenter

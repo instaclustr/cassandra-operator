@@ -27,9 +27,7 @@ spec:
           type: object
         spec:
           properties:
-            backupSecrets:
-              type: string
-            cassandraConfig:
+            backupSecretVolume:
               type: object
             cassandraImage:
               type: string
@@ -39,6 +37,10 @@ spec:
               type: string
             dataVolumeClaimSpec:
               type: object
+            env:
+              items:
+                type: object
+              type: array
             imagePullPolicy:
               type: string
             imagePullSecrets:
@@ -48,12 +50,16 @@ spec:
             nodes:
               format: int32
               type: integer
+            privilegedSupported:
+              type: boolean
             prometheusSupport:
               type: boolean
             resources:
               type: object
             sidecarImage:
               type: string
+            userConfigMapVolumeSource:
+              type: object
           required:
           - nodes
           - cassandraImage
