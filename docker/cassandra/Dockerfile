@@ -19,6 +19,7 @@ COPY cql-readiness-probe /usr/bin/cql-readiness-probe
 COPY ${cassandra_k8s_addons_jar} /usr/share/cassandra/lib
 
 ADD default-config /etc/cassandra
+RUN chown -R cassandra:cassandra /etc/cassandra
 
 VOLUME /var/lib/cassandra
 VOLUME /etc/cassandra
@@ -29,5 +30,11 @@ VOLUME /etc/cassandra
 # 9042: CQL
 # 9160: thrift service
 EXPOSE 7000 7001 7199 9042 9160
+
+# Run as user 'cassandra'
+# A numeric UID is used for PSP support:
+# https://kubernetes.io/docs/concepts/policy/pod-security-policy/#users-and-groups
+# The user is created in ./install-cassandra
+USER 999
 
 ENTRYPOINT ["/usr/bin/entry-point"]
