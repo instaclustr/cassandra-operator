@@ -284,6 +284,7 @@ func (in *CassandraDataCenterSpec) DeepCopyInto(out *CassandraDataCenterSpec) {
 		copy(*out, *in)
 	}
 	in.BackupSecretVolume.DeepCopyInto(&out.BackupSecretVolume)
+	in.UserSecretVolume.DeepCopyInto(&out.UserSecretVolume)
 	in.UserConfigMapVolumeSource.DeepCopyInto(&out.UserConfigMapVolumeSource)
 	in.Resources.DeepCopyInto(&out.Resources)
 	in.DataVolumeClaimSpec.DeepCopyInto(&out.DataVolumeClaimSpec)

@@ -60,6 +60,8 @@ spec:
               type: string
             userConfigMapVolumeSource:
               type: object
+            userSecretVolume:
+              type: object
           required:
           - nodes
           - cassandraImage

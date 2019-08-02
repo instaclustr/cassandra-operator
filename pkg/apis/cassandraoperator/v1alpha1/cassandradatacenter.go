@@ -17,6 +17,7 @@ type CassandraDataCenterSpec struct {
 	ImagePullPolicy           v1.PullPolicy                `json:"imagePullPolicy"`
 	ImagePullSecrets          []v1.LocalObjectReference    `json:"imagePullSecrets,omitempty"`
 	BackupSecretVolume        v1.SecretVolumeSource        `json:"backupSecretVolume,omitempty"`
+	UserSecretVolume          v1.SecretVolumeSource        `json:"userSecretVolume,omitempty"`
 	UserConfigMapVolumeSource v1.ConfigMapVolumeSource     `json:"userConfigMapVolumeSource,omitempty"`
 	Resources                 v1.ResourceRequirements      `json:"resources"`
 	DataVolumeClaimSpec       v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec"`

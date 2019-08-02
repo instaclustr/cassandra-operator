@@ -316,6 +316,11 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 							Ref: ref("k8s.io/api/core/v1.SecretVolumeSource"),
 						},
 					},
+					"userSecretVolume": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.SecretVolumeSource"),
+						},
+					},
 					"userConfigMapVolumeSource": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/api/core/v1.ConfigMapVolumeSource"),

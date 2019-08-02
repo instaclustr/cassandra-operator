@@ -23,6 +23,7 @@ const (
 	DataVolumeMountPath = "/var/lib/cassandra"
 	OperatorConfigVolumeMountPath = "/tmp/operator-config"
 	UserConfigVolumeMountPath     = "/tmp/user-config"
+	UserSecretVolumeMountPath     = "/tmp/user-secret-config"
 )
 
 const SidecarApiPort = 4567
@@ -52,9 +53,10 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		dataVolumeClaim := newDataVolumeClaim(&rctx.cdc.Spec.DataVolumeClaimSpec)
 		podInfoVolume := newPodInfoVolume()
 		backupSecretVolume := newBackupSecretVolume(rctx)
+		userSecretVolume := newUserSecretVolume(rctx)
 		userConfigVolume := newUserConfigVolume(rctx)
 
-		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, userConfigVolume)
+		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, userSecretVolume, userConfigVolume)
 		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, podInfoVolume, backupSecretVolume)
 
 		sysctlLimitsContainer := newSysctlLimitsContainer(rctx.cdc)
@@ -66,6 +68,10 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 
 		if backupSecretVolume != nil {
 			podSpec.Volumes = append(podSpec.Volumes, *backupSecretVolume)
+		}
+
+		if userSecretVolume != nil {
+			podSpec.Volumes = append(podSpec.Volumes, *userSecretVolume)
 		}
 
 		if userConfigVolume != nil {
@@ -120,7 +126,7 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumes []co
 	return podSpec
 }
 
-func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume *corev1.Volume, userConfigVolume *corev1.Volume) *corev1.Container {
+func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume *corev1.Volume, userSecretVolume, userConfigVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
@@ -128,6 +134,7 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		Args:            []string{OperatorConfigVolumeMountPath},
 		Ports: []corev1.ContainerPort{
 			{Name: "internode", ContainerPort: 7000},
+			{Name: "internode-ssl", ContainerPort: 7001},
 			{Name: "cql", ContainerPort: 9042},
 			{Name: "jmx", ContainerPort: 7199},
 		},
@@ -158,6 +165,10 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 	if userConfigVolume != nil {
 		container.Args = append(container.Args, UserConfigVolumeMountPath)
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: userConfigVolume.Name, MountPath: UserConfigVolumeMountPath})
+	}
+
+	if userSecretVolume != nil {
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: userSecretVolume.Name, MountPath: UserSecretVolumeMountPath})
 	}
 
 	if cdc.Spec.PrometheusSupport == true {
@@ -231,6 +242,19 @@ func newUserConfigVolume(rctx *reconciliationRequestContext) *corev1.Volume {
 	return &corev1.Volume{
 		Name: rctx.cdc.Spec.UserConfigMapVolumeSource.Name,
 		VolumeSource: corev1.VolumeSource{ConfigMap: &rctx.cdc.Spec.UserConfigMapVolumeSource},
+	}
+}
+
+func newUserSecretVolume(rctx *reconciliationRequestContext) *corev1.Volume {
+
+	// check if set
+	if len(rctx.cdc.Spec.UserSecretVolume.SecretName) == 0 {
+		return nil
+	}
+
+	return &corev1.Volume{
+		Name: rctx.cdc.Spec.UserSecretVolume.SecretName,
+		VolumeSource: corev1.VolumeSource{Secret: &rctx.cdc.Spec.UserSecretVolume},
 	}
 }
 

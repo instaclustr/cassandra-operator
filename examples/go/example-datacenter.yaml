@@ -7,7 +7,6 @@ metadata:
 spec:
   cluster: "test-cluster"
   nodes: 3
-  racks: 3
   cassandraImage: "gcr.io/cassandra-operator/cassandra:3.11.3"
   sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
   imagePullPolicy: IfNotPresent
@@ -23,13 +22,19 @@ spec:
   env:
     - name: GOOGLE_APPLICATION_CREDENTIALS
       value: "/etc/google/creds.json"
+  userSecretVolume:
+    secretName: dc1-user-secret
   userConfigMapVolumeSource:
-    name: concurrent-data
+    name: dc1-user-config
     #     type is a workaround for https://github.com/kubernetes/kubernetes/issues/68466
     type: array
     items:
-      - key: "concurrent.yaml"
-        path: "cassandra.yaml.d/100-user.yaml"
+      - key: cassandra_ssl
+        path: cassandra.yaml.d/003-ssl.yaml
+      - key: cqlshrc
+        path: cqlshrc
+      - key: install_cqlshrc
+        path: cassandra-env.sh.d/003-install-cqlshrc.sh
   resources:
     limits:
       memory: 1Gi
