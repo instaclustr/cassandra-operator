@@ -26,19 +26,6 @@ const (
 	BackupSecretVolumeMountPath   = "/tmp/backup-secret"
 )
 
-const SidecarApiPort = 4567
-
-const GOOGLE_APPLICATION_CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
-
-var sidecarClientOptions = sidecar.ClientOptions{
-	Port:   SidecarApiPort,
-	Secure: false,
-}
-
-func boolRef(b bool) *bool {
-	return &b
-}
-
 func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume *corev1.Volume) (*v1beta2.StatefulSet, error) {
 	statefulSet := &v1beta2.StatefulSet{ObjectMeta: DataCenterResourceMetadata(rctx.cdc)}
 
@@ -185,7 +172,7 @@ func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dat
 		Image:           cdc.Spec.SidecarImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Ports: []corev1.ContainerPort{
-			{Name: "http", ContainerPort: SidecarApiPort},
+			{Name: "http", ContainerPort: sidecar.DefaultSidecarClientOptions.Port},
 		},
 		Env: cdc.Spec.SidecarEnv,
 		VolumeMounts: []corev1.VolumeMount{

@@ -37,7 +37,7 @@ type Client struct {
 type ClientOptions struct {
 	Secure   bool
 	HttpMode bool
-	Port     int
+	Port     int32
 	Timeout  time.Duration
 }
 
