@@ -16,14 +16,15 @@ type CassandraDataCenterSpec struct {
 	SidecarImage              string                       `json:"sidecarImage"`
 	ImagePullPolicy           v1.PullPolicy                `json:"imagePullPolicy"`
 	ImagePullSecrets          []v1.LocalObjectReference    `json:"imagePullSecrets,omitempty"`
-	BackupSecretVolume        v1.SecretVolumeSource        `json:"backupSecretVolume,omitempty"`
-	UserSecretVolume          v1.SecretVolumeSource        `json:"userSecretVolume,omitempty"`
-	UserConfigMapVolumeSource v1.ConfigMapVolumeSource     `json:"userConfigMapVolumeSource,omitempty"`
+	BackupSecretVolumeSource  *v1.SecretVolumeSource       `json:"backupSecretVolumeSource,omitempty"`
+	UserSecretVolumeSource    *v1.SecretVolumeSource       `json:"userSecretVolumeSource,omitempty"`
+	UserConfigMapVolumeSource *v1.ConfigMapVolumeSource    `json:"userConfigMapVolumeSource,omitempty"`
 	Resources                 v1.ResourceRequirements      `json:"resources"`
 	DataVolumeClaimSpec       v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec"`
 	PrivilegedSupported       bool                         `json:"privilegedSupported,omitempty"`
 	PrometheusSupport         bool                         `json:"prometheusSupport"`
-	Env                       []v1.EnvVar                  `json:"env,omitempty"`
+	SidecarEnv                []v1.EnvVar                  `json:"sidecarEnv,omitempty"`
+	CassandraEnv              []v1.EnvVar                  `json:"cassandraEnv,omitempty"`
 }
 
 // CassandraDataCenterStatus defines the observed state of CassandraDataCenter

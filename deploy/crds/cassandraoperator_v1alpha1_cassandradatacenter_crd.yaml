@@ -27,8 +27,12 @@ spec:
           type: object
         spec:
           properties:
-            backupSecretVolume:
+            backupSecretVolumeSource:
               type: object
+            cassandraEnv:
+              items:
+                type: object
+              type: array
             cassandraImage:
               type: string
             cluster:
@@ -37,10 +41,6 @@ spec:
               type: string
             dataVolumeClaimSpec:
               type: object
-            env:
-              items:
-                type: object
-              type: array
             imagePullPolicy:
               type: string
             imagePullSecrets:
@@ -56,11 +56,15 @@ spec:
               type: boolean
             resources:
               type: object
+            sidecarEnv:
+              items:
+                type: object
+              type: array
             sidecarImage:
               type: string
             userConfigMapVolumeSource:
               type: object
-            userSecretVolume:
+            userSecretVolumeSource:
               type: object
           required:
           - nodes

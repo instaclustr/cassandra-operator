@@ -283,13 +283,32 @@ func (in *CassandraDataCenterSpec) DeepCopyInto(out *CassandraDataCenterSpec) {
 		*out = make([]v1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
-	in.BackupSecretVolume.DeepCopyInto(&out.BackupSecretVolume)
-	in.UserSecretVolume.DeepCopyInto(&out.UserSecretVolume)
-	in.UserConfigMapVolumeSource.DeepCopyInto(&out.UserConfigMapVolumeSource)
+	if in.BackupSecretVolumeSource != nil {
+		in, out := &in.BackupSecretVolumeSource, &out.BackupSecretVolumeSource
+		*out = new(v1.SecretVolumeSource)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.UserSecretVolumeSource != nil {
+		in, out := &in.UserSecretVolumeSource, &out.UserSecretVolumeSource
+		*out = new(v1.SecretVolumeSource)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.UserConfigMapVolumeSource != nil {
+		in, out := &in.UserConfigMapVolumeSource, &out.UserConfigMapVolumeSource
+		*out = new(v1.ConfigMapVolumeSource)
+		(*in).DeepCopyInto(*out)
+	}
 	in.Resources.DeepCopyInto(&out.Resources)
 	in.DataVolumeClaimSpec.DeepCopyInto(&out.DataVolumeClaimSpec)
-	if in.Env != nil {
-		in, out := &in.Env, &out.Env
+	if in.SidecarEnv != nil {
+		in, out := &in.SidecarEnv, &out.SidecarEnv
+		*out = make([]v1.EnvVar, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.CassandraEnv != nil {
+		in, out := &in.CassandraEnv, &out.CassandraEnv
 		*out = make([]v1.EnvVar, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

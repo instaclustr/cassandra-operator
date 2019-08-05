@@ -22,7 +22,7 @@ You can inspect the secret created via `kubectl describe secrets/awsbackuptest`
 Create a `CassandraDataCenter` CRD that injects the secret as environment variables that matches the AWS client libraries expected env variables:
 
 ```yaml
-  env:
+  sidecarEnv:
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:
@@ -65,7 +65,7 @@ spec:
     resources:
       requests:
         storage: 100Mi
-  env:
+  sidecarEnv:
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:
@@ -85,6 +85,9 @@ spec:
 To create a cluster using this yaml file use `kubectl apply -f myBackupCluster.yaml`
 
 ## Configuring GCP Object Storage via environment variables
+The backup credentials will be added to the sidecar container at the `/tmp/backup-creds` location. 
+Use this location to set GOOGLE_APPLICATION_CREDENTIALS environment variable to the key json file stored in the secret.
+
 First create a secret in kubernetes to hold a Google service account token/file (assuming they are stored in files named access and secret respectively).
 
 `kubectl create secret generic gcp-auth-reference --from-file=my_service_key.json`
@@ -118,14 +121,14 @@ spec:
     resources:
       requests:
         storage: 100Mi
-  userSecretSource:
+  backupSecretVolumeSource:
     name: gcp-auth-reference
     items:
       - key: my_service_key.json
         path:  my_service_key.json
-  env:
+  sidecarEnv:
     - name: GOOGLE_APPLICATION_CREDENTIALS
-      value: "/tmp/user-secret/my_service_key.json"
+      value: "/tmp/backup-creds/my_service_key.json"
     - name: GOOGLE_CLOUD_PROJECT
       value: "cassandra-operator"
     - name: BUCKET_NAME

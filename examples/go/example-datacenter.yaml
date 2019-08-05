@@ -12,17 +12,20 @@ spec:
   imagePullPolicy: IfNotPresent
   imagePullSecrets:
     - name: regcred
-  backupSecretVolume:
-    secretName: backup-secret
+  backupSecretVolumeSource:
+    secretName: gcp-auth-reference
     #     type is a workaround for https://github.com/kubernetes/kubernetes/issues/68466
     type: array
     items:
-      - key: creds.json
-        path: creds.json
-  env:
+      - key: my-service-key.json
+        path: my-service-key.json
+  sidecarEnv:
     - name: GOOGLE_APPLICATION_CREDENTIALS
-      value: "/etc/google/creds.json"
-  userSecretVolume:
+      value: "/tmp/backup-creds/my-service-key.json"
+  cassandraEnv:
+    - name: CQLSHRC
+      value: "/etc/cassandra/cqlshrc"
+  userSecretVolumeSource:
     secretName: dc1-user-secret
   userConfigMapVolumeSource:
     name: dc1-user-config
@@ -33,8 +36,6 @@ spec:
         path: cassandra.yaml.d/003-ssl.yaml
       - key: cqlshrc
         path: cqlshrc
-      - key: install_cqlshrc
-        path: cassandra-env.sh.d/003-install-cqlshrc.sh
   resources:
     limits:
       memory: 1Gi

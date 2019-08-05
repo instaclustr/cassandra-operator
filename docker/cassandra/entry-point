@@ -12,4 +12,12 @@ do
 done
 )
 
+# Copy over cqlshrc to a default location if defined as ENV
+if [[ ! -z "${CQLSHRC}" ]]; then
+    if [[ ! -e ~/.cassandra ]]; then
+        mkdir ~/.cassandra
+    fi
+    mv ${CQLSHRC} ~/.cassandra/
+fi
+
 exec /usr/sbin/cassandra
