@@ -22,7 +22,7 @@ const (
 	DataVolumeMountPath = "/var/lib/cassandra"
 	OperatorConfigVolumeMountPath = "/tmp/operator-config"
 	UserConfigVolumeMountPath     = "/tmp/user-config"
-	UserSecretVolumeMountPath     = "/tmp/user-secret-config"
+	UserSecretVolumeMountPath     = "/tmp/user-secret"
 	BackupSecretVolumeMountPath   = "/tmp/backup-secret"
 )
 
