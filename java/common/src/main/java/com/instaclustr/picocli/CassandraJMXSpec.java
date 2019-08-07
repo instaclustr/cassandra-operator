@@ -1,8 +1,10 @@
-package com.instaclustr.cassandra.backup.cli;
+package com.instaclustr.picocli;
 
 import static com.instaclustr.picocli.typeconverter.CassandraJMXServiceURLTypeConverter.DEFAULT_CASSANDRA_JMX_PORT;
 
 import javax.management.remote.JMXServiceURL;
+
+import java.nio.file.Path;
 
 import com.instaclustr.picocli.typeconverter.CassandraJMXServiceURLTypeConverter;
 import picocli.CommandLine;
@@ -10,7 +12,7 @@ import picocli.CommandLine;
 /**
  * Holds JMX connection information, used as mixin for application to achieve DRY.
  */
-public class JMXSpec {
+public class CassandraJMXSpec {
 
     @CommandLine.Option(names = "--jmx-service",
             paramLabel = "[ADDRESS][:PORT]|[JMX SERVICE URL]",
@@ -28,4 +30,10 @@ public class JMXSpec {
 
     @CommandLine.Option(names = "--jmx-password", paramLabel = "[STRING]", description = "Password for JMX for Cassandra")
     public String jmxPassword;
+
+    @CommandLine.Option(names = "--jmx-truststore", paramLabel = "[PATH]", description = "Path to truststore file for Cassandra")
+    public String trustStore;
+
+    @CommandLine.Option(names = "--jmx-truststore-password", paramLabel = "[PATH]", description = "Password to truststore file for Cassandra")
+    public String trustStorePassword;
 }

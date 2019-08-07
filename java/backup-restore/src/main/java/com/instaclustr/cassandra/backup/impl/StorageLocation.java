@@ -102,19 +102,19 @@ public class StorageLocation {
 
     @Target({TYPE, PARAMETER, FIELD})
     @Retention(RUNTIME)
-    @Constraint(validatedBy = ValidBackupLocation.BackupLocationValidator.class)
-    public @interface ValidBackupLocation {
-        String message() default "{com.instaclustr.cassandra.backup.impl.StorageLocation.BackupLocationValidator.message}";
+    @Constraint(validatedBy = ValidStorageLocation.StorageLocationValidator.class)
+    public @interface ValidStorageLocation {
+        String message() default "{com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationValidator.message}";
 
         Class<?>[] groups() default {};
 
         Class<? extends Payload>[] payload() default {};
 
-        class BackupLocationValidator implements ConstraintValidator<ValidBackupLocation, StorageLocation> {
+        class StorageLocationValidator implements ConstraintValidator<ValidStorageLocation, StorageLocation> {
             private final Set<String> storageProviders;
 
             @Inject
-            public BackupLocationValidator(final @StorageProviders Set<String> storageProviders) {
+            public StorageLocationValidator(final @StorageProviders Set<String> storageProviders) {
                 this.storageProviders = storageProviders;
             }
 

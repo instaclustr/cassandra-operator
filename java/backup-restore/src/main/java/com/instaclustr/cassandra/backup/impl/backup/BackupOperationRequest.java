@@ -20,7 +20,7 @@ import com.instaclustr.cassandra.backup.impl.StorageLocation;
 import com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationDeserializer;
 import com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationSerializer;
 import com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationTypeConverter;
-import com.instaclustr.cassandra.backup.impl.StorageLocation.ValidBackupLocation;
+import com.instaclustr.cassandra.backup.impl.StorageLocation.ValidStorageLocation;
 import com.instaclustr.jackson.PathDeserializer;
 import com.instaclustr.jackson.PathSerializer;
 import com.instaclustr.measure.DataRate;
@@ -35,15 +35,15 @@ import picocli.CommandLine;
 public class BackupOperationRequest extends OperationRequest {
 
     @CommandLine.Option(
-            names = {"--bl", "--backup-location"},
+            names = {"--sl", "--storage-location"},
             converter = StorageLocationTypeConverter.class,
             description = "Location to which files will be backed up, in form " +
                     "cloudProvider://bucketName/clusterId/nodeId or file:///some/path/bucketName/clusterId/nodeId. " +
-                    "'cloudProvider' is one of 'aws', 'azure' or 'gcp'.",
+                    "'cloudProvider' is one of 's3', 'azure' or 'gcp'.",
             required = true
     )
     @NotNull
-    @ValidBackupLocation
+    @ValidStorageLocation
     @JsonSerialize(using = StorageLocationSerializer.class)
     @JsonDeserialize(using = StorageLocationDeserializer.class)
     public StorageLocation storageLocation;
@@ -82,7 +82,7 @@ public class BackupOperationRequest extends OperationRequest {
     @JsonSerialize(using = PathSerializer.class)
     @JsonDeserialize(using = PathDeserializer.class)
     @NotNull
-    public Path cassandraDirectory = Paths.get("/var/lib/cassandra");
+    public Path cassandraDirectory;
 
     @CommandLine.Option(
             names = {"--cc", "--concurrent-connections"},
@@ -92,7 +92,7 @@ public class BackupOperationRequest extends OperationRequest {
     public Integer concurrentConnections;
 
     @CommandLine.Option(
-            names = {"--wait"},
+            names = {"-w", "--wait"},
             description = "Wait to acquire the global transfer lock (which prevents more than one backup or restore from running)."
     )
     public boolean waitForLock;
@@ -145,7 +145,7 @@ public class BackupOperationRequest extends OperationRequest {
         this.bandwidth = bandwidth;
         this.sharedContainerPath = sharedContainerPath == null ? Paths.get("/") : sharedContainerPath;
         this.cassandraDirectory = cassandraDirectory == null ? Paths.get("/var/lib/cassandra") : cassandraDirectory;
-        this.concurrentConnections = concurrentConnections;
+        this.concurrentConnections = concurrentConnections == null ? 10 : concurrentConnections;
         this.waitForLock = waitForLock == null ? true : waitForLock;
         this.keyspaces = keyspaces == null ? ImmutableList.of() : keyspaces;
         this.snapshotTag = snapshotTag == null ? format("autosnap-%d", MILLISECONDS.toSeconds(currentTimeMillis())) : snapshotTag;

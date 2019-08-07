@@ -58,7 +58,7 @@ public class RestoreCommitLogsOperation extends BaseRestoreOperation<RestoreComm
         try (final Restorer restorer = restorerFactoryMap.get(request.storageLocation.storageProvider).createRestorer(request)) {
             restorer.restore();
 
-            downloadCommitLogs();
+            downloadCommitLogs(restorer);
 
             updateConfigurationForRestoreInitiation();
 
@@ -92,9 +92,7 @@ public class RestoreCommitLogsOperation extends BaseRestoreOperation<RestoreComm
         }
     }
 
-    private void downloadCommitLogs() throws Exception {
-        final Restorer restorer = restorerFactoryMap.get(request.storageLocation.storageProvider).createRestorer(request);
-
+    private void downloadCommitLogs(final Restorer restorer) throws Exception {
         final Set<Path> existingCommitlogsList = new HashSet<>();
         final Path commitlogsPath = request.cassandraDirectory.resolve(CASSANDRA_COMMIT_LOGS);
 

@@ -4,8 +4,8 @@ import java.nio.file.Path;
 
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 
-public class AWSRemoteObjectReference extends RemoteObjectReference {
-    public AWSRemoteObjectReference(Path objectKey, String canonicalPath) {
+public class S3RemoteObjectReference extends RemoteObjectReference {
+    public S3RemoteObjectReference(Path objectKey, String canonicalPath) {
         super(objectKey, canonicalPath);
     }
 

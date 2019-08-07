@@ -15,6 +15,7 @@ import com.google.common.collect.Multimap;
 import com.instaclustr.cassandra.backup.impl.StorageLocation;
 import com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationDeserializer;
 import com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationSerializer;
+import com.instaclustr.cassandra.backup.impl.StorageLocation.ValidStorageLocation;
 import com.instaclustr.jackson.PathDeserializer;
 import com.instaclustr.jackson.PathSerializer;
 import com.instaclustr.picocli.typeconverter.KeyspaceTablePairsConverter;
@@ -25,7 +26,7 @@ import picocli.CommandLine;
 public class RestoreOperationRequest extends OperationRequest {
 
     @CommandLine.Option(
-            names = {"--bl", "--backup-location"},
+            names = {"--sl", "--storage-location"},
             converter = StorageLocation.StorageLocationTypeConverter.class,
             description = "Location from which files will be fetched for restore, in form " +
                     "cloudProvider://bucketName/clusterId/nodeId or file:///some/path/bucketName/clusterId/nodeId. " +
@@ -33,7 +34,7 @@ public class RestoreOperationRequest extends OperationRequest {
             required = true
     )
     @NotNull
-    @StorageLocation.ValidBackupLocation
+    @ValidStorageLocation
     @JsonSerialize(using = StorageLocationSerializer.class)
     @JsonDeserialize(using = StorageLocationDeserializer.class)
     public StorageLocation storageLocation;
@@ -73,7 +74,7 @@ public class RestoreOperationRequest extends OperationRequest {
             description = "Comma separated list of tables to restore. Must include keyspace name in the format <keyspace.table>",
             converter = KeyspaceTablePairsConverter.class
     )
-    public Multimap<String, String> keyspaceTables = ImmutableMultimap.of();
+    public Multimap<String, String> keyspaceTables;
 
     @CommandLine.Option(
             names = {"-s", "--st", "--snapshot-tag"},
@@ -84,13 +85,13 @@ public class RestoreOperationRequest extends OperationRequest {
     public String snapshotTag;
 
     @CommandLine.Option(
-            names = {"-rs", "--restore-system-keyspace"},
+            names = {"--rs", "--restore-system-keyspace"},
             description = "Restore system keyspace. Use this to prevent bootstrapping, when restoring on only a single node."
     )
     public boolean restoreSystemKeyspace;
 
     @CommandLine.Option(
-            names = {"--wait"},
+            names = {"-w", "--wait"},
             description = "Wait to acquire the global transfer lock (which prevents more than one backup or restore from running)."
     )
     public Boolean waitForLock;
@@ -113,16 +114,16 @@ public class RestoreOperationRequest extends OperationRequest {
                                    @JsonProperty("keyspaceTables") final Multimap<String, String> keyspaceTables,
                                    @JsonProperty("snapshotTag") final String snapshotTag,
                                    @JsonProperty("restoreSystemKeyspace") final boolean restoreSystemKeyspace,
-                                   @JsonProperty("waitForLock") final Boolean waitForLock,
-                                   @JsonProperty("concurrentConnections") final Integer concurrentConnections) {
+                                   @JsonProperty("concurrentConnections") final Integer concurrentConnections,
+                                   @JsonProperty("waitForLock") final Boolean waitForLock) {
         this.storageLocation = storageLocation;
+        this.cassandraDirectory = cassandraDirectory == null ? Paths.get("/var/lib/cassandra") : cassandraDirectory;
+        this.cassandraConfigDirectory = cassandraConfigDirectory == null ? Paths.get("/etc/cassandra") : cassandraConfigDirectory;
         this.sharedContainerPath = sharedContainerPath == null ? Paths.get("/") : sharedContainerPath;
-        this.cassandraDirectory = cassandraDirectory;
-        this.cassandraConfigDirectory = cassandraDirectory == null ? Paths.get("/var/lib/cassandra") : cassandraDirectory;
         this.keyspaceTables = keyspaceTables == null ? ImmutableMultimap.of() : keyspaceTables;
         this.snapshotTag = snapshotTag;
         this.restoreSystemKeyspace = restoreSystemKeyspace;
-        this.concurrentConnections = concurrentConnections;
+        this.concurrentConnections = concurrentConnections == null ? 10 : concurrentConnections;
         this.waitForLock = waitForLock == null ? true : waitForLock;
     }
 
@@ -136,8 +137,8 @@ public class RestoreOperationRequest extends OperationRequest {
                 .add("keyspaceTables", keyspaceTables)
                 .add("snapshotTag", snapshotTag)
                 .add("restoreSystemKeyspace", restoreSystemKeyspace)
-                .add("waitForLock", waitForLock)
                 .add("concurrentConnections", concurrentConnections)
+                .add("waitForLock", waitForLock)
                 .toString();
     }
 }

@@ -15,7 +15,7 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.internal.S3ProgressListener;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.cassandra.backup.aws.AWSModule.TransferManagerProvider;
+import com.instaclustr.cassandra.backup.aws.S3Module.TransferManagerProvider;
 import com.instaclustr.threading.Executors;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
@@ -23,16 +23,16 @@ import com.instaclustr.cassandra.backup.impl.restore.Restorer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AWSRestorer extends Restorer {
-    private static final Logger logger = LoggerFactory.getLogger(AWSRestorer.class);
+public class S3Restorer extends Restorer {
+    private static final Logger logger = LoggerFactory.getLogger(S3Restorer.class);
 
     private final AmazonS3 amazonS3;
     private final TransferManager transferManager;
 
     @Inject
-    public AWSRestorer(final TransferManagerProvider transferManagerProvider,
-                       final Executors.ExecutorServiceSupplier executorServiceSupplier,
-                       @Assisted final RestoreOperationRequest request) {
+    public S3Restorer(final TransferManagerProvider transferManagerProvider,
+                      final Executors.ExecutorServiceSupplier executorServiceSupplier,
+                      @Assisted final RestoreOperationRequest request) {
         super(request, executorServiceSupplier);
         this.transferManager = transferManagerProvider.get();
         this.amazonS3 = this.transferManager.getAmazonS3Client();
@@ -40,7 +40,7 @@ public class AWSRestorer extends Restorer {
 
     @Override
     public RemoteObjectReference objectKeyToRemoteReference(final Path objectKey) {
-        return new AWSRemoteObjectReference(objectKey, resolveRemotePath(objectKey));
+        return new S3RemoteObjectReference(objectKey, resolveRemotePath(objectKey));
     }
 
     @Override

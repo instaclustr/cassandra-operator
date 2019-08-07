@@ -14,14 +14,14 @@ import com.google.inject.throwingproviders.CheckedProvider;
 import com.google.inject.throwingproviders.CheckedProvides;
 import com.google.inject.throwingproviders.ThrowingProviderBinder;
 
-public class AWSModule extends AbstractModule {
+public class S3Module extends AbstractModule {
     @Override
     protected void configure() {
         install(ThrowingProviderBinder.forModule(this));
         installBindings(binder(),
-                        "aws",
-                        AWSRestorer.class,
-                        AWSBackuper.class);
+                        "s3",
+                        S3Restorer.class,
+                        S3Backuper.class);
     }
 
     public interface TransferManagerProvider extends CheckedProvider<TransferManager> {

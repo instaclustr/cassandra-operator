@@ -16,6 +16,7 @@ import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.instaclustr.cassandra.backup.guice.BackupRestoreModule;
 import com.instaclustr.guice.GuiceInjectorHolder;
+import com.instaclustr.picocli.CassandraJMXSpec;
 import com.instaclustr.picocli.JarManifestVersionProvider;
 import com.instaclustr.sidecar.operations.OperationRequest;
 import com.instaclustr.sidecar.operations.OperationsModule;
@@ -59,14 +60,18 @@ public class BackupRestoreCLI implements Runnable {
     }
 
     static void init(final Runnable command,
-                     final JMXSpec jmxSpec,
+                     final CassandraJMXSpec jmxSpec,
                      final OperationRequest operationRequest,
                      final Logger logger) {
 
         final List<Module> modules = new ArrayList<>();
 
         if (jmxSpec != null) {
-            modules.add(new CassandraModule(new JMXConnectionInfo(jmxSpec.jmxPassword, jmxSpec.jmxUser, jmxSpec.jmxServiceURL)));
+            modules.add(new CassandraModule(new JMXConnectionInfo(jmxSpec.jmxPassword,
+                                                                  jmxSpec.jmxUser,
+                                                                  jmxSpec.jmxServiceURL,
+                                                                  jmxSpec.trustStore,
+                                                                  jmxSpec.trustStorePassword)));
         }
 
         modules.add(new OperationsModule());

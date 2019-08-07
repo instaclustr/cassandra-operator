@@ -7,6 +7,7 @@ import static org.awaitility.Awaitility.await;
 import com.google.inject.Inject;
 import com.instaclustr.cassandra.backup.cli.BackupRestoreCLI.CLIJarManifestVersionProvider;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
+import com.instaclustr.picocli.CassandraJMXSpec;
 import com.instaclustr.sidecar.operations.Operation;
 import com.instaclustr.sidecar.operations.OperationsService;
 import org.slf4j.Logger;
@@ -26,7 +27,7 @@ public class BackupApplication implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(BackupApplication.class);
 
     @CommandLine.Mixin
-    private JMXSpec jmxSpec;
+    private CassandraJMXSpec jmxSpec;
 
     @CommandLine.Mixin
     private BackupOperationRequest request;

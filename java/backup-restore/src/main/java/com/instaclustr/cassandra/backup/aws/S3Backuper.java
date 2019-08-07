@@ -23,7 +23,7 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.cassandra.backup.aws.AWSModule.TransferManagerProvider;
+import com.instaclustr.cassandra.backup.aws.S3Module.TransferManagerProvider;
 import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
@@ -31,17 +31,17 @@ import com.instaclustr.cassandra.backup.impl.backup.Backuper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AWSBackuper extends Backuper {
-    private static final Logger logger = LoggerFactory.getLogger(AWSBackuper.class);
+public class S3Backuper extends Backuper {
+    private static final Logger logger = LoggerFactory.getLogger(S3Backuper.class);
 
     private final TransferManager transferManager;
 
     private final Optional<String> kmsId;
 
     @Inject
-    public AWSBackuper(final TransferManagerProvider transferManagerProvider,
-                       final ExecutorServiceSupplier executorSupplier,
-                       @Assisted final BackupOperationRequest request) {
+    public S3Backuper(final TransferManagerProvider transferManagerProvider,
+                      final ExecutorServiceSupplier executorSupplier,
+                      @Assisted final BackupOperationRequest request) {
         super(request, executorSupplier);
         this.transferManager = transferManagerProvider.get();
         this.kmsId = Optional.empty();
@@ -49,12 +49,12 @@ public class AWSBackuper extends Backuper {
 
     @Override
     public RemoteObjectReference objectKeyToRemoteReference(final Path objectKey) {
-        return new AWSRemoteObjectReference(objectKey, resolveRemotePath(objectKey));
+        return new S3RemoteObjectReference(objectKey, resolveRemotePath(objectKey));
     }
 
     @Override
     public FreshenResult freshenRemoteObject(final RemoteObjectReference object) throws InterruptedException {
-        final String canonicalPath = ((AWSRemoteObjectReference) object).canonicalPath;
+        final String canonicalPath = ((S3RemoteObjectReference) object).canonicalPath;
 
         final CopyObjectRequest copyRequest = new CopyObjectRequest(request.storageLocation.bucket,
                                                                     canonicalPath,
@@ -85,10 +85,10 @@ public class AWSBackuper extends Backuper {
 
     @Override
     public void uploadFile(final long size, final InputStream localFileStream, final RemoteObjectReference object) throws Exception {
-        final AWSRemoteObjectReference awsRemoteObjectReference = (AWSRemoteObjectReference) object;
+        final S3RemoteObjectReference s3RemoteObjectReference = (S3RemoteObjectReference) object;
 
         final PutObjectRequest putObjectRequest = new PutObjectRequest(request.storageLocation.bucket,
-                                                                       awsRemoteObjectReference.canonicalPath,
+                                                                       s3RemoteObjectReference.canonicalPath,
                                                                        localFileStream,
                                                                        new ObjectMetadata() {{
                                                                            setContentLength(size);
@@ -104,7 +104,7 @@ public class AWSBackuper extends Backuper {
 
         upload.addProgressListener((ProgressListener) progressEvent -> {
             if (progressEvent.getEventType() == ProgressEventType.TRANSFER_PART_COMPLETED_EVENT)
-                logger.debug("Successfully uploaded part for {}.", awsRemoteObjectReference.canonicalPath);
+                logger.debug("Successfully uploaded part for {}.", s3RemoteObjectReference.canonicalPath);
         });
 
         upload.waitForCompletion();

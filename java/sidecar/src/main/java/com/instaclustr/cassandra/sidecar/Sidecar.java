@@ -22,6 +22,7 @@ import com.instaclustr.guice.Application;
 import com.instaclustr.guice.ServiceManagerModule;
 import com.instaclustr.measure.Time;
 import com.instaclustr.picocli.CLIApplication;
+import com.instaclustr.picocli.CassandraJMXSpec;
 import com.instaclustr.picocli.typeconverter.CassandraJMXServiceURLTypeConverter;
 import com.instaclustr.picocli.typeconverter.ServerInetSocketAddressTypeConverter;
 import com.instaclustr.picocli.typeconverter.TimeMeasureTypeConverter;
@@ -63,22 +64,8 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
                     "Defaults to '${DEFAULT-VALUE}'")
     public InetSocketAddress httpServerAddress;
 
-    @CommandLine.Option(names = "--jmx-service",
-            paramLabel = "[ADDRESS][:PORT]|[JMX SERVICE URL]",
-            defaultValue = ":" + DEFAULT_CASSANDRA_JMX_PORT,
-            converter = CassandraJMXServiceURLTypeConverter.class,
-            description = "Address (and optional port) of a Cassandra instance to connect to via JMX. " +
-                    "ADDRESS may be a hostname, IPv4 dotted or decimal address, or IPv6 address. " +
-                    "When ADDRESS is omitted, the loopback address is used. " +
-                    "PORT, when specified, must be a valid port number. The default port " + DEFAULT_CASSANDRA_JMX_PORT + " will be substituted if omitted." +
-                    "Defaults to '${DEFAULT-VALUE}'")
-    public JMXServiceURL jmxServiceURL;
-
-    @CommandLine.Option(names = "--jmx-user", paramLabel = "[STRING]", description = "User for JMX for Cassandra")
-    public String jmxUser;
-
-    @CommandLine.Option(names = "--jmx-password", paramLabel = "[STRING]", description = "Password for JMX for Cassandra")
-    public String jmxPassword;
+    @CommandLine.Mixin
+    private CassandraJMXSpec jmxSpec;
 
     @CommandLine.Option(
             names = {"-e", "--operations-expiration"},
@@ -107,7 +94,11 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
 
                 new ServiceManagerModule(),
 
-                new CassandraModule(new JMXConnectionInfo(jmxPassword, jmxUser, jmxServiceURL)),
+                new CassandraModule(new JMXConnectionInfo(jmxSpec.jmxPassword,
+                                                          jmxSpec.jmxUser,
+                                                          jmxSpec.jmxServiceURL,
+                                                          jmxSpec.trustStore,
+                                                          jmxSpec.trustStorePassword)),
                 new JerseyHttpServerModule(httpServerAddress),
 
                 new OperationsModule(operationsExpirationPeriod),

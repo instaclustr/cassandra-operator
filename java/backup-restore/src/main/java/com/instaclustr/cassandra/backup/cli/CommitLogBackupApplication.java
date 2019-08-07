@@ -6,6 +6,7 @@ import static com.instaclustr.picocli.CLIApplication.execute;
 import com.google.inject.Inject;
 import com.instaclustr.cassandra.backup.cli.BackupRestoreCLI.CLIJarManifestVersionProvider;
 import com.instaclustr.cassandra.backup.impl.commitlog.BackupCommitLogsOperationRequest;
+import com.instaclustr.picocli.CassandraJMXSpec;
 import com.instaclustr.sidecar.operations.OperationsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,7 @@ public class CommitLogBackupApplication implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(CommitLogBackupApplication.class);
 
     @CommandLine.Mixin
-    private JMXSpec jmxSpec;
+    private CassandraJMXSpec jmxSpec;
 
     @CommandLine.Mixin
     private BackupCommitLogsOperationRequest request;

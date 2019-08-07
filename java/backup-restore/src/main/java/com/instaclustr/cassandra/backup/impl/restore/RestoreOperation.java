@@ -18,10 +18,10 @@ public class RestoreOperation extends BaseRestoreOperation<RestoreOperationReque
 
     @Override
     protected void run0() throws Exception {
-        final Restorer restorer = restorerFactoryMap.get(request.storageLocation.storageProvider).createRestorer(request);
+        try (final Restorer restorer = restorerFactoryMap.get(request.storageLocation.storageProvider).createRestorer(request)) {
+            restorer.restore();
 
-        restorer.restore();
-
-        writeConfigOptions(restorer, request.keyspaceTables.size() > 0);
+            writeConfigOptions(restorer, request.keyspaceTables.size() > 0);
+        }
     }
 }

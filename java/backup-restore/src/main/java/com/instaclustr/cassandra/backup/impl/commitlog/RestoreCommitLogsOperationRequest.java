@@ -59,8 +59,8 @@ public class RestoreCommitLogsOperationRequest extends RestoreOperationRequest {
               keyspaceTables,
               snapshotTag,
               restoreSystemKeyspace,
-              waitForLock,
-              concurrentConnections);
+              concurrentConnections,
+              waitForLock);
         this.commitLogArchiveOverride = commitLogArchiveOverride;
         this.timestampStart = timestampStart;
         this.timestampEnd = timestampEnd;
