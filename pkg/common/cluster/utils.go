@@ -22,9 +22,9 @@ type Rack struct {
 
 type Racks []*Rack
 
-func (racks Racks) GetRack(rack string) *Rack {
+func (racks Racks) GetRack(rackName string) *Rack {
 	for _, r := range racks {
-		if r.Name == rack {
+		if r.Name == rackName {
 			return r
 		}
 	}

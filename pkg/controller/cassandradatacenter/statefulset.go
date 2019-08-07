@@ -420,6 +420,16 @@ func contains(a []nodestate.NodeState, x nodestate.NodeState) bool {
 	return false
 }
 
+func rackExist(name string, sets []v1.StatefulSet) bool {
+	for _, set := range sets {
+		if set.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
+
 func getRack(rctx *reconciliationRequestContext) (*cluster.Rack, error) {
 
 	// This currently works with the following logic:
@@ -428,8 +438,6 @@ func getRack(rctx *reconciliationRequestContext) (*cluster.Rack, error) {
 	// of the nodes it's supposed to have.
 	// 3. If all racks are present, iterate and check if the expected distribution replicas match the status, if not - reconcile.
 
-	// TODO: For now, call racks "rack#num", where #num starts with 1. Later, figure out the node placement mechanics and
-	//  the way to get a consistent ordering for this distribution
 	racksDistribution := cluster.BuildRacksDistribution(rctx.cdc.Spec.Nodes, rctx.cdc.Spec.Racks)
 
 	// Get all stateful sets
@@ -442,20 +450,40 @@ func getRack(rctx *reconciliationRequestContext) (*cluster.Rack, error) {
 	// check if all required racks are built. If not, create a missing one.
 	rackNum := int32(len(sets.Items))
 	if rackNum != rctx.cdc.Spec.Racks {
-		rack := fmt.Sprintf("rack%v", rackNum+1)
-		return racksDistribution.GetRack(rack), nil
-	}
-
-	// Otherwise, we have all stateful sets running. Let's see which one we should reconcile.
-	for _, sts := range sets.Items {
-		rack := racksDistribution.GetRack(sts.Labels[rackKey])
-		if rack.Replicas != sts.Status.Replicas {
-			// reconcile
-			return rack, nil
+	    for _, rack := range racksDistribution {
+	    	if ! rackExist(rack.Name, sets.Items) {
+				return rack, nil
+			}
 		}
 	}
 
-	rctx.logger.Info("Couldn't find a rack to reconcile, changes might be in config")
+	// Otherwise, we have all stateful sets running. Let's see which one we should reconcile.
+
+	// Old way, per rack - we reconcile the rack until it's full before moving on to the next rack.
+	//for _, sts := range sets.Items {
+	//	rack := racksDistribution.GetRack(sts.Labels[rackKey])
+	//	if rack.Replicas != sts.Status.Replicas {
+	//		// reconcile
+	//		return rack, nil
+	//	}
+	//}
+
+	// New way
+	// Basically, we implement a round-robin algorithm, where we populate racks horizontally,
+	// that is 1 node in each rack, then 2 nodes in each rack, etc.
+
+	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
+	if err != nil {
+		return nil, err
+	}
+
+	if int32(len(allPods)) < rctx.cdc.Spec.Nodes {
+		// Scale up
+		return racksDistribution.GetRack(getRackWithMinNodes(sets.Items)), nil
+	} else if int32(len(allPods)) > rctx.cdc.Spec.Nodes {
+		// Scale down
+		return racksDistribution.GetRack(getRackWithMaxNodes(sets.Items)), nil
+	}
 
 	return nil, nil
 
@@ -470,4 +498,28 @@ func getStatefulSets(rctx *reconciliationRequestContext) (*v1.StatefulSetList, e
 		return &v1.StatefulSetList{}, err
 	}
 	return sts, nil
+}
+
+func getRackWithMaxNodes(sets []v1.StatefulSet) (rack string) {
+	var nodes int32
+	for _, set := range sets {
+		if set.Status.Replicas > nodes {
+			nodes = set.Status.Replicas
+			rack = set.Name
+		}
+	}
+
+	return rack
+}
+
+func getRackWithMinNodes(sets []v1.StatefulSet) (rack string) {
+	var nodes int32
+	for _, set := range sets {
+		if set.Status.Replicas > nodes {
+			nodes = set.Status.Replicas
+			rack = set.Name
+		}
+	}
+
+	return rack
 }
