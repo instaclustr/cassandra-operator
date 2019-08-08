@@ -20,6 +20,7 @@ import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.Restorer;
 import com.instaclustr.threading.Executors;
+import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +32,7 @@ public class S3Restorer extends Restorer {
 
     @Inject
     public S3Restorer(final TransferManagerProvider transferManagerProvider,
-                      final Executors.ExecutorServiceSupplier executorServiceSupplier,
+                      final ExecutorServiceSupplier executorServiceSupplier,
                       @Assisted final RestoreOperationRequest request) {
         super(request, executorServiceSupplier);
         this.transferManager = transferManagerProvider.get();

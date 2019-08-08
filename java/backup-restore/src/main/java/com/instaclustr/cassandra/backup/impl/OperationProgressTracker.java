@@ -21,4 +21,8 @@ public class OperationProgressTracker {
     public synchronized void update() {
         this.operation.progress = (float) ++eventsCompleted / (float) eventsToComplete;
     }
+
+    public void complete() {
+        this.operation.progress = 1.0f;
+    }
 }

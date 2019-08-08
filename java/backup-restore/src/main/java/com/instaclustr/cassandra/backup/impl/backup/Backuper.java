@@ -31,10 +31,10 @@ import org.slf4j.LoggerFactory;
 public abstract class Backuper extends StorageInteractor {
     private static final Logger logger = LoggerFactory.getLogger(Backuper.class);
 
-    protected final BackupOperationRequest request;
+    protected final BaseBackupOperationRequest request;
     private final ExecutorServiceSupplier executorServiceSupplier;
 
-    protected Backuper(final BackupOperationRequest request,
+    protected Backuper(final BaseBackupOperationRequest request,
                        final ExecutorServiceSupplier executorServiceSupplier) {
         super(request.storageLocation);
         this.request = request;
@@ -56,6 +56,7 @@ public abstract class Backuper extends StorageInteractor {
     public void uploadOrFreshenFiles(final Collection<ManifestEntry> manifest,
                                      final OperationProgressTracker operationProgressTracker) throws Exception {
         if (manifest.isEmpty()) {
+            operationProgressTracker.complete();
             logger.info("0 files to upload.");
             return;
         }
@@ -108,7 +109,6 @@ public abstract class Backuper extends StorageInteractor {
                         throw t;
                     } finally {
                         completionLatch.countDown();
-                        operationProgressTracker.update();
                     }
                 });
 
@@ -135,7 +135,7 @@ public abstract class Backuper extends StorageInteractor {
         return manifestEntries.stream().map(e -> e.size).reduce(0L, Long::sum);
     }
 
-    private void computeBPS(final BackupOperationRequest request, final long filesSizeSum) {
+    private void computeBPS(final BaseBackupOperationRequest request, final long filesSizeSum) {
         if (request.duration != null) {
             long bps = filesSizeSum / request.duration.asSeconds().value;
             if (request.bandwidth != null)

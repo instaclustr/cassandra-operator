@@ -1,4 +1,4 @@
-package com.instaclustr.cassandra.backup.impl.commitlog;
+package com.instaclustr.cassandra.backup.impl.restore;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -26,8 +26,6 @@ import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.backup.guice.RestorerFactory;
 import com.instaclustr.cassandra.backup.impl.ManifestEntry;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
-import com.instaclustr.cassandra.backup.impl.restore.BaseRestoreOperation;
-import com.instaclustr.cassandra.backup.impl.restore.Restorer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

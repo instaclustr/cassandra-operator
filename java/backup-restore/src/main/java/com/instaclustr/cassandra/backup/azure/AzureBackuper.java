@@ -9,9 +9,11 @@ import java.util.EnumSet;
 
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.instaclustr.cassandra.backup.azure.AzureModule.CloudBlobClientProvider;
 import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
+import com.instaclustr.cassandra.backup.impl.backup.BackupCommitLogsOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
 import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
@@ -30,10 +32,18 @@ public class AzureBackuper extends Backuper {
 
     private final CloudBlobContainer blobContainer;
 
-    @Inject
+    @AssistedInject
     public AzureBackuper(final CloudBlobClientProvider cloudBlobClientProvider,
                          final ExecutorServiceSupplier executorServiceSupplier,
                          @Assisted final BackupOperationRequest request) throws Exception {
+        super(request, executorServiceSupplier);
+        this.blobContainer = cloudBlobClientProvider.get().getContainerReference(request.storageLocation.bucket);
+    }
+
+    @AssistedInject
+    public AzureBackuper(final CloudBlobClientProvider cloudBlobClientProvider,
+                         final ExecutorServiceSupplier executorServiceSupplier,
+                         @Assisted final BackupCommitLogsOperationRequest request) throws Exception {
         super(request, executorServiceSupplier);
         this.blobContainer = cloudBlobClientProvider.get().getContainerReference(request.storageLocation.bucket);
     }

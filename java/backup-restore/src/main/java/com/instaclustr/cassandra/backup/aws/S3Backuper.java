@@ -26,11 +26,12 @@ import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.transfer.PersistableTransfer;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.internal.S3ProgressListener;
-import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.instaclustr.cassandra.backup.aws.S3Module.TransferManagerProvider;
 import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
+import com.instaclustr.cassandra.backup.impl.backup.BackupCommitLogsOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
 import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
@@ -44,11 +45,20 @@ public class S3Backuper extends Backuper {
 
     private final Optional<String> kmsId;
 
-    @Inject
+    @AssistedInject
     public S3Backuper(final TransferManagerProvider transferManagerProvider,
                       final ExecutorServiceSupplier executorSupplier,
                       @Assisted final BackupOperationRequest request) {
         super(request, executorSupplier);
+        this.transferManager = transferManagerProvider.get();
+        this.kmsId = Optional.empty();
+    }
+
+    @AssistedInject
+    public S3Backuper(final TransferManagerProvider transferManagerProvider,
+                      final ExecutorServiceSupplier executorServiceSupplier,
+                      @Assisted final BackupCommitLogsOperationRequest request) {
+        super(request, executorServiceSupplier);
         this.transferManager = transferManagerProvider.get();
         this.kmsId = Optional.empty();
     }

@@ -39,7 +39,6 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
 
     private final Provider<StorageServiceMBean> storageServiceMBeanProvider;
     private final Map<String, BackuperFactory> backuperFactoryMap;
-    private final BackupOperationRequest request;
 
     @Inject
     public BackupOperation(final Provider<StorageServiceMBean> storageServiceMBeanProvider,
@@ -48,11 +47,11 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
         super(request);
         this.storageServiceMBeanProvider = storageServiceMBeanProvider;
         this.backuperFactoryMap = backuperFactoryMap;
-        this.request = request;
     }
 
     @Override
     protected void run0() throws Exception {
+        logger.info(request.toString());
 
         new GlobalLock(request.sharedContainerPath).waitForLock(request.waitForLock);
 
@@ -112,9 +111,6 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
 
         // add snapshot files to the manifest
         for (final KeyspaceColumnFamilySnapshot keyspaceColumnFamilySnapshot : keyspaceColumnFamilySnapshots) {
-
-            System.out.println(keyspaceColumnFamilySnapshot.toString());
-
             final Path bucketKey = Paths.get("data").resolve(Paths.get(keyspaceColumnFamilySnapshot.keyspace, keyspaceColumnFamilySnapshot.columnFamily));
             Iterables.addAll(manifest, SSTableUtils.ssTableManifest(keyspaceColumnFamilySnapshot.snapshotDirectory, bucketKey).collect(toList()));
         }

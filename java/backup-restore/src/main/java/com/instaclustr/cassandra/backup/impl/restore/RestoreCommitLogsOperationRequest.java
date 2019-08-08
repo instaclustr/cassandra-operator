@@ -1,4 +1,4 @@
-package com.instaclustr.cassandra.backup.impl.commitlog;
+package com.instaclustr.cassandra.backup.impl.restore;
 
 import javax.validation.constraints.NotNull;
 import java.nio.file.Path;

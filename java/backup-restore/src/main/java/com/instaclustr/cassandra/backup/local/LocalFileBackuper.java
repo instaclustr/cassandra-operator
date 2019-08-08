@@ -6,19 +6,26 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
-import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
+import com.instaclustr.cassandra.backup.impl.backup.BackupCommitLogsOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
 import com.instaclustr.threading.Executors;
 
 public class LocalFileBackuper extends Backuper {
 
-    @Inject
+    @AssistedInject
     public LocalFileBackuper(final Executors.ExecutorServiceSupplier executorServiceSupplier,
                              @Assisted final BackupOperationRequest request) {
+        super(request, executorServiceSupplier);
+    }
+
+    @AssistedInject
+    public LocalFileBackuper(final Executors.ExecutorServiceSupplier executorServiceSupplier,
+                             @Assisted final BackupCommitLogsOperationRequest request) {
         super(request, executorServiceSupplier);
     }
 

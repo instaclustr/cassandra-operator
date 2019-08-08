@@ -18,6 +18,7 @@ import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.Restorer;
 import com.instaclustr.threading.Executors;
+import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.BlobListingDetails;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
@@ -33,7 +34,7 @@ public class AzureRestorer extends Restorer {
 
     @Inject
     public AzureRestorer(final CloudBlobClientProvider cloudBlobClientProvider,
-                         final Executors.ExecutorServiceSupplier executorServiceSupplier,
+                         final ExecutorServiceSupplier executorServiceSupplier,
                          @Assisted final RestoreOperationRequest request) throws Exception {
         super(request, executorServiceSupplier);
         this.blobContainer = cloudBlobClientProvider.get().getContainerReference(request.storageLocation.clusterId);

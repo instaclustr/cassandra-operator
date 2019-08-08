@@ -5,7 +5,7 @@ import static com.instaclustr.picocli.CLIApplication.execute;
 import static org.awaitility.Awaitility.await;
 
 import com.google.inject.Inject;
-import com.instaclustr.cassandra.backup.impl.commitlog.RestoreCommitLogsOperationRequest;
+import com.instaclustr.cassandra.backup.impl.restore.RestoreCommitLogsOperationRequest;
 import com.instaclustr.sidecar.operations.Operation;
 import com.instaclustr.sidecar.operations.OperationsService;
 import org.slf4j.Logger;

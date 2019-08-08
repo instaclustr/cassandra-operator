@@ -1,5 +1,6 @@
 package com.instaclustr.cassandra.backup.impl.backup;
 
+import static java.lang.String.format;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
@@ -19,7 +20,7 @@ import java.nio.file.Files;
 })
 public @interface ValidBackupOperationRequest {
 
-    String message() default "{com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequestValidator.message}";
+    String message() default "{com.instaclustr.cassandra.backup.impl.backup.ValidBackupOperationRequest.BackupOperationRequestValidator.message}";
 
     Class<?>[] groups() default {};
 
@@ -34,18 +35,18 @@ public @interface ValidBackupOperationRequest {
 
             if (value.columnFamily != null && (value.keyspaces == null || value.keyspaces.size() != 1)) {
                 context
-                        .buildConstraintViolationWithTemplate("{com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequestValidator.oneKeyspaceForColumnFamily}")
+                        .buildConstraintViolationWithTemplate("{com.instaclustr.cassandra.backup.impl.backup.ValidBackupOperationRequest.BackupOperationRequestValidator.oneKeyspaceForColumnFamily}")
                         .addConstraintViolation();
                 return false;
             }
 
             if (!Files.exists(value.sharedContainerPath)) {
-                context.buildConstraintViolationWithTemplate(String.format("sharedContainerPath %s does not exist", value.sharedContainerPath)).addConstraintViolation();
+                context.buildConstraintViolationWithTemplate(format("sharedContainerPath %s does not exist", value.sharedContainerPath)).addConstraintViolation();
                 return false;
             }
 
             if (!Files.exists(value.cassandraDirectory)) {
-                context.buildConstraintViolationWithTemplate(String.format("cassandraDirectory %s does not exist", value.cassandraDirectory)).addConstraintViolation();
+                context.buildConstraintViolationWithTemplate(format("cassandraDirectory %s does not exist", value.cassandraDirectory)).addConstraintViolation();
                 return false;
             }
 

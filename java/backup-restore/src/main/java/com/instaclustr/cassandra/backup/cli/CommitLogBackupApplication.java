@@ -2,11 +2,12 @@ package com.instaclustr.cassandra.backup.cli;
 
 import static com.instaclustr.cassandra.backup.cli.BackupRestoreCLI.init;
 import static com.instaclustr.picocli.CLIApplication.execute;
+import static org.awaitility.Awaitility.await;
 
 import com.google.inject.Inject;
 import com.instaclustr.cassandra.backup.cli.BackupRestoreCLI.CLIJarManifestVersionProvider;
-import com.instaclustr.cassandra.backup.impl.commitlog.BackupCommitLogsOperationRequest;
-import com.instaclustr.picocli.CassandraJMXSpec;
+import com.instaclustr.cassandra.backup.impl.backup.BackupCommitLogsOperationRequest;
+import com.instaclustr.sidecar.operations.Operation;
 import com.instaclustr.sidecar.operations.OperationsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,9 +24,6 @@ public class CommitLogBackupApplication implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(CommitLogBackupApplication.class);
 
     @CommandLine.Mixin
-    private CassandraJMXSpec jmxSpec;
-
-    @CommandLine.Mixin
     private BackupCommitLogsOperationRequest request;
 
     @Inject
@@ -37,6 +35,10 @@ public class CommitLogBackupApplication implements Runnable {
 
     @Override
     public void run() {
-        init(this, jmxSpec, request, logger);
+        init(this, null, request, logger);
+
+        final Operation operation = operationsService.submitOperationRequest(request);
+
+        await().forever().until(() -> operation.state.isTerminalState());
     }
 }

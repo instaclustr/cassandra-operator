@@ -11,23 +11,33 @@ import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageException;
 import com.google.common.io.ByteStreams;
-import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.instaclustr.cassandra.backup.gcp.GCPModule.StorageProvider;
 import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
+import com.instaclustr.cassandra.backup.impl.backup.BackupCommitLogsOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
 import com.instaclustr.threading.Executors;
+import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 
 public class GCPBackuper extends Backuper {
 
     private final Storage storage;
 
-    @Inject
+    @AssistedInject
+    public GCPBackuper(final StorageProvider storage,
+                       final ExecutorServiceSupplier executorServiceSupplier,
+                       @Assisted final BackupOperationRequest backupOperationRequest) {
+        super(backupOperationRequest, executorServiceSupplier);
+        this.storage = storage.get();
+    }
+
+    @AssistedInject
     public GCPBackuper(final StorageProvider storage,
                        final Executors.ExecutorServiceSupplier executorServiceSupplier,
-                       @Assisted final BackupOperationRequest backupOperationRequest) {
+                       @Assisted final BackupCommitLogsOperationRequest backupOperationRequest) {
         super(backupOperationRequest, executorServiceSupplier);
         this.storage = storage.get();
     }

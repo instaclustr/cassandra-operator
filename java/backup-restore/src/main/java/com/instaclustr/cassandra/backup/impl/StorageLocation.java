@@ -166,6 +166,10 @@ public class StorageLocation {
 
     public static class StorageLocationSerializer extends StdSerializer<StorageLocation> {
 
+        public StorageLocationSerializer() {
+            super(StorageLocation.class);
+        }
+
         protected StorageLocationSerializer(final Class<StorageLocation> t) {
             super(t);
         }

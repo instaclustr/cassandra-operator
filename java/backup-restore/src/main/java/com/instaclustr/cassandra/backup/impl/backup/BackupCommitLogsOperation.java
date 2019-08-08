@@ -1,4 +1,4 @@
-package com.instaclustr.cassandra.backup.impl.commitlog;
+package com.instaclustr.cassandra.backup.impl.backup;
 
 import javax.inject.Inject;
 import java.nio.file.DirectoryStream;
@@ -14,7 +14,6 @@ import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.backup.guice.BackuperFactory;
 import com.instaclustr.cassandra.backup.impl.ManifestEntry;
 import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
-import com.instaclustr.cassandra.backup.impl.backup.Backuper;
 import com.instaclustr.io.GlobalLock;
 import com.instaclustr.sidecar.operations.Operation;
 import org.slf4j.Logger;
@@ -35,6 +34,7 @@ public class BackupCommitLogsOperation extends Operation<BackupCommitLogsOperati
 
     @Override
     protected void run0() throws Exception {
+        logger.info(request.toString());
 
         new GlobalLock(request.sharedContainerPath).waitForLock(request.waitForLock);
 
@@ -43,11 +43,11 @@ public class BackupCommitLogsOperation extends Operation<BackupCommitLogsOperati
         final Pattern pattern = Pattern.compile("CommitLog-\\d+-\\d+\\.log");
         final DirectoryStream.Filter<Path> filter = entry -> Files.isRegularFile(entry) && pattern.matcher(entry.getFileName().toString()).matches();
 
-        final Path commitLogArchiveDirectory = request.sharedContainerPath.resolve(request.commitLogArchiveOverride);
+        final Path commitLogArchiveDirectory = resolveCommitLogsPath(request);
         final Path backupCommitLogRootKey = Paths.get(CASSANDRA_COMMIT_LOGS);
 
         try (final DirectoryStream<Path> commitLogs = Files.newDirectoryStream(commitLogArchiveDirectory, filter);
-             final Backuper backuper = backuperFactoryMap.get(request.storageLocation.storageProvider).createBackuper(request)) {
+             final Backuper backuper = backuperFactoryMap.get(request.storageLocation.storageProvider).createCommitLogBackuper(request)) {
 
             for (final Path commitLog : commitLogs) {
                 // Append file modified date so we have some idea of the time range this commitlog covers
@@ -57,9 +57,15 @@ public class BackupCommitLogsOperation extends Operation<BackupCommitLogsOperati
 
             logger.debug("{} files in manifest for commitlog backup.", manifest.size());
 
-            if (!manifest.isEmpty()) {
-                backuper.uploadOrFreshenFiles(manifest, new OperationProgressTracker(this, manifest.size()));
-            }
+            backuper.uploadOrFreshenFiles(manifest, new OperationProgressTracker(this, manifest.size()));
+        }
+    }
+
+    private Path resolveCommitLogsPath(final BackupCommitLogsOperationRequest request) {
+        if (request.commitLogArchiveOverride != null && request.commitLogArchiveOverride.toFile().exists()) {
+            return request.commitLogArchiveOverride;
+        } else {
+            return request.cassandraDirectory.resolve(CASSANDRA_COMMIT_LOGS);
         }
     }
 }

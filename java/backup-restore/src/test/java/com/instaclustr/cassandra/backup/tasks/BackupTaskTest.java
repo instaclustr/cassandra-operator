@@ -25,18 +25,20 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimaps;
 import com.instaclustr.cassandra.backup.guice.BackuperFactory;
 import com.instaclustr.cassandra.backup.guice.RestorerFactory;
-import com.instaclustr.threading.Executors.FixedTasksExecutor;
 import com.instaclustr.cassandra.backup.impl.ManifestEntry;
 import com.instaclustr.cassandra.backup.impl.SSTableUtils;
 import com.instaclustr.cassandra.backup.impl.StorageLocation;
+import com.instaclustr.cassandra.backup.impl.backup.BackupCommitLogsOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperation;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
-import com.instaclustr.cassandra.backup.impl.commitlog.RestoreCommitLogsOperation;
-import com.instaclustr.cassandra.backup.impl.commitlog.RestoreCommitLogsOperationRequest;
+import com.instaclustr.cassandra.backup.impl.backup.Backuper;
+import com.instaclustr.cassandra.backup.impl.restore.RestoreCommitLogsOperation;
+import com.instaclustr.cassandra.backup.impl.restore.RestoreCommitLogsOperationRequest;
 import com.instaclustr.cassandra.backup.local.LocalFileBackuper;
 import com.instaclustr.cassandra.backup.local.LocalFileRestorer;
 import com.instaclustr.cassandra.backup.service.TestHelperService;
 import com.instaclustr.cassandra.backup.util.CassandraVersion;
+import com.instaclustr.threading.Executors.FixedTasksExecutor;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -100,7 +102,17 @@ public class BackupTaskTest {
 
         new BackupOperation(null,
                             new HashMap<String, BackuperFactory>() {{
-                                put("file", backupOperationRequest -> new LocalFileBackuper(new FixedTasksExecutor(), backupRequest));
+                                put("file", new BackuperFactory() {
+                                    @Override
+                                    public Backuper createBackuper(final BackupOperationRequest backupOperationRequest) {
+                                        return new LocalFileBackuper(new FixedTasksExecutor(), backupRequest);
+                                    }
+
+                                    @Override
+                                    public Backuper createCommitLogBackuper(final BackupCommitLogsOperationRequest backupCommitLogsOperationRequest) {
+                                        return null;
+                                    }
+                                });
                             }},
                             backupRequest).run();
 
@@ -172,19 +184,25 @@ public class BackupTaskTest {
             final Path sharedContainerRoot = tempDirs.get(testFileConfig.cassandraVersion.name());
             final Path backupPath = tempDirs.get(testFileConfig.cassandraVersion.name() + "-backup-location");
 
-            final BackupOperationRequest backupRequest = new BackupOperationRequest();
-
             final StorageLocation storageLocation = new StorageLocation(String.format("file://%s/%s/%s/%s",
                                                                                       backupPath.toString(),
                                                                                       bucket,
                                                                                       clusterId,
                                                                                       nodeId));
 
-            backupRequest.storageLocation = storageLocation;
-            backupRequest.cassandraDirectory = sharedContainerRoot;
-            backupRequest.sharedContainerPath = sharedContainerRoot;
-            backupRequest.snapshotTag = testSnapshotName;
-            backupRequest.offlineSnapshot = true;
+            final BackupOperationRequest backupRequest = new BackupOperationRequest(
+                    storageLocation,
+                    null,
+                    null,
+                    10,
+                    true,
+                    sharedContainerRoot,
+                    sharedContainerRoot,
+                    ImmutableList.of(),
+                    testSnapshotName,
+                    true,
+                    null
+            );
 
             final RestoreCommitLogsOperationRequest restoreRequest = new RestoreCommitLogsOperationRequest(
                     null,
