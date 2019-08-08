@@ -92,7 +92,7 @@ public class SSTableUtils {
     }
 
     /**
-     * Traverses the @tablePath directory and generates a stream of ManifestEntry to be uploaded to the @tableBackupPath
+     * Traverses the {@code tablePath} directory and generates a stream of ManifestEntry to be uploaded to the {@code tableBackupPath}
      * directory. It includes files which only belongs to sstables or secondary indexes.
      *
      * @param tablePath

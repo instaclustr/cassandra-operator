@@ -1,6 +1,5 @@
 package com.instaclustr.cassandra.backup.impl.backup;
 
-import static java.nio.file.StandardOpenOption.DELETE_ON_CLOSE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
@@ -17,7 +16,6 @@ import java.util.function.Function;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.RateLimiter;
-import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import com.instaclustr.cassandra.backup.impl.ManifestEntry;
 import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
@@ -26,6 +24,7 @@ import com.instaclustr.io.RateLimitedInputStream;
 import com.instaclustr.io.SeekableByteChannelInputStream;
 import com.instaclustr.measure.DataRate;
 import com.instaclustr.measure.DataSize;
+import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,15 +48,12 @@ public abstract class Backuper extends StorageInteractor {
 
     public abstract FreshenResult freshenRemoteObject(final RemoteObjectReference object) throws Exception;
 
-    public abstract void uploadFile(final long size, final InputStream localFileStream, final RemoteObjectReference object) throws Exception;
+    public abstract void uploadFile(final long size,
+                                    final InputStream localFileStream,
+                                    final RemoteObjectReference object,
+                                    final OperationProgressTracker operationProgressTracker) throws Exception;
 
     public void uploadOrFreshenFiles(final Collection<ManifestEntry> manifest,
-                                     final OperationProgressTracker operationProgressTracker) throws Exception {
-        uploadOrFreshenFiles(manifest, true, operationProgressTracker);
-    }
-
-    public void uploadOrFreshenFiles(final Collection<ManifestEntry> manifest,
-                                     final boolean deleteOnClose,
                                      final OperationProgressTracker operationProgressTracker) throws Exception {
         if (manifest.isEmpty()) {
             logger.info("0 files to upload.");
@@ -77,7 +73,7 @@ public abstract class Backuper extends StorageInteractor {
         final Iterable<Future<?>> uploadResults = manifest.stream().map((manifestEntry) -> {
             try {
                 return executorService.submit(() -> {
-                    try (final InputStream s = new SeekableByteChannelInputStream(FileChannel.open(manifestEntry.localFile, READ, deleteOnClose ? DELETE_ON_CLOSE : READ))) {
+                    try (final InputStream s = new SeekableByteChannelInputStream(FileChannel.open(manifestEntry.localFile, READ))) {
 
                         if (manifestEntry.type == ManifestEntry.Type.MANIFEST_FILE)
                             completionLatch.await();
@@ -101,7 +97,7 @@ public abstract class Backuper extends StorageInteractor {
                                      DataSize.bytesToHumanReadable(manifestEntry.size),
                                      completionLatch.getCount());
 
-                        uploadFile(manifestEntry.size, rateLimitedStream, remoteObjectReference);
+                        uploadFile(manifestEntry.size, rateLimitedStream, remoteObjectReference, operationProgressTracker);
 
                         return null;
                     } catch (final Throwable t) {

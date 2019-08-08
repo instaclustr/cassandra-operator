@@ -23,13 +23,13 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.util.concurrent.Futures;
-import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import com.instaclustr.cassandra.backup.impl.ManifestEntry;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.SSTableUtils;
 import com.instaclustr.cassandra.backup.impl.StorageInteractor;
 import com.instaclustr.io.FileUtils;
 import com.instaclustr.io.GlobalLock;
+import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

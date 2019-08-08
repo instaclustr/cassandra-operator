@@ -16,10 +16,10 @@ import com.amazonaws.services.s3.transfer.internal.S3ProgressListener;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.backup.aws.S3Module.TransferManagerProvider;
-import com.instaclustr.threading.Executors;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.Restorer;
+import com.instaclustr.threading.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

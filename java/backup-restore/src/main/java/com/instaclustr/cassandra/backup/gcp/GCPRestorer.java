@@ -16,7 +16,6 @@ import com.google.cloud.storage.Storage.BlobListOption;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.backup.gcp.GCPModule.StorageProvider;
-import com.instaclustr.threading.Executors;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.Restorer;

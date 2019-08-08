@@ -8,10 +8,11 @@ import java.nio.file.StandardCopyOption;
 
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.threading.Executors;
+import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
+import com.instaclustr.threading.Executors;
 
 public class LocalFileBackuper extends Backuper {
 
@@ -43,10 +44,17 @@ public class LocalFileBackuper extends Backuper {
     }
 
     @Override
-    public void uploadFile(final long size, final InputStream localFileStream, final RemoteObjectReference object) throws Exception {
-        Path snapshotPath = resolveFullRemoteObjectPath(object);
-        Files.createDirectories(snapshotPath.getParent());
-        Files.copy(localFileStream, snapshotPath, StandardCopyOption.REPLACE_EXISTING);
+    public void uploadFile(final long size,
+                           final InputStream localFileStream,
+                           final RemoteObjectReference object,
+                           final OperationProgressTracker operationProgressTracker) throws Exception {
+        try {
+            Path snapshotPath = resolveFullRemoteObjectPath(object);
+            Files.createDirectories(snapshotPath.getParent());
+            Files.copy(localFileStream, snapshotPath, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            operationProgressTracker.update();
+        }
     }
 
     @Override

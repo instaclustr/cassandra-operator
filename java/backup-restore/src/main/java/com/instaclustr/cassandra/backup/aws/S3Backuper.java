@@ -1,5 +1,9 @@
 package com.instaclustr.cassandra.backup.aws;
 
+import static com.amazonaws.event.ProgressEventType.TRANSFER_COMPLETED_EVENT;
+import static com.amazonaws.event.ProgressEventType.TRANSFER_FAILED_EVENT;
+import static java.util.Optional.ofNullable;
+
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -8,8 +12,8 @@ import java.util.Optional;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
@@ -19,15 +23,17 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.StorageClass;
+import com.amazonaws.services.s3.transfer.PersistableTransfer;
 import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.Upload;
+import com.amazonaws.services.s3.transfer.internal.S3ProgressListener;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.backup.aws.S3Module.TransferManagerProvider;
-import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
+import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
+import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,7 +90,10 @@ public class S3Backuper extends Backuper {
     }
 
     @Override
-    public void uploadFile(final long size, final InputStream localFileStream, final RemoteObjectReference object) throws Exception {
+    public void uploadFile(final long size,
+                           final InputStream localFileStream,
+                           final RemoteObjectReference object,
+                           final OperationProgressTracker operationProgressTracker) throws Exception {
         final S3RemoteObjectReference s3RemoteObjectReference = (S3RemoteObjectReference) object;
 
         final PutObjectRequest putObjectRequest = new PutObjectRequest(request.storageLocation.bucket,
@@ -100,14 +109,48 @@ public class S3Backuper extends Backuper {
             putObjectRequest.withSSEAwsKeyManagementParams(params);
         }
 
-        final Upload upload = transferManager.upload(putObjectRequest);
+        final UploadProgressListener listener = new UploadProgressListener(s3RemoteObjectReference);
 
-        upload.addProgressListener((ProgressListener) progressEvent -> {
-            if (progressEvent.getEventType() == ProgressEventType.TRANSFER_PART_COMPLETED_EVENT)
+        final Optional<AmazonClientException> exception = ofNullable(transferManager.upload(putObjectRequest, listener).waitForException());
+
+        operationProgressTracker.update();
+
+        if (exception.isPresent()) {
+            throw exception.get();
+        }
+    }
+
+    private static class UploadProgressListener implements S3ProgressListener {
+        private final S3RemoteObjectReference s3RemoteObjectReference;
+
+        UploadProgressListener(final S3RemoteObjectReference s3RemoteObjectReference) {
+            this.s3RemoteObjectReference = s3RemoteObjectReference;
+        }
+
+        @Override
+        public void progressChanged(final ProgressEvent progressEvent) {
+            final ProgressEventType progressEventType = progressEvent.getEventType();
+
+            if (progressEventType == ProgressEventType.TRANSFER_PART_COMPLETED_EVENT) {
                 logger.debug("Successfully uploaded part for {}.", s3RemoteObjectReference.canonicalPath);
-        });
+            }
 
-        upload.waitForCompletion();
+            if (progressEventType == ProgressEventType.TRANSFER_PART_FAILED_EVENT) {
+                logger.debug("Failed to upload part for {}.", s3RemoteObjectReference.canonicalPath);
+            }
+
+            if (progressEventType == TRANSFER_FAILED_EVENT) {
+                logger.debug("Failed to upload {}.", s3RemoteObjectReference.canonicalPath);
+            }
+
+            if (progressEventType == TRANSFER_COMPLETED_EVENT) {
+                logger.debug("Successfully uploaded {}.", s3RemoteObjectReference.canonicalPath);
+            }
+        }
+
+        @Override
+        public void onPersistableTransfer(final PersistableTransfer persistableTransfer) {
+        }
     }
 
     @Override

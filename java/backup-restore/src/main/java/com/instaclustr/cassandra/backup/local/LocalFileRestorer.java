@@ -10,10 +10,10 @@ import java.util.function.Consumer;
 
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.Restorer;
+import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 
 public class LocalFileRestorer extends Restorer {
 

@@ -1,6 +1,5 @@
 package com.instaclustr.cassandra.backup.impl.backup;
 
-import static com.instaclustr.cassandra.backup.impl.ManifestEntry.Type.MANIFEST_FILE;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
@@ -9,7 +8,6 @@ import javax.inject.Inject;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,9 +17,11 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.inject.Provider;
 import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.backup.guice.BackuperFactory;
 import com.instaclustr.cassandra.backup.impl.ManifestEntry;
@@ -37,16 +37,16 @@ import org.slf4j.LoggerFactory;
 public class BackupOperation extends Operation<BackupOperationRequest> {
     private static final Logger logger = LoggerFactory.getLogger(BackupOperation.class);
 
-    private final StorageServiceMBean storageServiceMBean;
+    private final Provider<StorageServiceMBean> storageServiceMBeanProvider;
     private final Map<String, BackuperFactory> backuperFactoryMap;
     private final BackupOperationRequest request;
 
     @Inject
-    public BackupOperation(final StorageServiceMBean storageServiceMBean,
+    public BackupOperation(final Provider<StorageServiceMBean> storageServiceMBeanProvider,
                            final Map<String, BackuperFactory> backuperFactoryMap,
                            @Assisted final BackupOperationRequest request) {
         super(request);
-        this.storageServiceMBean = storageServiceMBean;
+        this.storageServiceMBeanProvider = storageServiceMBeanProvider;
         this.backuperFactoryMap = backuperFactoryMap;
         this.request = request;
     }
@@ -62,12 +62,13 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
             return;
         }
 
+        final StorageServiceMBean storageServiceMBean = this.storageServiceMBeanProvider.get();
+
         try {
             new TakeSnapshotOperation(storageServiceMBean,
                                       new TakeSnapshotOperation.TakeSnapshotOperationRequest(request.keyspaces,
                                                                                              request.snapshotTag,
-                                                                                             request.columnFamily,
-                                                                                             request.drain)).run0();
+                                                                                             request.columnFamily)).run0();
             executeUpload(storageServiceMBean.getTokens());
         } finally {
             new ClearSnapshotOperation(storageServiceMBean,
@@ -89,20 +90,21 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
     }
 
     private Collection<ManifestEntry> generateManifest(final List<String> keyspaces,
-                                                       final String tag,
+                                                       final String snapshotTag,
                                                        final Path cassandraDataDirectory) throws IOException {
         // find files belonging to snapshot
         final Map<String, ? extends Iterable<KeyspaceColumnFamilySnapshot>> snapshots = findKeyspaceColumnFamilySnapshots(cassandraDataDirectory);
-        final Iterable<KeyspaceColumnFamilySnapshot> keyspaceColumnFamilySnapshots = snapshots.get(tag);
+
+        final Iterable<KeyspaceColumnFamilySnapshot> keyspaceColumnFamilySnapshots = snapshots.get(snapshotTag);
 
         if (keyspaceColumnFamilySnapshots == null) {
-            if (!keyspaces.isEmpty()) {
-                logger.warn("No keyspace column family snapshot directories were found for snapshot \"{}\" of {}", tag, Joiner.on(",").join(keyspaces));
+            if (keyspaces != null && !keyspaces.isEmpty()) {
+                logger.warn("No keyspace column family snapshot directories were found for snapshot \"{}\" of {}", snapshotTag, Joiner.on(",").join(keyspaces));
                 return new LinkedList<>();
             }
 
             // There should at least be system keyspace tables
-            throw new IllegalStateException(format("No keyspace column family snapshot directories were found for snapshot \"%s\" of all data.", tag));
+            throw new IllegalStateException(format("No keyspace column family snapshot directories were found for snapshot \"%s\" of all data.", snapshotTag));
         }
 
         // generate manifest (set of object keys and source files defining the snapshot)
@@ -110,11 +112,14 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
 
         // add snapshot files to the manifest
         for (final KeyspaceColumnFamilySnapshot keyspaceColumnFamilySnapshot : keyspaceColumnFamilySnapshots) {
+
+            System.out.println(keyspaceColumnFamilySnapshot.toString());
+
             final Path bucketKey = Paths.get("data").resolve(Paths.get(keyspaceColumnFamilySnapshot.keyspace, keyspaceColumnFamilySnapshot.columnFamily));
             Iterables.addAll(manifest, SSTableUtils.ssTableManifest(keyspaceColumnFamilySnapshot.snapshotDirectory, bucketKey).collect(toList()));
         }
 
-        logger.debug("{} files in manifest for snapshot \"{}\".", manifest.size(), tag);
+        logger.debug("{} files in manifest for snapshot \"{}\".", manifest.size(), snapshotTag);
 
         if (manifest.stream().noneMatch((Predicate<ManifestEntry>) input -> input != null && input.localFile.toString().contains("-Data.db"))) {
             throw new IllegalStateException("No Data.db SSTables found in manifest. Aborting backup.");
@@ -129,16 +134,18 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
 
         final Path manifestFilePath = Files.createFile(snapshotManifestDirectory.resolve(tag));
 
-        try (final Writer writer = Files.newBufferedWriter(manifestFilePath)) {
+        try (final OutputStream stream = Files.newOutputStream(manifestFilePath);
+             final PrintStream writer = new PrintStream(stream)) {
             for (final ManifestEntry manifestEntry : manifest) {
-                writer.write(Joiner.on(' ').join(manifestEntry.size, manifestEntry.objectKey));
-                writer.write('\n');
+                writer.println(Joiner.on(' ').join(manifestEntry.size, manifestEntry.objectKey));
             }
         }
 
         manifestFilePath.toFile().deleteOnExit();
 
-        return ImmutableList.of(new ManifestEntry(Paths.get("manifests").resolve(manifestFilePath.getFileName()), manifestFilePath, MANIFEST_FILE));
+        return ImmutableList.of(new ManifestEntry(Paths.get("manifests").resolve(manifestFilePath.getFileName()),
+                                                  manifestFilePath,
+                                                  ManifestEntry.Type.MANIFEST_FILE));
     }
 
     private Iterable<ManifestEntry> saveTokenList(List<String> tokens) throws IOException {
@@ -147,7 +154,8 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
 
         final Path tokensFilePath = tokensDirectory.resolve(format("%s-tokens.yaml", request.snapshotTag));
 
-        try (final OutputStream stream = Files.newOutputStream(tokensFilePath); final PrintStream writer = new PrintStream(stream)) {
+        try (final OutputStream stream = Files.newOutputStream(tokensFilePath);
+             final PrintStream writer = new PrintStream(stream)) {
             writer.println("# automatically generated by cassandra-backup");
             writer.println("# add the following to cassandra.yaml when restoring to a new cluster.");
             writer.printf("initial_token: %s%n", Joiner.on(',').join(tokens));
@@ -181,6 +189,15 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
             this.columnFamily = columnFamilyDirectory.getFileName().toString();
             this.keyspace = columnFamilyDirectory.getParent().getFileName().toString();
             this.snapshotDirectory = snapshotDirectory;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("keyspace", keyspace)
+                    .add("columnFamily", columnFamily)
+                    .add("snapshotDirectory", snapshotDirectory)
+                    .toString();
         }
     }
 
@@ -250,27 +267,19 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
                 logger.info("Taking snapshot \"{}\" on {}.", request.tag, (request.keyspaces.isEmpty() ? "\"all\"" : request.keyspaces));
                 storageServiceMBean.takeSnapshot(request.tag, request.keyspaces.toArray(new String[0]));
             }
-
-            // Optionally drain immediately following snapshot (e.g. pre-restore) - TODO: not sure of the "why" we do this here
-            if (request.drain) {
-                storageServiceMBean.drain();
-            }
         }
 
         static class TakeSnapshotOperationRequest extends OperationRequest {
             final List<String> keyspaces;
             final String tag;
             final String columnFamily;
-            final boolean drain;
 
             TakeSnapshotOperationRequest(final List<String> keyspaces,
                                          final String tag,
-                                         final String columnFamily,
-                                         final boolean drain) {
-                this.keyspaces = keyspaces;
+                                         final String columnFamily) {
+                this.keyspaces = keyspaces == null ? ImmutableList.of() : keyspaces;
                 this.tag = tag;
                 this.columnFamily = columnFamily;
-                this.drain = drain;
             }
         }
     }

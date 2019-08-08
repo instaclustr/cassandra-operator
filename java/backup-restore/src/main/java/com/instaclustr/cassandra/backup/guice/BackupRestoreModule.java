@@ -6,10 +6,10 @@ import com.google.inject.Singleton;
 import com.instaclustr.cassandra.backup.aws.S3Module;
 import com.instaclustr.cassandra.backup.azure.AzureModule;
 import com.instaclustr.cassandra.backup.gcp.GCPModule;
-import com.instaclustr.threading.Executors;
 import com.instaclustr.cassandra.backup.impl.backup.BackupModule;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreModule;
 import com.instaclustr.cassandra.backup.local.LocalFileModule;
+import com.instaclustr.threading.Executors;
 
 public class BackupRestoreModule extends AbstractModule {
     @Override

@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -23,6 +24,7 @@ import com.instaclustr.sidecar.operations.OperationsModule;
 import com.instaclustr.validation.GuiceInjectingConstraintValidatorFactory;
 import jmx.org.apache.cassandra.JMXConnectionInfo;
 import jmx.org.apache.cassandra.guice.CassandraModule;
+import jmx.org.apache.cassandra.service.StorageServiceMBean;
 import org.slf4j.Logger;
 import picocli.CommandLine;
 import picocli.CommandLine.Model.CommandSpec;
@@ -72,6 +74,13 @@ public class BackupRestoreCLI implements Runnable {
                                                                   jmxSpec.jmxServiceURL,
                                                                   jmxSpec.trustStore,
                                                                   jmxSpec.trustStorePassword)));
+        } else {
+            modules.add(new AbstractModule() {
+                @Override
+                protected void configure() {
+                    bind(StorageServiceMBean.class).toProvider(() -> null);
+                }
+            });
         }
 
         modules.add(new OperationsModule());

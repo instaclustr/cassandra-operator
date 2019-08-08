@@ -14,10 +14,11 @@ import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.backup.gcp.GCPModule.StorageProvider;
-import com.instaclustr.threading.Executors;
+import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
+import com.instaclustr.threading.Executors;
 
 public class GCPBackuper extends Backuper {
 
@@ -58,13 +59,18 @@ public class GCPBackuper extends Backuper {
     }
 
     @Override
-    public void uploadFile(final long size, final InputStream localFileStream, final RemoteObjectReference object) throws Exception {
+    public void uploadFile(final long size,
+                           final InputStream localFileStream,
+                           final RemoteObjectReference object,
+                           final OperationProgressTracker operationProgressTracker) throws Exception {
         final BlobId blobId = ((GCPRemoteObjectReference) object).blobId;
 
-        try (final WriteChannel outputChannel = storage.writer(BlobInfo.newBuilder(blobId).build(), Storage.BlobWriteOption.predefinedAcl(Storage.PredefinedAcl.BUCKET_OWNER_FULL_CONTROL));
+        try (final WriteChannel outputChannel = storage.writer(BlobInfo.newBuilder(blobId).build(),
+                                                               Storage.BlobWriteOption.predefinedAcl(Storage.PredefinedAcl.BUCKET_OWNER_FULL_CONTROL));
              final ReadableByteChannel inputChannel = Channels.newChannel(localFileStream)) {
-
             ByteStreams.copy(inputChannel, outputChannel);
+        } finally {
+            operationProgressTracker.update();
         }
     }
 

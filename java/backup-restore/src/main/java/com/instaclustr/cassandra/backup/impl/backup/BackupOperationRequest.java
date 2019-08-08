@@ -7,7 +7,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import javax.validation.constraints.NotNull;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -115,14 +114,8 @@ public class BackupOperationRequest extends OperationRequest {
     )
     public String columnFamily;
 
-    @CommandLine.Option(
-            names = {"--drain"},
-            description = "Optionally drain Cassandra following snapshot."
-    )
-    public boolean drain;
-
     @CommandLine.Parameters
-    public List<String> keyspaces = new ArrayList<>();
+    public List<String> keyspaces;
 
     public BackupOperationRequest() {
     }
@@ -138,8 +131,7 @@ public class BackupOperationRequest extends OperationRequest {
                                   @JsonProperty("keyspaces") final List<String> keyspaces,
                                   @JsonProperty("snapshotTag") final String snapshotTag,
                                   @JsonProperty("offlineSnapshot") final boolean offlineSnapshot,
-                                  @JsonProperty("columnFamily") final String columnFamily,
-                                  @JsonProperty("drain") final boolean drain) {
+                                  @JsonProperty("columnFamily") final String columnFamily) {
         this.storageLocation = storageLocation;
         this.duration = duration;
         this.bandwidth = bandwidth;
@@ -151,7 +143,6 @@ public class BackupOperationRequest extends OperationRequest {
         this.snapshotTag = snapshotTag == null ? format("autosnap-%d", MILLISECONDS.toSeconds(currentTimeMillis())) : snapshotTag;
         this.offlineSnapshot = offlineSnapshot;
         this.columnFamily = columnFamily;
-        this.drain = drain;
     }
 
     @Override
@@ -168,7 +159,6 @@ public class BackupOperationRequest extends OperationRequest {
                 .add("snapshotTag", snapshotTag)
                 .add("offlineSnapshot", offlineSnapshot)
                 .add("columnFamily", columnFamily)
-                .add("drain", drain)
                 .toString();
     }
 }

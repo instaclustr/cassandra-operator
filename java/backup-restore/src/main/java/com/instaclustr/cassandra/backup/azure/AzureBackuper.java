@@ -10,10 +10,11 @@ import java.util.EnumSet;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.backup.azure.AzureModule.CloudBlobClientProvider;
-import com.instaclustr.threading.Executors;
+import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
+import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.BlobListingDetails;
 import com.microsoft.azure.storage.blob.BlobProperties;
@@ -31,7 +32,7 @@ public class AzureBackuper extends Backuper {
 
     @Inject
     public AzureBackuper(final CloudBlobClientProvider cloudBlobClientProvider,
-                         final Executors.ExecutorServiceSupplier executorServiceSupplier,
+                         final ExecutorServiceSupplier executorServiceSupplier,
                          @Assisted final BackupOperationRequest request) throws Exception {
         super(request, executorServiceSupplier);
         this.blobContainer = cloudBlobClientProvider.get().getContainerReference(request.storageLocation.bucket);
@@ -64,10 +65,17 @@ public class AzureBackuper extends Backuper {
     }
 
     @Override
-    public void uploadFile(final long size, final InputStream localFileStream, final RemoteObjectReference object) throws Exception {
+    public void uploadFile(final long size,
+                           final InputStream localFileStream,
+                           final RemoteObjectReference object,
+                           final OperationProgressTracker operationProgressTracker) throws Exception {
         final CloudBlockBlob blob = ((AzureRemoteObjectReference) object).blob;
 
-        blob.upload(localFileStream, size);
+        try {
+            blob.upload(localFileStream, size);
+        } finally {
+            operationProgressTracker.update();
+        }
     }
 
     @Override

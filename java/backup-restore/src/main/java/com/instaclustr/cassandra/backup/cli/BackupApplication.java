@@ -41,7 +41,11 @@ public class BackupApplication implements Runnable {
 
     @Override
     public void run() {
-        init(this, jmxSpec, request, logger);
+        if (request.offlineSnapshot) {
+            init(this, null, request, logger);
+        } else {
+            init(this, jmxSpec, request, logger);
+        }
 
         final Operation operation = operationsService.submitOperationRequest(request);
 
