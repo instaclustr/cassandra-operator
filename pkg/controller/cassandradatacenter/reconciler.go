@@ -85,6 +85,9 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 
 	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume)
 	if err != nil {
+		if err == ErrorCDCNotReady {
+			return reconcile.Result{}, nil
+		}
 		return reconcile.Result{}, err
 	}
 

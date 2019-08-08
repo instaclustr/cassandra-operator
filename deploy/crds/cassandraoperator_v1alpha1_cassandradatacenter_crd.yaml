@@ -47,14 +47,26 @@ spec:
             prometheusSupport:
               type: boolean
             racks:
-              format: int32
-              type: integer
+              items:
+                properties:
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  name:
+                    type: string
+                required:
+                - name
+                - labels
+                type: object
+              type: array
             resources:
               type: object
             sidecarImage:
               type: string
           required:
           - nodes
+          - racks
           - cassandraImage
           - sidecarImage
           - imagePullPolicy
