@@ -48,6 +48,9 @@ spec:
               type: boolean
             resources:
               type: object
+            serviceAccountName:
+              description: ServiceAccount to assign to pods created by the operator
+              type: string
             sidecarImage:
               type: string
           required:

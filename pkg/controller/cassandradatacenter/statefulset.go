@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"sync"
+
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
@@ -14,8 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strings"
-	"sync"
 )
 
 const DataVolumeMountPath = "/var/lib/cassandra"
@@ -91,10 +92,11 @@ func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podS
 func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumes []corev1.Volume, containers []corev1.Container, initContainers []corev1.Container) *corev1.PodSpec {
 	// TODO: should this spec be fully exposed into the CDC.Spec?
 	podSpec := &corev1.PodSpec{
-		Volumes:          volumes,
-		Containers:       containers,
-		InitContainers:   initContainers,
-		ImagePullSecrets: cdc.Spec.ImagePullSecrets,
+		Volumes:            volumes,
+		Containers:         containers,
+		InitContainers:     initContainers,
+		ImagePullSecrets:   cdc.Spec.ImagePullSecrets,
+		ServiceAccountName: cdc.Spec.ServiceAccountName,
 	}
 
 	return podSpec
