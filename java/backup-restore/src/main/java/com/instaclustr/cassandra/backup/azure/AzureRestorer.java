@@ -4,20 +4,18 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
-import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.instaclustr.cassandra.backup.azure.AzureModule.CloudBlobClientProvider;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
+import com.instaclustr.cassandra.backup.impl.restore.RestoreCommitLogsOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.Restorer;
-import com.instaclustr.threading.Executors;
 import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.BlobListingDetails;
@@ -32,10 +30,18 @@ public class AzureRestorer extends Restorer {
 
     private final CloudBlobContainer blobContainer;
 
-    @Inject
+    @AssistedInject
     public AzureRestorer(final CloudBlobClientProvider cloudBlobClientProvider,
                          final ExecutorServiceSupplier executorServiceSupplier,
                          @Assisted final RestoreOperationRequest request) throws Exception {
+        super(request, executorServiceSupplier);
+        this.blobContainer = cloudBlobClientProvider.get().getContainerReference(request.storageLocation.clusterId);
+    }
+
+    @AssistedInject
+    public AzureRestorer(final CloudBlobClientProvider cloudBlobClientProvider,
+                         final ExecutorServiceSupplier executorServiceSupplier,
+                         @Assisted final RestoreCommitLogsOperationRequest request) throws Exception {
         super(request, executorServiceSupplier);
         this.blobContainer = cloudBlobClientProvider.get().getContainerReference(request.storageLocation.clusterId);
     }
@@ -47,8 +53,8 @@ public class AzureRestorer extends Restorer {
     }
 
     @Override
-    public void downloadFile(final Path localPath, final RemoteObjectReference object) throws Exception {
-        final CloudBlockBlob blob = ((AzureRemoteObjectReference) object).blob;
+    public void downloadFile(final Path localPath, final RemoteObjectReference objectReference) throws Exception {
+        final CloudBlockBlob blob = ((AzureRemoteObjectReference) objectReference).blob;
         Files.createDirectories(localPath);
         blob.downloadToFile(localPath.toAbsolutePath().toString());
     }
@@ -62,14 +68,17 @@ public class AzureRestorer extends Restorer {
                 .resolve(request.storageLocation.nodeId)
                 .resolve(azureRemoteObjectReference.getObjectKey()).toString();
 
-        List<RemoteObjectReference> fileList = new ArrayList<>();
+        final String pattern = String.format("^/%s/%s/%s/", request.storageLocation.clusterId, request.storageLocation.clusterId, request.storageLocation.nodeId);
 
-        String pattern = String.format("^/%s/%s/%s/", request.storageLocation.clusterId, request.storageLocation.clusterId, request.storageLocation.nodeId);
+        final Pattern containerPattern = Pattern.compile(pattern);
 
-        Pattern containerPattern = Pattern.compile(pattern);
+        final Iterable<ListBlobItem> blobItemsIterable = blobContainer.listBlobs(blobPrefix,
+                                                                                 true,
+                                                                                 EnumSet.noneOf(BlobListingDetails.class),
+                                                                                 null,
+                                                                                 null);
 
-        Iterable<ListBlobItem> blobItemsIterable = blobContainer.listBlobs(blobPrefix, true, EnumSet.noneOf(BlobListingDetails.class), null, null);
-        Iterator<ListBlobItem> blobItemsIterator = blobItemsIterable.iterator();
+        final Iterator<ListBlobItem> blobItemsIterator = blobItemsIterable.iterator();
 
         while (blobItemsIterator.hasNext()) {
             ListBlobItem listBlobItem = blobItemsIterator.next();

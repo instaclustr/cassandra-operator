@@ -160,6 +160,7 @@ public class S3Backuper extends Backuper {
 
         @Override
         public void onPersistableTransfer(final PersistableTransfer persistableTransfer) {
+            // We don't resume uploads
         }
     }
 

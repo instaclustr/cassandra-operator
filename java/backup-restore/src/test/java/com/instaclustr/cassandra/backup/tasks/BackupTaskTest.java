@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimaps;
+import com.google.common.collect.ImmutableMultimap;
 import com.instaclustr.cassandra.backup.guice.BackuperFactory;
 import com.instaclustr.cassandra.backup.guice.RestorerFactory;
 import com.instaclustr.cassandra.backup.impl.ManifestEntry;
@@ -32,8 +32,10 @@ import com.instaclustr.cassandra.backup.impl.backup.BackupCommitLogsOperationReq
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperation;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
-import com.instaclustr.cassandra.backup.impl.restore.RestoreCommitLogsOperation;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreCommitLogsOperationRequest;
+import com.instaclustr.cassandra.backup.impl.restore.RestoreOperation;
+import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
+import com.instaclustr.cassandra.backup.impl.restore.Restorer;
 import com.instaclustr.cassandra.backup.local.LocalFileBackuper;
 import com.instaclustr.cassandra.backup.local.LocalFileRestorer;
 import com.instaclustr.cassandra.backup.service.TestHelperService;
@@ -89,7 +91,7 @@ public class BackupTaskTest {
     }
 
 
-    private void testBackupAndRestore(final BackupOperationRequest backupRequest, final RestoreCommitLogsOperationRequest restoreRequest, final TestFileConfig testFileConfig) throws Exception {
+    private void testBackupAndRestore(final BackupOperationRequest backupRequest, final RestoreOperationRequest restoreRequest, final TestFileConfig testFileConfig) throws Exception {
         final Path sharedContainerRoot = backupRequest.sharedContainerPath;
         final File manifestFile = new File(sharedContainerRoot.resolve("manifests/" + testSnapshotName).toString());
 
@@ -97,8 +99,8 @@ public class BackupTaskTest {
         calendar.setTimeZone(TimeZone.getTimeZone("GMT"));
 
         calendar.set(2017, Calendar.MAY, 2, 2, 6, 0);
-        restoreRequest.timestampStart = calendar.getTimeInMillis();
-        restoreRequest.timestampEnd = System.currentTimeMillis();
+//        restoreRequest.timestampStart = calendar.getTimeInMillis();
+//        restoreRequest.timestampEnd = System.currentTimeMillis();
 
         new BackupOperation(null,
                             new HashMap<String, BackuperFactory>() {{
@@ -128,8 +130,18 @@ public class BackupTaskTest {
                     .forEach(Assert::assertFalse);
         });
 
-        new RestoreCommitLogsOperation(new HashMap<String, RestorerFactory>() {{
-            put("file", restoreOperationRequest -> new LocalFileRestorer(new FixedTasksExecutor(), restoreRequest));
+        new RestoreOperation(new HashMap<String, RestorerFactory>() {{
+            put("file", new RestorerFactory() {
+                @Override
+                public Restorer createRestorer(final RestoreOperationRequest restoreOperationRequest) {
+                    return new LocalFileRestorer(new FixedTasksExecutor(), restoreRequest);
+                }
+
+                @Override
+                public Restorer createCommitLogRestorer(final RestoreCommitLogsOperationRequest restoreCommitLogsOperationRequest) {
+                    return null;
+                }
+            });
         }}, restoreRequest).run();
 
         // Confirm manifest downloaded
@@ -204,21 +216,15 @@ public class BackupTaskTest {
                     null
             );
 
-            final RestoreCommitLogsOperationRequest restoreRequest = new RestoreCommitLogsOperationRequest(
-                    null,
-                    0,
-                    0,
+            final RestoreOperationRequest restoreRequest = new RestoreOperationRequest(
                     storageLocation,
-                    sharedContainerRoot,
-                    sharedContainerRoot.resolve(confDir),
-                    sharedContainerRoot,
-                    Multimaps.forMap(new HashMap<String, String>() {{
-                        put(keyspace, table);
-                    }}),
-                    testSnapshotName,
-                    false,
+                    10,
                     true,
-                    10
+                    sharedContainerRoot,
+                    sharedContainerRoot,
+                    true,
+                    testSnapshotName,
+                    ImmutableMultimap.of()
             );
 
             testBackupAndRestore(backupRequest, restoreRequest, testFileConfig);

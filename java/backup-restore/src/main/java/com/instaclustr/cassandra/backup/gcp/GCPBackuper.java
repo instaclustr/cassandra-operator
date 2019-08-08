@@ -36,7 +36,7 @@ public class GCPBackuper extends Backuper {
 
     @AssistedInject
     public GCPBackuper(final StorageProvider storage,
-                       final Executors.ExecutorServiceSupplier executorServiceSupplier,
+                       final ExecutorServiceSupplier executorServiceSupplier,
                        @Assisted final BackupCommitLogsOperationRequest backupOperationRequest) {
         super(backupOperationRequest, executorServiceSupplier);
         this.storage = storage.get();

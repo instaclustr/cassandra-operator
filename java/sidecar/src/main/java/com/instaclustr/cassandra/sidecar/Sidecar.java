@@ -11,7 +11,12 @@ import java.util.concurrent.TimeUnit;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Stage;
+import com.instaclustr.cassandra.backup.aws.S3Module;
+import com.instaclustr.cassandra.backup.azure.AzureModule;
+import com.instaclustr.cassandra.backup.gcp.GCPModule;
 import com.instaclustr.cassandra.backup.guice.BackupRestoreModule;
+import com.instaclustr.cassandra.backup.impl.backup.BackupModule;
+import com.instaclustr.cassandra.backup.local.LocalFileModule;
 import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupsModule;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissioningModule;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildModule;
@@ -107,7 +112,12 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
                 new UpgradeSSTablesModule(),
                 new RebuildModule(),
                 new ScrubModule(),
-                new BackupRestoreModule()
+                // backups modules
+                new S3Module(),
+                new AzureModule(),
+                new GCPModule(),
+                new LocalFileModule(),
+                new BackupModule()
         );
 
         return injector.getInstance(Application.class).call();

@@ -8,18 +8,25 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.function.Consumer;
 
-import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
+import com.instaclustr.cassandra.backup.impl.restore.RestoreCommitLogsOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.Restorer;
 import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 
 public class LocalFileRestorer extends Restorer {
 
-    @Inject
+    @AssistedInject
     public LocalFileRestorer(final ExecutorServiceSupplier executorServiceSupplier,
                              @Assisted final RestoreOperationRequest request) {
+        super(request, executorServiceSupplier);
+    }
+
+    @AssistedInject
+    public LocalFileRestorer(final ExecutorServiceSupplier executorServiceSupplier,
+                             @Assisted final RestoreCommitLogsOperationRequest request) {
         super(request, executorServiceSupplier);
     }
 
@@ -29,10 +36,10 @@ public class LocalFileRestorer extends Restorer {
     }
 
     @Override
-    public void downloadFile(final Path localFilePath, final RemoteObjectReference object) throws Exception {
+    public void downloadFile(final Path localFilePath, final RemoteObjectReference objectReference) throws Exception {
         final Path remoteFilePath = request.storageLocation.fileBackupDirectory
                 .resolve(request.storageLocation.bucket)
-                .resolve(Paths.get(((LocalFileObjectReference) object).canonicalPath));
+                .resolve(Paths.get(((LocalFileObjectReference) objectReference).canonicalPath));
 
         //Assume that any path passed in to this function is a file
         Files.createDirectories(localFilePath.getParent());
