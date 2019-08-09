@@ -48,14 +48,6 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 
 	requestLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 
-	// TODO: Multi-racks support
-	// This is just some thoughts on the subject, which only supports starting/growing the cluster atm.
-	// Things to consider:
-	// 1. How to confine StatusSet to a specific AZ? Ideas: pods should select nodes according to labels or node isolation,
-	// read up https://kubernetes.io/docs/concepts/configuration/assign-pod-node/. Then StatusSet will automatically pick
-	// them up with the labels.
-	// ...TBD
-
 	rctx := &reconciliationRequestContext{
 		CassandraDataCenterReconciler: *reconciler,
 		Request:                       request,
