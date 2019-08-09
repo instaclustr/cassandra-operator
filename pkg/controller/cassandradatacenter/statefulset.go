@@ -373,7 +373,7 @@ func badPods(desiredReplicas int32, existingReplicas int32, statuses map[*corev1
 func checkState(
 	currentSpecReplicas, currentStatusReplicas, desiredSpecReplicas int32,
 	allPods []corev1.Pod,
-	statuses map[*corev1.Pod]nodestate.NodeState) (valid bool) {
+	statuses map[*corev1.Pod]nodestate.NodeState) bool {
 
 	// check if current running # of pods match the current spec of the stateful set
 	if currentStatusReplicas != currentSpecReplicas {

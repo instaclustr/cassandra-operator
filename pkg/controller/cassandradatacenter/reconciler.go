@@ -40,7 +40,6 @@ func (reconciler *CassandraDataCenterReconciler) Reconcile(request reconcile.Req
 	// Fetch the CassandraDataCenter instance
 	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
 	if err := reconciler.client.Get(context.TODO(), request.NamespacedName, cdc); err != nil {
-		log.Error(err, "Error finding the CDC object in k8")
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
