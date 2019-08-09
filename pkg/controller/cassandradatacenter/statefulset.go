@@ -210,16 +210,16 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 		currentSpecReplicas = *existingStatefulSet.Spec.Replicas
 	}
 
-	// Get pods, clients and statuses map
+	// Get pods, clients and statuses
 	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
 	if err != nil {
-		return ErrorCDCPods
+		log.Info("unable to list pods in the cdc")
+		return err
 	}
-	rackLabels := StatefulSetLabels(rctx.cdc, rack.Name)
-	podsInRack, err := AllPodsInRack(rctx.client, rctx.cdc.Namespace, rackLabels)
+	podsInRack, err := AllPodsInRack(rctx.client, rctx.cdc.Namespace, StatefulSetLabels(rctx.cdc, rack.Name))
 	if err != nil {
 		log.Info(fmt.Sprintf("unable to list pods in rack %v", rack.Name))
-		return ErrorRackPods
+		return err
 	}
 	clients := sidecar.SidecarClients(allPods, &sidecar.DefaultSidecarClientOptions)
 	statuses := cassandraStatuses(clients)
@@ -238,13 +238,10 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 
 	// Scale
 	if desiredSpecReplicas > currentSpecReplicas {
-
 		// Scale up
 		existingStatefulSet.Spec = *newStatefulSetSpec
 		return controllerutil.SetControllerReference(rctx.cdc, existingStatefulSet, rctx.scheme)
-
 	} else if desiredSpecReplicas < currentSpecReplicas {
-
 		// Scale down
 		newestPod := podsInRack[len(podsInRack)-1]
 		if len(decommissionedNodes) == 0 {
@@ -374,13 +371,13 @@ func badPods(desiredReplicas int32, existingReplicas int32, statuses map[*corev1
 }
 
 func checkState(
-	existingSpecReplicas, currentReplicas, desiredSpecReplicas int32,
+	currentSpecReplicas, currentStatusReplicas, desiredSpecReplicas int32,
 	allPods []corev1.Pod,
 	statuses map[*corev1.Pod]nodestate.NodeState) (valid bool) {
 
 	// check if current running # of pods match the current spec of the stateful set
-	if currentReplicas != existingSpecReplicas {
-		log.Info("skipping StatefulSet reconciliation as it is undergoing scaling operations", "current", currentReplicas, "expected", existingSpecReplicas)
+	if currentStatusReplicas != currentSpecReplicas {
+		log.Info("skipping StatefulSet reconciliation as it is undergoing scaling operations", "current", currentStatusReplicas, "expected", currentSpecReplicas)
 		return false
 	}
 
@@ -391,8 +388,8 @@ func checkState(
 	}
 
 	// check if all Cassandras are ok to scale
-	if existingSpecReplicas > 0 {
-		badPods := badPods(desiredSpecReplicas, existingSpecReplicas, statuses)
+	if currentSpecReplicas > 0 {
+		badPods := badPods(desiredSpecReplicas, currentSpecReplicas, statuses)
 		if len(badPods) > 0 {
 			log.Info("skipping StatefulSet reconciliation as some Cassandra pods are not in the running mode")
 			for pod, status := range badPods {
@@ -436,15 +433,15 @@ func rackExist(name string, sets []v1.StatefulSet) bool {
 func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, error) {
 
 	// This currently works with the following logic:
-	// 1. Build a struct of racks with distribution numbers.
-	// 2. Check if all racks (stateful sets) have been created. If not, create a new missing one, and pass it the number
-	// of the nodes it's supposed to have.
-	// 3. If all racks are present, sort for scale up or down and iterate and check if the expected distribution
+	// 1. Build the racks distribution numbers.
+	// 2. Fetch the running stateful sets sorted by number of nodes (or in reverse when scaling down)
+	// 3. Check if all racks (stateful sets) have been created. If not, create a new missing one
+	// 4. If all racks are present, cycle through and check if the expected distribution
 	// replicas match the status, if not - reconcile.
 
 	racksDistribution := cluster.BuildRacksDistribution(rctx.cdc.Spec)
 
-	// Get all stateful sets
+	// Get all stateful sets, sorted
 	sets, err := getStatefulSets(rctx)
 	if err != nil {
 		log.Error(err, "Can't find Stateful Sets")
@@ -461,22 +458,6 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 	}
 
 	// Otherwise, we have all stateful sets running. Let's see which one we should reconcile.
-	// First, we figure if it's scale up or down, and sort the list of sets by number of
-	// replicas.
-	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
-	if err != nil {
-		return nil, err
-	}
-
-	if int32(len(allPods)) < rctx.cdc.Spec.Nodes {
-		// Scale up
-		sets = sortAscending(sets)
-	} else if int32(len(allPods)) > rctx.cdc.Spec.Nodes {
-		// Scale down
-		sets = sortDescending(sets)
-	}
-
-	// Now as sets are sorted, we just find the first one that needs reconciling.
 	for _, sts := range sets {
 		rack := racksDistribution.GetRack(sts.Labels[rackKey])
 		if rack == nil {
@@ -488,6 +469,7 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 		}
 	}
 
+	// if we're here, no rack needs to be reconciled
 	return nil, nil
 
 }
@@ -500,6 +482,22 @@ func getStatefulSets(rctx *reconciliationRequestContext) ([]v1.StatefulSet, erro
 		}
 		return []v1.StatefulSet{}, err
 	}
+
+	// Got the set. Now sort it for ascending (for scale up) or descending (for scale down) by the number of running replicas.
+	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
+	if err != nil {
+		return nil, err
+	}
+
+	if int32(len(allPods)) < rctx.cdc.Spec.Nodes {
+		// Scaling up
+		return sortAscending(sts.Items), nil
+	} else if int32(len(allPods)) > rctx.cdc.Spec.Nodes {
+		// Scaling down
+		return sortDescending(sts.Items), nil
+	}
+
+	// if all nodes present, no need to sort
 	return sts.Items, nil
 }
 
