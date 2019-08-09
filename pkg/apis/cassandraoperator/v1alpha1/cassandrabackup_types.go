@@ -30,6 +30,7 @@ type CassandraBackupStatus struct {
 
 // CassandraBackup is the Schema for the cassandrabackups API
 // +k8s:openapi-gen=true
+// +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="Backup operation state"
 // +kubebuilder:printcolumn:name="Progress",type="string",JSONPath=".status.progress",description="Backup operation progress"
 // TODO: apply state/progress appropriately for every node, not the whole operation
