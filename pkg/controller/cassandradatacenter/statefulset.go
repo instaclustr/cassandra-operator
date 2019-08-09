@@ -451,11 +451,9 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 	}
 
 	// check if all required racks are built. If not, create a missing one.
-	if len(sets) != len(racksDistribution) {
-		for _, rack := range racksDistribution {
-			if !rackExist(rack.Name, sets) {
-				return rack, nil
-			}
+	for _, rack := range racksDistribution {
+		if !rackExist(rack.Name, sets) {
+			return rack, nil
 		}
 	}
 
@@ -463,9 +461,10 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 	for _, sts := range sets {
 		rack := racksDistribution.GetRack(sts.Labels[rackKey])
 		if rack == nil {
-			return nil, fmt.Errorf("couldn't find the rack %v in the distribution\n", sts.Labels[rackKey])
+			log.Info("couldn't find the rack %v in the distribution\n", sts.Labels[rackKey])
+			continue
 		}
-		if rack.Replicas != sts.Status.Replicas {
+		if rack.Replicas != *sts.Spec.Replicas {
 			// reconcile
 			return rack, nil
 		}

@@ -6,7 +6,7 @@ metadata:
     app: cassandra
 spec:
   cluster: "test-cluster"
-  nodes: 1
+  nodes: 4
   racks:
     - name: "west1-b"
       labels:
