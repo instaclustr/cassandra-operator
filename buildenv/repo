@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-# you can over ride REPO and TAG if needed
+# you can override REGISTRY and TAG if needed
 
-REPO="${REPO:-gcr.io/cassandra-operator}"
+REGISTRY="${REGISTRY:-gcr.io/cassandra-operator}"
 CIRCLE_TAG="${CIRCLE_TAG:-}"
 NO_DEV="${NO_DEV:-}"
 CIRCLE_BRANCH="${CIRCLE_BRANCH:-}"
-export REPO="$REPO/${1}"
+export REGISTRY="$REGISTRY/${1}"
 
 if [[ "${CIRCLE_TAG}" == "" ]] && [[ "${CIRCLE_BRANCH}" != master ]] && [[ "${NO_DEV}" != "true" ]]; then
-	export REPO="${REPO}-dev"
+	export REGISTRY="${REGISTRY}-dev"
 fi
 
 SHA1=`git rev-parse --short HEAD`

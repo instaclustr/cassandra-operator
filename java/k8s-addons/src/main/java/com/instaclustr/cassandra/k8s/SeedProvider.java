@@ -1,13 +1,13 @@
 package com.instaclustr.cassandra.k8s;
 
-import com.google.common.collect.ImmutableList;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
+
+import com.google.common.collect.ImmutableList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SeedProvider implements org.apache.cassandra.locator.SeedProvider {
     private static final Logger logger = LoggerFactory.getLogger(SeedProvider.class);

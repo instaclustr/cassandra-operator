@@ -2,7 +2,9 @@
 
 cassandra_version=$1
 
-adduser --disabled-password --gid 0 --gecos "Cassandra" cassandra
+# create 'cassandra' user and group
+groupadd -g 999 cassandra
+useradd -r -u 999 -g cassandra cassandra
 
 pkg_dir=$(mktemp -d) && chmod 755 "${pkg_dir}"
 arch="all"

@@ -61,7 +61,7 @@ public class SidecarTest {
         };
 
         final Injector injector = Guice.createInjector(
-                new OperationsModule(),
+                new OperationsModule(3600),
                 new AbstractModule() {
                     @Override
                     protected void configure() {

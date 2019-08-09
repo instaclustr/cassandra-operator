@@ -16,7 +16,9 @@ import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoSet;
+import com.instaclustr.guice.GuiceInjectorHolder;
 import com.instaclustr.sidecar.jackson.GuiceJacksonHandlerInstantiator;
+import com.instaclustr.sidecar.jersey.DefaultExceptionMapper;
 import com.instaclustr.sidecar.validation.ValidationConfigurationContextResolver;
 import org.glassfish.hk2.api.ServiceLocator;
 import org.glassfish.jersey.InjectionManagerProvider;
@@ -51,11 +53,16 @@ public class JerseyHttpServerModule extends AbstractModule {
     @Provides
     @Singleton
     ResourceConfig provideResourceConfig(final GuiceHK2BridgeFeature guiceHK2BridgeFeature,
-                                         final CustomObjectMapperFeature customObjectMapperFeature) {
+                                         final CustomObjectMapperFeature customObjectMapperFeature,
+                                         final Injector injector) {
+
+        GuiceInjectorHolder.INSTANCE.setInjector(injector);
+
         return new ResourceConfig()
                 .packages("com.instaclustr")
                 .register(customObjectMapperFeature)
                 .register(guiceHK2BridgeFeature)
+                .register(DefaultExceptionMapper.class)
                 .register(ValidationConfigurationContextResolver.class)
                 .property(ServerProperties.BV_SEND_ERROR_IN_RESPONSE, true);
     }
@@ -119,5 +126,4 @@ public class JerseyHttpServerModule extends AbstractModule {
             return true;
         }
     }
-
 }

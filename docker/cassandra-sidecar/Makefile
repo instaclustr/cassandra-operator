@@ -16,8 +16,8 @@ cassandra-sidecar: $(CASSANDRA_SIDECAR_JAR)
 	docker build \
 		--build-arg cassandra_sidecar_jar=$(CASSANDRA_SIDECAR_JAR) \
 		--build-arg openjre_image="$(OPENJRE_IMAGE)" \
-		-t $(DOCKER_REPO)/cassandra-sidecar \
-		-t $(DOCKER_REPO)/cassandra-sidecar:$(CASSANDRA_SIDECAR_VERSION) \
+		-t $(DOCKER_REGISTRY)cassandra-sidecar \
+		-t $(DOCKER_REGISTRY)cassandra-sidecar:$(CASSANDRA_SIDECAR_VERSION) \
 		.
 
 .PHONY: clean

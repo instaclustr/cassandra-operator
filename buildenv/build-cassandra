@@ -11,6 +11,6 @@ source ./buildenv/repo
 
 echo "Building Cassandra versions in version list"
 while IFS="" read -r line || [[ -n "$line" ]]; do
-    echo "Building ${REPO}:${line}"
-    docker build --tag "${REPO}:${line}" --tag "${1}:${line}" --build-arg cassandra_version="${line}" docker/${1} 1>/dev/null
+    echo "Building ${REGISTRY}:${line}"
+    docker build --tag "${REGISTRY}:${line}" --tag "${1}:${line}" --build-arg cassandra_version="${line}" docker/${1} 1>/dev/null
 done < buildenv/CASSANDRA_VERSIONS
