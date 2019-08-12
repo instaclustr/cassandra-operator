@@ -436,10 +436,10 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 
 	// This currently works with the following logic:
 	// 1. Build the racks distribution numbers.
-	// 2. Fetch the running stateful sets sorted by number of nodes (or in reverse when scaling down)
+	// 2. Fetch the running stateful sets sorted by number of currently running nodes (or in reverse when scaling down)
 	// 3. Check if all racks (stateful sets) have been created. If not, create a new missing one
 	// 4. If all racks are present, cycle through and check if the expected distribution
-	// replicas match the status, if not - reconcile.
+	// replicas match the status, if not - reconcile by adding 1 to the current spec of the set.
 
 	racksDistribution := cluster.BuildRacksDistribution(rctx.cdc.Spec)
 
@@ -453,6 +453,11 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 	// check if all required racks are built. If not, create a missing one.
 	for _, rack := range racksDistribution {
 		if !rackExist(rack.Name, sets) {
+			// make sure that replicas in the new set is <= 1 otherwise the set may launch more than 1 pod at a time,
+			// which may end up with uneven replicas distribution
+			if rack.Replicas > 1 {
+				rack.Replicas = 1
+			}
 			return rack, nil
 		}
 	}
@@ -466,6 +471,12 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 		}
 		if rack.Replicas != *sts.Spec.Replicas {
 			// reconcile
+			// update the number of replicas in the rack with the current spec +1 or -1 depending on scale up or down.
+			if scaleUp(rctx) {
+				rack.Replicas = *sts.Spec.Replicas + 1
+			} else if scaleDown(rctx) {
+				rack.Replicas = *sts.Spec.Replicas - 1
+			}
 			return rack, nil
 		}
 	}
@@ -484,22 +495,32 @@ func getStatefulSets(rctx *reconciliationRequestContext) ([]v1.StatefulSet, erro
 		return []v1.StatefulSet{}, err
 	}
 
-	// Got the set. Now sort it for ascending (for scale up) or descending (for scale down) by the number of running replicas.
-	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
-	if err != nil {
-		return nil, err
-	}
-
-	if int32(len(allPods)) < rctx.cdc.Spec.Nodes {
+	if scaleUp(rctx) {
 		// Scaling up
 		return sortAscending(sts.Items), nil
-	} else if int32(len(allPods)) > rctx.cdc.Spec.Nodes {
+	} else if scaleDown(rctx) {
 		// Scaling down
 		return sortDescending(sts.Items), nil
 	}
 
-	// if all nodes present, no need to sort
+	// if all nodes present or not scaling, no need to sort
 	return sts.Items, nil
+}
+
+func scaleUp(rctx *reconciliationRequestContext) bool {
+	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
+	if err != nil {
+		return false
+	}
+	return int32(len(allPods)) < rctx.cdc.Spec.Nodes
+}
+
+func scaleDown(rctx *reconciliationRequestContext) bool {
+	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
+	if err != nil {
+		return false
+	}
+	return int32(len(allPods)) > rctx.cdc.Spec.Nodes
 }
 
 func sortAscending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
@@ -519,3 +540,4 @@ func sortDescending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
 
 	return sets
 }
+
