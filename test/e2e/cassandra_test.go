@@ -71,10 +71,14 @@ func scaleCluster(t *testing.T, from, to int32) {
 }
 
 func checkStatefulSets(t *testing.T, f *framework.Framework, namespace string, nodes, racks int32) {
-	rackDistribution := cluster.BuildRacksDistribution(nodes, racks)
-	fmt.Println(rackDistribution)
-	for i := int32(0); i < racks; i++ {
-		rack := fmt.Sprintf("rack%v", i+1)
-		waitForStatefulset(t, f, namespace, statefulSetName+"-"+rack, rackDistribution[rack])
+	zone := "failure-domain.beta.kubernetes.io/zone"
+	cdcSpec := v1alpha1.CassandraDataCenterSpec{Nodes: nodes, Racks: []v1alpha1.Rack{
+		{Name: "west1-a", Labels: map[string]string{zone: "europe-west1-a"}},
+		{Name: "west1-b", Labels: map[string]string{zone: "europe-west1-b"}},
+		{Name: "west1-c", Labels: map[string]string{zone: "europe-west1-c"}},
+	}}
+	rackDistribution := cluster.BuildRacksDistribution(cdcSpec)
+	for _, rack := range rackDistribution {
+		waitForStatefulset(t, f, namespace, statefulSetName+"-"+rack.Name, rack.Replicas)
 	}
 }
