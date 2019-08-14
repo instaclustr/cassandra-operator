@@ -1,4 +1,4 @@
-package com.instaclustr.picocli;
+package com.instaclustr.sidecar.picocli;
 
 import static java.util.concurrent.TimeUnit.HOURS;
 

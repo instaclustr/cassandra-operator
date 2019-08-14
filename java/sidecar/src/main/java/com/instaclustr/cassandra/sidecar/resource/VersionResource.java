@@ -16,13 +16,18 @@ import jmx.org.apache.cassandra.service.StorageServiceMBean;
 public class VersionResource {
 
     private final Version version;
-    final StorageServiceMBean storageServiceMBean;
+    private final StorageServiceMBean storageServiceMBean;
 
     @Inject
     public VersionResource(final Version version,
                            final StorageServiceMBean storageServiceMBean) {
         this.version = version;
         this.storageServiceMBean = storageServiceMBean;
+    }
+
+    @GET
+    public Response getVersion() {
+        return getSidecarVersion();
     }
 
     @GET
