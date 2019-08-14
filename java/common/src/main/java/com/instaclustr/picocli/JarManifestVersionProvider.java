@@ -11,14 +11,9 @@ import com.google.common.base.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import picocli.CommandLine.IVersionProvider;
 
-public abstract class JarManifestVersionProvider implements CommandLine.IVersionProvider {
-    private static final Logger logger = LoggerFactory.getLogger(JarManifestVersionProvider.class);
-    private final String implementationTitle;
-
-    protected JarManifestVersionProvider(final String implementationTitle) {
-        this.implementationTitle = implementationTitle;
-    }
+public abstract class JarManifestVersionProvider implements IVersionProvider {
 
     @Override
     public String[] getVersion() throws IOException {
@@ -44,15 +39,17 @@ public abstract class JarManifestVersionProvider implements CommandLine.IVersion
         }
 
         return new String[]{
-                String.format("%s %s", implementationTitle, implementationVersion.orElse("development build")),
+                String.format("%s %s", getImplementationTitle(), implementationVersion.orElse("development build")),
                 String.format("Build time: %s", buildTime.orElse("unknown")),
                 String.format("Git commit: %s", gitCommit.orElse("unknown")),
         };
     }
 
     private boolean isApplicableManifest(Attributes attributes) {
-        return implementationTitle.equals(attributes.getValue(Attributes.Name.IMPLEMENTATION_TITLE));
+        return getImplementationTitle().equals(attributes.getValue(Attributes.Name.IMPLEMENTATION_TITLE));
     }
+
+    public abstract String getImplementationTitle();
 
     public static void logCommandVersionInformation(final CommandLine.Model.CommandSpec commandSpec) {
         final Logger logger = LoggerFactory.getLogger(commandSpec.userObject().getClass());

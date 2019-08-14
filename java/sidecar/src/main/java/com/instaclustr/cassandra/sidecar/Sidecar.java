@@ -1,7 +1,5 @@
 package com.instaclustr.cassandra.sidecar;
 
-import static com.instaclustr.picocli.JarManifestVersionProvider.logCommandVersionInformation;
-
 import java.util.concurrent.Callable;
 
 import com.google.inject.Guice;
@@ -17,14 +15,13 @@ import com.instaclustr.cassandra.sidecar.operations.decommission.Decommissioning
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildModule;
 import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubModule;
 import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesModule;
-import com.instaclustr.cassandra.sidecar.picocli.SidecarJarManifestVersionProvider;
 import com.instaclustr.guice.Application;
 import com.instaclustr.guice.ServiceManagerModule;
 import com.instaclustr.picocli.CLIApplication;
 import com.instaclustr.picocli.CassandraJMXSpec;
-import com.instaclustr.sidecar.picocli.SidecarSpec;
 import com.instaclustr.sidecar.http.JerseyHttpServerModule;
 import com.instaclustr.sidecar.operations.OperationsModule;
+import com.instaclustr.sidecar.picocli.SidecarSpec;
 import com.instaclustr.threading.ExecutorsModule;
 import com.instaclustr.version.VersionModule;
 import jmx.org.apache.cassandra.JMXConnectionInfo;
@@ -36,10 +33,10 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Spec;
 
 @Command(name = "cassandra-sidecar",
-        mixinStandardHelpOptions = true,
-        description = "Sidecar management application for Apache Cassandra running on Kubernetes.",
-        versionProvider = SidecarJarManifestVersionProvider.class,
-        sortOptions = false
+         mixinStandardHelpOptions = true,
+         description = "Sidecar management application for Apache Cassandra running on Kubernetes.",
+         versionProvider = Sidecar.class,
+         sortOptions = false
 )
 public final class Sidecar extends CLIApplication implements Callable<Void> {
 
@@ -67,7 +64,7 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
         final Injector injector = Guice.createInjector(
                 Stage.PRODUCTION, // production binds singletons as eager by default
 
-                new VersionModule(commandSpec.version()),
+                new VersionModule(getVersion()),
                 new ServiceManagerModule(),
 
                 new CassandraModule(new JMXConnectionInfo(jmxSpec.jmxPassword,
@@ -93,5 +90,10 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
         );
 
         return injector.getInstance(Application.class).call();
+    }
+
+    @Override
+    public String getImplementationTitle() {
+        return "cassandra-sidecar";
     }
 }

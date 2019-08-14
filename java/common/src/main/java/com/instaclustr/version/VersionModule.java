@@ -6,7 +6,7 @@ public class VersionModule extends AbstractModule {
     private final Version version;
 
     public VersionModule(final String[] version) {
-        this(new Version(version));
+        this(Version.parse(version));
     }
 
     public VersionModule(final Version version) {
