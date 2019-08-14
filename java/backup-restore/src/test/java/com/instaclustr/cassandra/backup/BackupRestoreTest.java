@@ -1,4 +1,4 @@
-package com.instaclustr.cassandra.backup.tasks;
+package com.instaclustr.cassandra.backup;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
@@ -38,8 +38,7 @@ import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.Restorer;
 import com.instaclustr.cassandra.backup.local.LocalFileBackuper;
 import com.instaclustr.cassandra.backup.local.LocalFileRestorer;
-import com.instaclustr.cassandra.backup.service.TestHelperService;
-import com.instaclustr.cassandra.backup.util.CassandraVersion;
+import jmx.org.apache.cassandra.CassandraVersion;
 import com.instaclustr.threading.Executors.FixedTasksExecutor;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -47,7 +46,10 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
-public class BackupTaskTest {
+public class BackupRestoreTest {
+
+    public static final CassandraVersion THREE = CassandraVersion.parse("3.0.0");
+
     private final String sha1Hash = "3a1bd6900872256303b1ed036881cd35f5b670ce";
     private String testSnapshotName = "testSnapshot";
     // Adler32 computed by python
@@ -60,7 +62,7 @@ public class BackupTaskTest {
     private String confDir = "config";
 
     private final List<TestFileConfig> versionsToTest = ImmutableList.of(
-            new TestFileConfig(sha1Hash, CassandraVersion.THREE)
+            new TestFileConfig(sha1Hash, THREE)
     );
 
 
@@ -69,20 +71,20 @@ public class BackupTaskTest {
     @BeforeClass(alwaysRun = true)
     public void setup() throws IOException, URISyntaxException {
         for (TestFileConfig testFileConfig : versionsToTest) {
-            Path containerTempRoot = Files.createTempDirectory(testFileConfig.cassandraVersion.name());
-            Path containerBackupRoot = Files.createTempDirectory(testFileConfig.cassandraVersion.name());
-            TestHelperService.createTempDirectories(containerTempRoot, TestHelperService.cleanableDirs);
-            TestHelperService.createTempDirectories(containerTempRoot, TestHelperService.uncleanableDirs);
-            tempDirs.put(testFileConfig.cassandraVersion.name(), containerTempRoot);
-            tempDirs.put(testFileConfig.cassandraVersion.name() + "-backup-location", containerBackupRoot);
+            Path containerTempRoot = Files.createTempDirectory(testFileConfig.cassandraVersion.toString());
+            Path containerBackupRoot = Files.createTempDirectory(testFileConfig.cassandraVersion.toString());
+            BackupRestoreTestUtils.createTempDirectories(containerTempRoot, BackupRestoreTestUtils.cleanableDirs);
+            BackupRestoreTestUtils.createTempDirectories(containerTempRoot, BackupRestoreTestUtils.uncleanableDirs);
+            tempDirs.put(testFileConfig.cassandraVersion.toString(), containerTempRoot);
+            tempDirs.put(testFileConfig.cassandraVersion.toString() + "-backup-location", containerBackupRoot);
 
         }
-        TestHelperService.resetDirectories(versionsToTest, tempDirs, testSnapshotName);
+        BackupRestoreTestUtils.resetDirectories(versionsToTest, tempDirs, testSnapshotName);
     }
 
 
     private List<Path> resolveSSTableComponentPaths(final String keyspace, final String table, final Path cassandraRoot, final int sequence, final TestFileConfig testFileConfig) {
-        return TestHelperService.SSTABLE_FILES.stream()
+        return BackupRestoreTestUtils.SSTABLE_FILES.stream()
                 .map(name -> cassandraRoot.resolve("data")
                         .resolve(keyspace)
                         .resolve(table)
@@ -118,8 +120,8 @@ public class BackupTaskTest {
                             }},
                             backupRequest).run();
 
-        TestHelperService.clearDirs(backupRequest.sharedContainerPath, TestHelperService.cleanableDirs);
-        TestHelperService.createConfigFiles(sharedContainerRoot.resolve(confDir));
+        BackupRestoreTestUtils.clearDirs(backupRequest.sharedContainerPath, BackupRestoreTestUtils.cleanableDirs);
+        BackupRestoreTestUtils.createConfigFiles(sharedContainerRoot.resolve(confDir));
 
 
         //Make sure we deleted the files
@@ -193,8 +195,8 @@ public class BackupTaskTest {
         final String keyspace = "keyspace1";
         final String table = "table1";
         for (TestFileConfig testFileConfig : versionsToTest) {
-            final Path sharedContainerRoot = tempDirs.get(testFileConfig.cassandraVersion.name());
-            final Path backupPath = tempDirs.get(testFileConfig.cassandraVersion.name() + "-backup-location");
+            final Path sharedContainerRoot = tempDirs.get(testFileConfig.cassandraVersion.toString());
+            final Path backupPath = tempDirs.get(testFileConfig.cassandraVersion.toString() + "-backup-location");
 
             final StorageLocation storageLocation = new StorageLocation(String.format("file://%s/%s/%s/%s",
                                                                                       backupPath.toString(),
@@ -236,7 +238,7 @@ public class BackupTaskTest {
         for (TestFileConfig testFileConfig : versionsToTest) {
             final String keyspace = "keyspace1";
             final String table1 = "table1";
-            final Path table1Path = tempDirs.get(testFileConfig.cassandraVersion.name()).resolve("data/" + keyspace + "/" + table1);
+            final Path table1Path = tempDirs.get(testFileConfig.cassandraVersion.toString()).resolve("data/" + keyspace + "/" + table1);
             final Path path = table1Path.resolve(String.format("%s-1-big-Data.db", testFileConfig.getSstablePrefix(keyspace, table1)));
             final String checksum = SSTableUtils.calculateChecksum(path);
             assertEquals(checksum, String.valueOf(independentChecksum));
@@ -258,11 +260,11 @@ public class BackupTaskTest {
 
             final String keyspace = "keyspace1";
             final String table1 = "table1";
-            final Path table1Path = tempDirs.get(testFileConfig.cassandraVersion.name()).resolve("data/" + keyspace + "/" + table1);
+            final Path table1Path = tempDirs.get(testFileConfig.cassandraVersion.toString()).resolve("data/" + keyspace + "/" + table1);
             Collection<ManifestEntry> manifest = SSTableUtils.ssTableManifest(table1Path, backupRoot.resolve(table1Path.getFileName())).collect(Collectors.toList());
 
             final String table2 = "table2";
-            final Path table2Path = tempDirs.get(testFileConfig.cassandraVersion.name()).resolve("data/" + keyspace + "/" + table2);
+            final Path table2Path = tempDirs.get(testFileConfig.cassandraVersion.toString()).resolve("data/" + keyspace + "/" + table2);
             manifest.addAll(SSTableUtils.ssTableManifest(table2Path, backupRoot.resolve(table2Path.getFileName())).collect(Collectors.toList()));
 
             Map<Path, Path> manifestMap = new HashMap<>();
@@ -270,7 +272,7 @@ public class BackupTaskTest {
                 manifestMap.put(e.localFile, e.objectKey);
             }
 
-            if (testFileConfig.cassandraVersion == CassandraVersion.TWO_ZERO) {
+            if (CassandraVersion.isTwoZero(testFileConfig.cassandraVersion)) {
                 // table1 is un-compressed so should have written out a sha1 digest
                 final Path localPath1 = table1Path.resolve(String.format("%s-1-big-Data.db", testFileConfig.getSstablePrefix(keyspace, table1)));
 
@@ -319,6 +321,6 @@ public class BackupTaskTest {
 
     @AfterClass(alwaysRun = true)
     public void cleanUp() throws IOException {
-        TestHelperService.deleteTempDirectories(tempDirs);
+        BackupRestoreTestUtils.deleteTempDirectories(tempDirs);
     }
 }

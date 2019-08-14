@@ -9,20 +9,20 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
 
 import com.instaclustr.version.Version;
-import jmx.org.apache.cassandra.service.StorageServiceMBean;
+import jmx.org.apache.cassandra.CassandraVersion;
 
 @Path("/version")
 @Produces(APPLICATION_JSON)
 public class VersionResource {
 
     private final Version version;
-    private final StorageServiceMBean storageServiceMBean;
+    private final CassandraVersion cassandraVersion;
 
     @Inject
     public VersionResource(final Version version,
-                           final StorageServiceMBean storageServiceMBean) {
+                           final CassandraVersion cassandraVersion) {
         this.version = version;
-        this.storageServiceMBean = storageServiceMBean;
+        this.cassandraVersion = cassandraVersion;
     }
 
     @GET
@@ -39,10 +39,6 @@ public class VersionResource {
     @GET
     @Path("cassandra")
     public Response getCassandraVersion() {
-        try {
-            return Response.ok(new Version(storageServiceMBean.getReleaseVersion())).build();
-        } catch (final Exception ex) {
-            return Response.serverError().build();
-        }
+        return Response.ok(cassandraVersion).build();
     }
 }

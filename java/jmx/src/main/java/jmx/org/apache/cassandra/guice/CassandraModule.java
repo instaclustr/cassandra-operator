@@ -8,6 +8,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import jmx.org.apache.cassandra.CassandraObjectNames;
+import jmx.org.apache.cassandra.CassandraVersion;
 import jmx.org.apache.cassandra.JMXConnectionInfo;
 import jmx.org.apache.cassandra.JMXUtils;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
@@ -41,5 +42,11 @@ public class CassandraModule extends AbstractModule {
     @Singleton
     JMXConnector provideJmxConnectorFactory(final JMXConnectionInfo jmxConnectionInfo) throws Exception {
         return JMXUtils.getJmxConnector(jmxConnectionInfo);
+    }
+
+    @Provides
+    @Singleton
+    CassandraVersion provideCassandraVersion(final StorageServiceMBean storageServiceMBean) {
+        return CassandraVersion.parse(storageServiceMBean.getReleaseVersion());
     }
 }
