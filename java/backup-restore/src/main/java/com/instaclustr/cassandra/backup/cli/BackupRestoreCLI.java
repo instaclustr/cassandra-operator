@@ -21,6 +21,7 @@ import com.instaclustr.picocli.CassandraJMXSpec;
 import com.instaclustr.picocli.JarManifestVersionProvider;
 import com.instaclustr.sidecar.operations.OperationRequest;
 import com.instaclustr.sidecar.operations.OperationsModule;
+import com.instaclustr.threading.ExecutorsModule;
 import com.instaclustr.validation.GuiceInjectingConstraintValidatorFactory;
 import jmx.org.apache.cassandra.JMXConnectionInfo;
 import jmx.org.apache.cassandra.guice.CassandraModule;
@@ -85,6 +86,7 @@ public class BackupRestoreCLI implements Runnable {
 
         modules.add(new OperationsModule());
         modules.add(new BackupRestoreModule());
+        modules.add(new ExecutorsModule());
 
         final Injector injector = Guice.createInjector(
                 Stage.PRODUCTION, // production binds singletons as eager by default

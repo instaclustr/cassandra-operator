@@ -6,13 +6,14 @@ import javax.management.remote.JMXServiceURL;
 
 import com.instaclustr.picocli.typeconverter.CassandraJMXServiceURLTypeConverter;
 import picocli.CommandLine;
+import picocli.CommandLine.Option;
 
 /**
  * Holds JMX connection information, used as mixin for application to achieve DRY.
  */
 public class CassandraJMXSpec {
 
-    @CommandLine.Option(names = "--jmx-service",
+    @Option(names = "--jmx-service",
             paramLabel = "[ADDRESS][:PORT]|[JMX SERVICE URL]",
             defaultValue = ":" + DEFAULT_CASSANDRA_JMX_PORT,
             converter = CassandraJMXServiceURLTypeConverter.class,
@@ -23,15 +24,15 @@ public class CassandraJMXSpec {
                     "Defaults to '${DEFAULT-VALUE}'")
     public JMXServiceURL jmxServiceURL;
 
-    @CommandLine.Option(names = "--jmx-user", paramLabel = "[STRING]", description = "User for JMX for Cassandra")
+    @Option(names = "--jmx-user", paramLabel = "[STRING]", description = "User for JMX for Cassandra")
     public String jmxUser;
 
-    @CommandLine.Option(names = "--jmx-password", paramLabel = "[STRING]", description = "Password for JMX for Cassandra")
+    @Option(names = "--jmx-password", paramLabel = "[STRING]", description = "Password for JMX for Cassandra")
     public String jmxPassword;
 
-    @CommandLine.Option(names = "--jmx-truststore", paramLabel = "[PATH]", description = "Path to truststore file for Cassandra")
+    @Option(names = "--jmx-truststore", paramLabel = "[PATH]", description = "Path to truststore file for Cassandra")
     public String trustStore;
 
-    @CommandLine.Option(names = "--jmx-truststore-password", paramLabel = "[PATH]", description = "Password to truststore file for Cassandra")
+    @Option(names = "--jmx-truststore-password", paramLabel = "[PATH]", description = "Password to truststore file for Cassandra")
     public String trustStorePassword;
 }
