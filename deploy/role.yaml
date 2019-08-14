@@ -61,3 +61,11 @@ rules:
   - cassandrabackups
   verbs:
   - '*'
+- apiGroups:
+  - policy
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+  resourceNames:
+  - cassandra-operator
