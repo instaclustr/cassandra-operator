@@ -488,7 +488,7 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 
 func getStatefulSets(rctx *reconciliationRequestContext) ([]v1.StatefulSet, error) {
 	sts := &v1.StatefulSetList{}
-	if err := rctx.client.List(context.TODO(), &client.ListOptions{Namespace: rctx.Request.Namespace}, sts); err != nil {
+	if err := rctx.client.List(context.TODO(), &client.ListOptions{Namespace: rctx.cdc.Namespace}, sts); err != nil {
 		if errors2.IsNotFound(err) {
 			return []v1.StatefulSet{}, nil
 		}
