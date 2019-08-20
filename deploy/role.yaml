@@ -9,6 +9,7 @@ rules:
   resources:
   - pods
   - services
+  - services/finalizers
   - endpoints
   - persistentvolumeclaims
   - events
@@ -16,12 +17,6 @@ rules:
   - secrets
   verbs:
   - '*'
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  verbs:
-  - get
 - apiGroups:
   - apps
   resources:
@@ -47,6 +42,18 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
   - cassandraoperator.instaclustr.com
   resources:
   - '*'
@@ -54,3 +61,11 @@ rules:
   - cassandrabackups
   verbs:
   - '*'
+- apiGroups:
+  - policy
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+  resourceNames:
+  - cassandra-operator

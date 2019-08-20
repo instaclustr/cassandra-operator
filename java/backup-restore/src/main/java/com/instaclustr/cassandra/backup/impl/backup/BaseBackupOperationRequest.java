@@ -81,7 +81,7 @@ public class BaseBackupOperationRequest extends OperationRequest {
     public Integer concurrentConnections;
 
     @CommandLine.Option(
-            names = {"-w", "--wait"},
+            names = {"-w", "--waitForLock"},
             description = "Wait to acquire the global transfer lock (which prevents more than one backup or restore from running)."
     )
     public Boolean waitForLock = true;
@@ -94,7 +94,7 @@ public class BaseBackupOperationRequest extends OperationRequest {
                                       final Time duration,
                                       final DataRate bandwidth,
                                       final Integer concurrentConnections,
-                                      final Boolean waitForLock,
+                                      final boolean waitForLock,
                                       final Path cassandraDirectory,
                                       final Path sharedContainerPath) {
         this.storageLocation = storageLocation;
@@ -103,6 +103,6 @@ public class BaseBackupOperationRequest extends OperationRequest {
         this.sharedContainerPath = sharedContainerPath == null ? Paths.get("/") : sharedContainerPath;
         this.cassandraDirectory = cassandraDirectory == null ? Paths.get("/var/lib/cassandra") : cassandraDirectory;
         this.concurrentConnections = concurrentConnections == null ? 10 : concurrentConnections;
-        this.waitForLock = waitForLock == null ? true : waitForLock;
+        this.waitForLock = waitForLock;
     }
 }

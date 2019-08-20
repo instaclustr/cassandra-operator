@@ -1,7 +1,5 @@
 package com.instaclustr.cassandra.backup.cli;
 
-import static com.instaclustr.picocli.CLIApplication.execute;
-
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.ValidationException;
@@ -17,37 +15,33 @@ import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.instaclustr.cassandra.backup.guice.BackupRestoreModule;
 import com.instaclustr.guice.GuiceInjectorHolder;
+import com.instaclustr.picocli.CLIApplication;
 import com.instaclustr.picocli.CassandraJMXSpec;
-import com.instaclustr.picocli.JarManifestVersionProvider;
 import com.instaclustr.sidecar.operations.OperationRequest;
 import com.instaclustr.sidecar.operations.OperationsModule;
+import com.instaclustr.threading.ExecutorsModule;
 import com.instaclustr.validation.GuiceInjectingConstraintValidatorFactory;
 import jmx.org.apache.cassandra.JMXConnectionInfo;
 import jmx.org.apache.cassandra.guice.CassandraModule;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 import org.slf4j.Logger;
 import picocli.CommandLine;
+import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 
-@CommandLine.Command(
-        subcommands = {
-                BackupApplication.class,
-                RestoreApplication.class,
-                CommitLogBackupApplication.class,
-                CommitLogRestoreApplication.class
-        },
-        synopsisSubcommandLabel = "COMMAND",
-        versionProvider = BackupRestoreCLI.CLIJarManifestVersionProvider.class
+@Command(subcommands = {BackupApplication.class, RestoreApplication.class, CommitLogBackupApplication.class, CommitLogRestoreApplication.class},
+         synopsisSubcommandLabel = "COMMAND",
+         versionProvider = BackupRestoreCLI.class
 )
-public class BackupRestoreCLI implements Runnable {
+public class BackupRestoreCLI extends CLIApplication implements Runnable {
 
-    @CommandLine.Option(
-            names = {"-V", "--version"},
+    @Option(names = {"-V", "--version"},
             versionHelp = true,
             description = "print version information and exit"
     )
-    boolean versionRequested;
+    private boolean version;
 
     @Spec
     private CommandSpec spec;
@@ -85,6 +79,7 @@ public class BackupRestoreCLI implements Runnable {
 
         modules.add(new OperationsModule());
         modules.add(new BackupRestoreModule());
+        modules.add(new ExecutorsModule());
 
         final Injector injector = Guice.createInjector(
                 Stage.PRODUCTION, // production binds singletons as eager by default
@@ -96,9 +91,9 @@ public class BackupRestoreCLI implements Runnable {
         injector.injectMembers(command);
 
         final Validator validator = Validation.byDefaultProvider()
-                .configure()
-                .constraintValidatorFactory(new GuiceInjectingConstraintValidatorFactory()).buildValidatorFactory()
-                .getValidator();
+                                              .configure()
+                                              .constraintValidatorFactory(new GuiceInjectingConstraintValidatorFactory()).buildValidatorFactory()
+                                              .getValidator();
 
         final Set<ConstraintViolation<OperationRequest>> violations = validator.validate(operationRequest);
 
@@ -108,9 +103,8 @@ public class BackupRestoreCLI implements Runnable {
         }
     }
 
-    public static class CLIJarManifestVersionProvider extends JarManifestVersionProvider {
-        protected CLIJarManifestVersionProvider() {
-            super("backup-restore");
-        }
+    @Override
+    public String getImplementationTitle() {
+        return "backup-restore";
     }
 }

@@ -28,7 +28,7 @@ public class BackupCommitLogsOperationRequest extends BaseBackupOperationRequest
                                             @JsonProperty("duration") final Time duration,
                                             @JsonProperty("bandwidth") final DataRate bandwidth,
                                             @JsonProperty("concurrentConnections") final Integer concurrentConnections,
-                                            @JsonProperty("waitForLock") final Boolean waitForLock,
+                                            @JsonProperty("waitForLock") final boolean waitForLock,
                                             @JsonProperty("sharedContainerPath") final Path sharedContainerPath,
                                             @JsonProperty("cassandraDirectory") final Path cassandraDirectory,
                                             @JsonProperty("commitLogArchiveOverride") final Path commitLogArchiveOverride) {

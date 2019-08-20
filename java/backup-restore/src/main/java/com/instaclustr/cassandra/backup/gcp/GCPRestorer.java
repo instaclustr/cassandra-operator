@@ -13,10 +13,11 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.Storage.BlobListOption;
-import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.instaclustr.cassandra.backup.gcp.GCPModule.StorageProvider;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
+import com.instaclustr.cassandra.backup.impl.restore.RestoreCommitLogsOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.Restorer;
 import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
@@ -25,10 +26,18 @@ public class GCPRestorer extends Restorer {
 
     private final Storage storage;
 
-    @Inject
+    @AssistedInject
     public GCPRestorer(final StorageProvider storage,
                        final ExecutorServiceSupplier executorServiceSupplier,
                        @Assisted final RestoreOperationRequest request) {
+        super(request, executorServiceSupplier);
+        this.storage = storage.get();
+    }
+
+    @AssistedInject
+    public GCPRestorer(final StorageProvider storage,
+                       final ExecutorServiceSupplier executorServiceSupplier,
+                       @Assisted final RestoreCommitLogsOperationRequest request) {
         super(request, executorServiceSupplier);
         this.storage = storage.get();
     }
@@ -40,8 +49,8 @@ public class GCPRestorer extends Restorer {
     }
 
     @Override
-    public void downloadFile(final Path localFile, final RemoteObjectReference object) throws Exception {
-        final BlobId blobId = ((GCPRemoteObjectReference) object).blobId;
+    public void downloadFile(final Path localFile, final RemoteObjectReference objectReference) throws Exception {
+        final BlobId blobId = ((GCPRemoteObjectReference) objectReference).blobId;
         Files.createDirectories(localFile);
 
         try (final ReadChannel inputChannel = storage.reader(blobId)) {
@@ -53,11 +62,11 @@ public class GCPRestorer extends Restorer {
     public void consumeFiles(final RemoteObjectReference prefix, final Consumer<RemoteObjectReference> consumer) {
         final GCPRemoteObjectReference gcpRemoteObjectReference = (GCPRemoteObjectReference) prefix;
 
-        Page<Blob> storagePage = storage.list(gcpRemoteObjectReference.blobId.getBucket(),
-                                              BlobListOption.prefix(request.storageLocation.nodeId + "/" + gcpRemoteObjectReference.getObjectKey() + "/"),
-                                              BlobListOption.currentDirectory());
+        final Page<Blob> storagePage = storage.list(gcpRemoteObjectReference.blobId.getBucket(),
+                                                    BlobListOption.prefix(request.storageLocation.nodeId + "/" + gcpRemoteObjectReference.getObjectKey() + "/"),
+                                                    BlobListOption.currentDirectory());
 
-        Pattern nodeIdPattern = Pattern.compile(request.storageLocation.nodeId + "/");
+        final Pattern nodeIdPattern = Pattern.compile(request.storageLocation.nodeId + "/");
 
         storagePage.iterateAll().iterator().forEachRemaining(blob -> {
             if (!blob.getName().endsWith("/"))

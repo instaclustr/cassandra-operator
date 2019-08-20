@@ -108,34 +108,33 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
                         }
                     })
 
+                    // only load regular yaml files
+                    .filter(path -> {
+                        if (!Files.isRegularFile(path)) {
+                            logger.warn("Configuration file \"{}\" is not a regular file and will not be loaded.", path);
+                            return false;
+                        }
+                        return true;
+                    })
 
-                // only load regular yaml files
-                .filter(path -> {
-                    if (!Files.isRegularFile(path)) {
-                        logger.warn("Configuration file \"{}\" is not a regular file and will not be loaded.", path);
-                        return false;
-                    }
-                    return true;
-                })
+                    .filter(path -> {
+                        if (!YAML_PATH_MATCHER.matches(path)) {
+                            logger.warn("Configuration file \"{}\" is not a YAML file and will not be loaded.", path);
+                            return false;
+                        }
+                        logger.info("Loading configuration file \"{}\"", path);
+                        return true;
+                    })
 
-                .filter(path -> {
-                    if (!YAML_PATH_MATCHER.matches(path)) {
-                        logger.warn("Configuration file \"{}\" is not a YAML file and will not be loaded.", path);
-                        return false;
-                    }
-                    logger.info("Loading configuration file \"{}\"", path);
-                    return true;
-                })
+                    .map(path -> {
+                        try {
+                            return Files.newBufferedReader(path, StandardCharsets.UTF_8);
 
-                .map(path -> {
-                    try {
-                        return Files.newBufferedReader(path, StandardCharsets.UTF_8);
-
-                    } catch (final IOException e) {
-                        throw new ConfigurationException(String.format("Failed to open configuration file \"%s\" for reading.", path), e);
-                    }
-                })
-                .collect(Collectors.toList());
+                        } catch (final IOException e) {
+                            throw new ConfigurationException(String.format("Failed to open configuration file \"%s\" for reading.", path), e);
+                        }
+                    })
+                    .collect(Collectors.toList());
 
             try (final Reader reader = new ConcatenatedReader(readers)) {
                 final Yaml yaml = new Yaml();

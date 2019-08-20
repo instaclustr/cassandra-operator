@@ -7,7 +7,6 @@ import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.EnumSet;
 
-import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import com.instaclustr.cassandra.backup.azure.AzureModule.CloudBlobClientProvider;

@@ -14,17 +14,18 @@ import com.instaclustr.cassandra.backup.impl.backup.BackupCommitLogsOperationReq
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
 import com.instaclustr.threading.Executors;
+import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 
 public class LocalFileBackuper extends Backuper {
 
     @AssistedInject
-    public LocalFileBackuper(final Executors.ExecutorServiceSupplier executorServiceSupplier,
+    public LocalFileBackuper(final ExecutorServiceSupplier executorServiceSupplier,
                              @Assisted final BackupOperationRequest request) {
         super(request, executorServiceSupplier);
     }
 
     @AssistedInject
-    public LocalFileBackuper(final Executors.ExecutorServiceSupplier executorServiceSupplier,
+    public LocalFileBackuper(final ExecutorServiceSupplier executorServiceSupplier,
                              @Assisted final BackupCommitLogsOperationRequest request) {
         super(request, executorServiceSupplier);
     }

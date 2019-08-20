@@ -2,34 +2,40 @@ package com.instaclustr.cassandra.backup.cli;
 
 import static com.instaclustr.cassandra.backup.cli.BackupRestoreCLI.init;
 import static com.instaclustr.picocli.CLIApplication.execute;
+import static com.instaclustr.picocli.JarManifestVersionProvider.logCommandVersionInformation;
 import static org.awaitility.Awaitility.await;
 
 import com.google.inject.Inject;
-import com.instaclustr.cassandra.backup.cli.BackupRestoreCLI.CLIJarManifestVersionProvider;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.picocli.CassandraJMXSpec;
 import com.instaclustr.sidecar.operations.Operation;
 import com.instaclustr.sidecar.operations.OperationsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Spec;
 
-@CommandLine.Command(name = "backup",
-        mixinStandardHelpOptions = true,
-        description = "Take a snapshot of this nodes Cassandra data and upload it to remote storage. " +
-                "Defaults to a snapshot of all keyspaces and their column families, " +
-                "but may be restricted to specific keyspaces or a single column-family.",
-        sortOptions = false,
-        versionProvider = CLIJarManifestVersionProvider.class
+@Command(name = "backup",
+         mixinStandardHelpOptions = true,
+         description = "Take a snapshot of this nodes Cassandra data and upload it to remote storage. " +
+                 "Defaults to a snapshot of all keyspaces and their column families, " +
+                 "but may be restricted to specific keyspaces or a single column-family.",
+         sortOptions = false,
+         versionProvider = BackupRestoreCLI.class
 )
 public class BackupApplication implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(BackupApplication.class);
 
-    @CommandLine.Mixin
+    @Spec
+    private CommandSpec spec;
+
+    @Mixin
     private CassandraJMXSpec jmxSpec;
 
-    @CommandLine.Mixin
+    @Mixin
     private BackupOperationRequest request;
 
     @Inject
@@ -41,6 +47,8 @@ public class BackupApplication implements Runnable {
 
     @Override
     public void run() {
+        logCommandVersionInformation(spec);
+
         if (request.offlineSnapshot) {
             init(this, null, request, logger);
         } else {

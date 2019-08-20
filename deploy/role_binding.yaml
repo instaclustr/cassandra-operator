@@ -3,8 +3,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: cassandra-operator
 subjects:
-  - kind: ServiceAccount
-    name: cassandra-operator
+- kind: ServiceAccount
+  name: cassandra-operator
 roleRef:
   kind: Role
   name: cassandra-operator

@@ -37,6 +37,7 @@ import com.instaclustr.operations.SidecarClient.OperationResult;
 import com.instaclustr.sidecar.http.JerseyHttpServerModule;
 import com.instaclustr.sidecar.http.JerseyHttpServerService;
 import com.instaclustr.sidecar.operations.OperationsModule;
+import com.instaclustr.threading.ExecutorsModule;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 import org.apache.commons.lang3.tuple.Pair;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -109,6 +110,7 @@ public abstract class AbstractSidecarTest {
             add(new RebuildModule());
             add(new ScrubModule());
             add(new BackupRestoreModule());
+            add(new ExecutorsModule());
         }};
 
         modules.addAll(getModules());

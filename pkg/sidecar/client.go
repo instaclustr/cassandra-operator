@@ -3,15 +3,21 @@ package sidecar
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty"
-	"github.com/google/uuid"
-	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
-	corev1 "k8s.io/api/core/v1"
 	"net/http"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
+
+	// Workaround for https://github.com/go-resty/resty/issues/230.
+	// TODO: Check if we can change import path to `github.com/go-resty/resty`.
+	// See Resty v2.0.0 release notes for more info:
+	// https://github.com/go-resty/resty/releases/tag/v2.0.0
+	"gopkg.in/resty.v1"
+	corev1 "k8s.io/api/core/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 const (

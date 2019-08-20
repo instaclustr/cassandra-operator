@@ -6,7 +6,7 @@ import java.util.concurrent.Callable;
 
 import picocli.CommandLine;
 
-public class CLIApplication {
+public abstract class CLIApplication extends JarManifestVersionProvider {
 
     public static int execute(final Runnable runnable, String... args) {
         return execute(new CommandLine(runnable), args);

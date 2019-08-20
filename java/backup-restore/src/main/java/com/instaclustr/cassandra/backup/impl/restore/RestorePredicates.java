@@ -8,9 +8,13 @@ import java.util.function.Predicate;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class RestorePredicates {
-    public static class KeyspaceTable {
+class RestorePredicates {
+
+    private static final Logger logger = LoggerFactory.getLogger(RestorePredicates.class);
+
+    private static class KeyspaceTable {
         enum TableType {
             SYSTEM,
             SYSTEM_AUTH,
@@ -28,7 +32,7 @@ public class RestorePredicates {
             this.tableType = classifyTable(keyspace, table);
         }
 
-        public TableType classifyTable(final String keyspace, final String table) {
+        private TableType classifyTable(final String keyspace, final String table) {
             if (keyspace.equals("system") && !table.startsWith("schema_")) {
                 return TableType.SYSTEM;
             } else if (keyspace.equals("system_schema") ||
@@ -42,7 +46,7 @@ public class RestorePredicates {
         }
     }
 
-    public static Optional<KeyspaceTable> getKeyspaceTableFromManifestPath(final Logger logger, final String manifestLine) {
+    private static Optional<KeyspaceTable> getKeyspaceTableFromManifestPath(final Logger logger, final String manifestLine) {
         final Path manifestPath = getManifestPath(manifestLine);
 
         if (!manifestPath.getName(0).toString().equals("data")) {
@@ -54,7 +58,7 @@ public class RestorePredicates {
                                              StringUtils.split(manifestPath.getName(2).toString(), '-')[0]));
     }
 
-    public static Path getManifestPath(final String manifestLine) {
+    private static Path getManifestPath(final String manifestLine) {
         final String[] lineArray = manifestLine.trim().split(" ");
 
         if (lineArray.length != 2) {
@@ -88,7 +92,7 @@ public class RestorePredicates {
     // 3.11: 38 data/test/testuncompressed-ce555490463111e7be3e3d534d5cadea/1-1160807146/mc-1-big-Digest.crc32
     // 2.2:  38 data/test/testuncompressed-37f71aca7dc2383ba70672528af04d4f/1-2632208265/test-testuncompressed-jb-1-Data.db
     // 2.0:  38 data/test/testuncompressed/1-2569865052/test-testuncompressed-jb-1-Data.db
-    public static Predicate<String> getManifestFilesAllExceptSystem(final Logger logger) {
+    private static Predicate<String> getManifestFilesAllExceptSystem(final Logger logger) {
         return m -> {
             final Optional<KeyspaceTable> ktOpt = getKeyspaceTableFromManifestPath(logger, m);
 
@@ -97,32 +101,38 @@ public class RestorePredicates {
         };
     }
 
-    public static Predicate<String> getManifestFilesForFullExistingRestore(final Logger logger) {
+    static Predicate<String> getManifestFilesForFullExistingRestore(boolean restoreSystemKeyspace) {
         // Full restore on existing cluster, so download:
         // 3.0, 3.1: system_distributed, system_traces, system_schema, system_auth, custom keyspaces
         // 2.0, 2.1, 2.2: system_distributed, system_traces, system_auth, system (only schema_ tables)
+        if (restoreSystemKeyspace) {
+            return m -> getKeyspaceTableFromManifestPath(logger, m).isPresent();
+        }
         return getManifestFilesAllExceptSystem(logger);
     }
 
-    public static Predicate<String> getManifestFilesForFullNewRestore(final Logger logger) {
+    static Predicate<String> getManifestFilesForFullNewRestore(boolean restoreSystemKeyspace) {
         // Full restore on new cluster, so download:
         // 3.0, 3.1: system_distributed, system_traces, system_schema, system_auth, custom keyspaces
         // 2.0, 2.1, 2.2: system_distributed, system_traces, system_auth, system (only schema_ tables)
+        if (restoreSystemKeyspace) {
+            return m -> getKeyspaceTableFromManifestPath(logger, m).isPresent();
+        }
         return getManifestFilesAllExceptSystem(logger);
     }
 
-    public static Predicate<String> getManifestFilesForSubsetExistingRestore(final Logger logger, final Multimap<String, String> keyspaceTableSubset) {
+    static Predicate<String> getManifestFilesForSubsetExistingRestore(final Multimap<String, String> keyspaceTableSubset, boolean restoreSystemKeyspace) {
         // Subset restore on existing cluster, so only download subset keyspace.tables.
         // Don't download schema files, so other tables will be unaffected (prefer possibility of PIT subset not matching current schema)
         return m -> {
             final Optional<KeyspaceTable> ktOpt = getKeyspaceTableFromManifestPath(logger, m);
 
-            return ktOpt.map(kt -> keyspaceTableSubset.containsEntry(kt.keyspace, kt.table))
+            return ktOpt.map(kt -> keyspaceTableSubset.containsEntry(kt.keyspace, kt.table) || (restoreSystemKeyspace && kt.tableType == KeyspaceTable.TableType.SCHEMA))
                     .orElse(false);
         };
     }
 
-    public static Predicate<String> getManifestFilesForSubsetNewRestore(final Logger logger, final Multimap<String, String> keyspaceTableSubset) {
+    static Predicate<String> getManifestFilesForSubsetNewRestore(final Multimap<String, String> keyspaceTableSubset, boolean restoreSystemKeyspace) {
         // Subset restore on new cluster. Download subset keyspace.tables and:
         // 3.0, 3.1: system_schema, system_auth
         // 2.0, 2.1, 2.2: system_auth, system (only schema_)
@@ -131,6 +141,7 @@ public class RestorePredicates {
 
             return ktOpt.map(kt -> kt.tableType == KeyspaceTable.TableType.SYSTEM_AUTH ||
                     kt.tableType == KeyspaceTable.TableType.SCHEMA ||
+                    (restoreSystemKeyspace && kt.tableType == KeyspaceTable.TableType.SCHEMA) ||
                     keyspaceTableSubset.containsEntry(kt.keyspace, kt.table))
                     .orElse(false);
         };

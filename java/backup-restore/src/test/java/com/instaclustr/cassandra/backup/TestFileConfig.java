@@ -1,7 +1,6 @@
-package com.instaclustr.cassandra.backup.tasks;
+package com.instaclustr.cassandra.backup;
 
-
-import com.instaclustr.cassandra.backup.util.CassandraVersion;
+import jmx.org.apache.cassandra.CassandraVersion;
 
 public class TestFileConfig {
     public String sha1Hash;
@@ -12,9 +11,9 @@ public class TestFileConfig {
         this.sha1Hash = sha1Hash;
         this.cassandraVersion = cassandraVersion;
 
-        if (cassandraVersion == CassandraVersion.THREE) {
+        if (CassandraVersion.isThree(cassandraVersion)) {
             this.sstableVersion = "mb";
-        } else if (cassandraVersion == CassandraVersion.TWO_TWO) {
+        } else if (CassandraVersion.isTwoTwo(cassandraVersion)) {
             this.sstableVersion = "lb";
         } else {
             this.sstableVersion = "jb";
@@ -22,20 +21,20 @@ public class TestFileConfig {
     }
 
     public String getSstablePrefix(final String keyspace, final String table) {
-        if (this.cassandraVersion == CassandraVersion.TWO_ZERO) {
-            return String.format("%s-%s-%s", keyspace, table, this.sstableVersion);
+        if (CassandraVersion.isTwoZero(cassandraVersion)) {
+            return String.format("%s-%s-%s", keyspace, table, sstableVersion);
         }
 
-        return this.sstableVersion;
+        return sstableVersion;
     }
 
     public String getChecksum(final String keyspace, final String table) {
-        if (this.cassandraVersion == CassandraVersion.TWO_ZERO) {
-            return String.format("%s  %s-%s-%s-1-Data.db", sha1Hash, keyspace, table, this.sstableVersion);
+        if (CassandraVersion.isTwoZero(cassandraVersion)) {
+            return String.format("%s  %s-%s-%s-1-Data.db", sha1Hash, keyspace, table, sstableVersion);
         }
 
         // 2.1 sha1 contains just checksum (compressed and uncompressed)
-        if (this.cassandraVersion == CassandraVersion.TWO_ONE) {
+        if (CassandraVersion.isTwoOne(cassandraVersion)) {
             return sha1Hash;
         }
 
@@ -46,6 +45,6 @@ public class TestFileConfig {
 
     // 2.0 only creates digest files for un-compressed SSTables
     public boolean createDigest(final boolean isCompressed) {
-        return cassandraVersion != CassandraVersion.TWO_ZERO || !isCompressed;
+        return !CassandraVersion.isTwoZero(cassandraVersion) || !isCompressed;
     }
 }
