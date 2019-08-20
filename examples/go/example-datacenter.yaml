@@ -13,6 +13,7 @@ spec:
   imagePullSecrets:
     - name: regcred
   backupSecretVolumeSource:
+    # example from doc/backup_restore.md
     secretName: gcp-auth-reference
     #     type is a workaround for https://github.com/kubernetes/kubernetes/issues/68466
     type: array
@@ -22,20 +23,14 @@ spec:
   sidecarEnv:
     - name: GOOGLE_APPLICATION_CREDENTIALS
       value: "/tmp/backup-creds/my-service-key.json"
-  cassandraEnv:
-    - name: CQLSHRC
-      value: "/etc/cassandra/cqlshrc"
-  userSecretVolumeSource:
-    secretName: dc1-user-secret
   userConfigMapVolumeSource:
-    name: dc1-user-config
-    #     type is a workaround for https://github.com/kubernetes/kubernetes/issues/68466
-    type: array
+    # example from doc/providers/pks.md
+    # the name of the ConfigMap
+    name: concurrent-data
+    # ConfigMap keys -> file paths (relative to /etc/cassandra)
     items:
-      - key: cassandra_ssl
-        path: cassandra.yaml.d/003-ssl.yaml
-      - key: cqlshrc
-        path: cqlshrc
+      - key: 100-concurrent-yaml
+        path: cassandra.yaml.d/100-concurrent.yaml
   resources:
     limits:
       memory: 1Gi
