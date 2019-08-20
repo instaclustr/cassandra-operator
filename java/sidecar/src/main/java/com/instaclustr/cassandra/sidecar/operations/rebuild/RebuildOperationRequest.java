@@ -6,7 +6,6 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.instaclustr.cassandra.sidecar.operations.upgradesstables.ValidRebuildOperationRequest;
 import com.instaclustr.sidecar.operations.OperationRequest;
 
 /**

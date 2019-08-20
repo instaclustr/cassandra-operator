@@ -19,6 +19,8 @@ spec:
     plural: cassandrabackups
     singular: cassandrabackup
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:

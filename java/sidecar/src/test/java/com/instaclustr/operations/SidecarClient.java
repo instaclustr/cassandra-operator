@@ -18,8 +18,8 @@ import java.util.UUID;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.CharStreams;
-import com.instaclustr.cassandra.sidecar.operations.backup.BackupOperation;
-import com.instaclustr.cassandra.sidecar.operations.backup.BackupOperationRequest;
+import com.instaclustr.cassandra.backup.impl.backup.BackupOperation;
+import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupOperation;
 import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissionOperation;

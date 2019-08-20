@@ -1,11 +1,12 @@
 package com.instaclustr.picocli.typeconverter;
 
-import org.testng.annotations.Test;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertThrows;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-import static org.testng.Assert.*;
+import org.testng.annotations.Test;
 
 public class InetSocketAddressTypeConverterTest {
     private static final int DEFAULT_PORT = 1234;

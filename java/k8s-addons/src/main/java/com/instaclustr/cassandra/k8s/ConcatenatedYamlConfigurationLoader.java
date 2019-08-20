@@ -1,30 +1,31 @@
 package com.instaclustr.cassandra.k8s;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-
-import com.google.common.io.CharSource;
-import com.google.common.io.CharStreams;
 import org.apache.cassandra.config.Config;
 import org.apache.cassandra.config.ConfigurationLoader;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.Reader;
-
 import org.yaml.snakeyaml.error.YAMLException;
-
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 /**
  * A ConfigurationLoader that reads from one or more specified YAML-formatted configuration files, including files
@@ -107,34 +108,33 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
                         }
                     })
 
+                    // only load regular yaml files
+                    .filter(path -> {
+                        if (!Files.isRegularFile(path)) {
+                            logger.warn("Configuration file \"{}\" is not a regular file and will not be loaded.", path);
+                            return false;
+                        }
+                        return true;
+                    })
 
-                // only load regular yaml files
-                .filter(path -> {
-                    if (!Files.isRegularFile(path)) {
-                        logger.warn("Configuration file \"{}\" is not a regular file and will not be loaded.", path);
-                        return false;
-                    }
-                    return true;
-                })
+                    .filter(path -> {
+                        if (!YAML_PATH_MATCHER.matches(path)) {
+                            logger.warn("Configuration file \"{}\" is not a YAML file and will not be loaded.", path);
+                            return false;
+                        }
+                        logger.info("Loading configuration file \"{}\"", path);
+                        return true;
+                    })
 
-                .filter(path -> {
-                    if (!YAML_PATH_MATCHER.matches(path)) {
-                        logger.warn("Configuration file \"{}\" is not a YAML file and will not be loaded.", path);
-                        return false;
-                    }
-                    logger.info("Loading configuration file \"{}\"", path);
-                    return true;
-                })
+                    .map(path -> {
+                        try {
+                            return Files.newBufferedReader(path, StandardCharsets.UTF_8);
 
-                .map(path -> {
-                    try {
-                        return Files.newBufferedReader(path, StandardCharsets.UTF_8);
-
-                    } catch (final IOException e) {
-                        throw new ConfigurationException(String.format("Failed to open configuration file \"%s\" for reading.", path), e);
-                    }
-                })
-                .collect(Collectors.toList());
+                        } catch (final IOException e) {
+                            throw new ConfigurationException(String.format("Failed to open configuration file \"%s\" for reading.", path), e);
+                        }
+                    })
+                    .collect(Collectors.toList());
 
             try (final Reader reader = new ConcatenatedReader(readers)) {
                 final Yaml yaml = new Yaml();

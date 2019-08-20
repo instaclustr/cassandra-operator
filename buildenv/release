@@ -6,7 +6,7 @@ set -o nounset
 set -o pipefail
 
 function defer {
-	if [[ $REPO == gcr.io/* ]]; then
+	if [[ $REGISTRY == gcr.io/* ]]; then
 		docker logout gcr.io
 	fi
 }
@@ -22,5 +22,5 @@ cd `dirname "$BASH_SOURCE"`/..
 
 source ./buildenv/repo
 
-docker push "${REPO}:${TAG}"  1>/dev/null
-docker push "${REPO}:latest"  1>/dev/null
+docker push "${REGISTRY}:${TAG}"  1>/dev/null
+docker push "${REGISTRY}:latest"  1>/dev/null

@@ -3,15 +3,21 @@ package sidecar
 import (
 	"bytes"
 	"fmt"
-	"github.com/go-resty/resty"
-	"github.com/google/uuid"
-	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
-	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
-	"gotest.tools/assert"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
+	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
+
+	// Workaround for https://github.com/go-resty/resty/issues/230.
+	// TODO: Check if we can change import path to `github.com/go-resty/resty`.
+	// See Resty v2.0.0 release notes for more info:
+	// https://github.com/go-resty/resty/releases/tag/v2.0.0
+	"gopkg.in/resty.v1"
+	"gotest.tools/assert"
 )
 
 func getHost() string {
