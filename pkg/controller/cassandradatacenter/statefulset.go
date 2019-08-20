@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	DataVolumeMountPath = "/var/lib/cassandra"
+	DataVolumeMountPath           = "/var/lib/cassandra"
 	OperatorConfigVolumeMountPath = "/tmp/operator-config"
 	UserConfigVolumeMountPath     = "/tmp/user-config"
 	UserSecretVolumeMountPath     = "/tmp/user-secret"
@@ -211,7 +211,7 @@ func newUserConfigVolume(rctx *reconciliationRequestContext) *corev1.Volume {
 	}
 
 	return &corev1.Volume{
-		Name: rctx.cdc.Spec.UserConfigMapVolumeSource.Name,
+		Name:         rctx.cdc.Spec.UserConfigMapVolumeSource.Name,
 		VolumeSource: corev1.VolumeSource{ConfigMap: rctx.cdc.Spec.UserConfigMapVolumeSource},
 	}
 }
@@ -221,7 +221,7 @@ func newUserSecretVolume(rctx *reconciliationRequestContext) *corev1.Volume {
 		return nil
 	}
 	return &corev1.Volume{
-		Name: rctx.cdc.Spec.UserSecretVolumeSource.SecretName,
+		Name:         rctx.cdc.Spec.UserSecretVolumeSource.SecretName,
 		VolumeSource: corev1.VolumeSource{Secret: rctx.cdc.Spec.UserSecretVolumeSource},
 	}
 }
@@ -231,7 +231,7 @@ func newBackupSecretVolume(rctx *reconciliationRequestContext) *corev1.Volume {
 		return nil
 	}
 	return &corev1.Volume{
-		Name: rctx.cdc.Spec.BackupSecretVolumeSource.SecretName,
+		Name:         rctx.cdc.Spec.BackupSecretVolumeSource.SecretName,
 		VolumeSource: corev1.VolumeSource{Secret: rctx.cdc.Spec.BackupSecretVolumeSource},
 	}
 }
