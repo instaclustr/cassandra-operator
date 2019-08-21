@@ -19,14 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const DataVolumeMountPath = "/var/lib/cassandra"
-
-const SidecarApiPort = 4567
-
-var sidecarClientOptions = sidecar.ClientOptions{
-	Port:   SidecarApiPort,
-	Secure: false,
-}
+const (
+	DataVolumeMountPath           = "/var/lib/cassandra"
+	OperatorConfigVolumeMountPath = "/tmp/operator-config"
+	UserConfigVolumeMountPath     = "/tmp/user-config"
+	UserSecretVolumeMountPath     = "/tmp/user-secret"
+	BackupSecretVolumeMountPath   = "/tmp/backup-secret"
+)
 
 func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume *corev1.Volume) (*v1beta2.StatefulSet, error) {
 	statefulSet := &v1beta2.StatefulSet{ObjectMeta: DataCenterResourceMetadata(rctx.cdc)}
@@ -40,11 +39,13 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		}
 
 		dataVolumeClaim := newDataVolumeClaim(&rctx.cdc.Spec.DataVolumeClaimSpec)
-
 		podInfoVolume := newPodInfoVolume()
+		backupSecretVolume := newBackupSecretVolume(rctx)
+		userSecretVolume := newUserSecretVolume(rctx)
+		userConfigVolume := newUserConfigVolume(rctx)
 
-		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume)
-		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, podInfoVolume)
+		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, userSecretVolume, userConfigVolume)
+		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, podInfoVolume, backupSecretVolume)
 
 		sysctlLimitsContainer := newSysctlLimitsContainer(rctx.cdc)
 
@@ -52,6 +53,18 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			[]corev1.Volume{*podInfoVolume, *configVolume},
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
 			[]corev1.Container{*sysctlLimitsContainer})
+
+		if backupSecretVolume != nil {
+			podSpec.Volumes = append(podSpec.Volumes, *backupSecretVolume)
+		}
+
+		if userSecretVolume != nil {
+			podSpec.Volumes = append(podSpec.Volumes, *userSecretVolume)
+		}
+
+		if userConfigVolume != nil {
+			podSpec.Volumes = append(podSpec.Volumes, *userConfigVolume)
+		}
 
 		statefulSetSpec := newStatefulSetSpec(rctx.cdc, podSpec, dataVolumeClaim)
 
@@ -102,9 +115,7 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, volumes []co
 	return podSpec
 }
 
-func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume *corev1.Volume) *corev1.Container {
-	const OperatorConfigVolumeMountPath = "/tmp/operator-config"
-
+func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume *corev1.Volume, userSecretVolume, userConfigVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
@@ -112,6 +123,7 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		Args:            []string{OperatorConfigVolumeMountPath},
 		Ports: []corev1.ContainerPort{
 			{Name: "internode", ContainerPort: 7000},
+			{Name: "internode-tls", ContainerPort: 7001},
 			{Name: "cql", ContainerPort: 9042},
 			{Name: "jmx", ContainerPort: 7199},
 		},
@@ -124,6 +136,7 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 				},
 			},
 		},
+		Env: cdc.Spec.CassandraEnv,
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				Exec: &corev1.ExecAction{
@@ -139,6 +152,15 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		},
 	}
 
+	if userConfigVolume != nil {
+		container.Args = append(container.Args, UserConfigVolumeMountPath)
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: userConfigVolume.Name, MountPath: UserConfigVolumeMountPath})
+	}
+
+	if userSecretVolume != nil {
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: userSecretVolume.Name, MountPath: UserSecretVolumeMountPath})
+	}
+
 	if cdc.Spec.PrometheusSupport == true {
 		container.Ports = append(container.Ports, corev1.ContainerPort{Name: "promql", ContainerPort: 9500})
 	}
@@ -146,19 +168,26 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 	return container
 }
 
-func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, podInfoVolume *corev1.Volume) *corev1.Container {
-	return &corev1.Container{
+func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, podInfoVolume *corev1.Volume, backupSecretVolume *corev1.Volume) *corev1.Container {
+	container := &corev1.Container{
 		Name:            "sidecar",
 		Image:           cdc.Spec.SidecarImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Ports: []corev1.ContainerPort{
-			{Name: "http", ContainerPort: SidecarApiPort},
+			{Name: "http", ContainerPort: sidecar.DefaultSidecarClientOptions.Port},
 		},
+		Env: cdc.Spec.SidecarEnv,
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath},
 			{Name: podInfoVolume.Name, MountPath: "/etc/pod-info"},
 		},
 	}
+
+	if backupSecretVolume != nil {
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: backupSecretVolume.Name, MountPath: BackupSecretVolumeMountPath})
+	}
+
+	return container
 }
 
 func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) *corev1.Container {
@@ -167,12 +196,43 @@ func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: func() *bool { b := true; return &b }(),
+			Privileged: &cdc.Spec.PrivilegedSupported,
 		},
 		Command: []string{"bash", "-xuec"},
 		Args: []string{
 			`sysctl -w vm.max_map_count=1048575 || true`,
 		},
+	}
+}
+
+func newUserConfigVolume(rctx *reconciliationRequestContext) *corev1.Volume {
+	if rctx.cdc.Spec.UserConfigMapVolumeSource == nil {
+		return nil
+	}
+
+	return &corev1.Volume{
+		Name:         rctx.cdc.Spec.UserConfigMapVolumeSource.Name,
+		VolumeSource: corev1.VolumeSource{ConfigMap: rctx.cdc.Spec.UserConfigMapVolumeSource},
+	}
+}
+
+func newUserSecretVolume(rctx *reconciliationRequestContext) *corev1.Volume {
+	if rctx.cdc.Spec.UserSecretVolumeSource == nil {
+		return nil
+	}
+	return &corev1.Volume{
+		Name:         rctx.cdc.Spec.UserSecretVolumeSource.SecretName,
+		VolumeSource: corev1.VolumeSource{Secret: rctx.cdc.Spec.UserSecretVolumeSource},
+	}
+}
+
+func newBackupSecretVolume(rctx *reconciliationRequestContext) *corev1.Volume {
+	if rctx.cdc.Spec.BackupSecretVolumeSource == nil {
+		return nil
+	}
+	return &corev1.Volume{
+		Name:         rctx.cdc.Spec.BackupSecretVolumeSource.SecretName,
+		VolumeSource: corev1.VolumeSource{Secret: rctx.cdc.Spec.BackupSecretVolumeSource},
 	}
 }
 

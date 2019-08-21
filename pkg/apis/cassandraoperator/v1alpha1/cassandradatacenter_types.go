@@ -10,19 +10,21 @@ import (
 type CassandraDataCenterSpec struct {
 	// Cluster is either a string or v1.LocalObjectReference
 	//Cluster interface{} `json:"cluster,omitempty"`
-	Cluster          string                    `json:"cluster,omitempty"`
-	Nodes            int32                     `json:"nodes"`
-	CassandraImage   string                    `json:"cassandraImage"`
-	SidecarImage     string                    `json:"sidecarImage"`
-	ImagePullPolicy  v1.PullPolicy             `json:"imagePullPolicy"`
-	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
-
-	Resources v1.ResourceRequirements `json:"resources"`
-
-	DataVolumeClaimSpec v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec"`
-
-	PrometheusSupport bool `json:"prometheusSupport"`
-
+	Cluster                   string                       `json:"cluster,omitempty"`
+	Nodes                     int32                        `json:"nodes"`
+	CassandraImage            string                       `json:"cassandraImage"`
+	SidecarImage              string                       `json:"sidecarImage"`
+	ImagePullPolicy           v1.PullPolicy                `json:"imagePullPolicy"`
+	ImagePullSecrets          []v1.LocalObjectReference    `json:"imagePullSecrets,omitempty"`
+	BackupSecretVolumeSource  *v1.SecretVolumeSource       `json:"backupSecretVolumeSource,omitempty"`
+	UserSecretVolumeSource    *v1.SecretVolumeSource       `json:"userSecretVolumeSource,omitempty"`
+	UserConfigMapVolumeSource *v1.ConfigMapVolumeSource    `json:"userConfigMapVolumeSource,omitempty"`
+	Resources                 v1.ResourceRequirements      `json:"resources"`
+	DataVolumeClaimSpec       v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec"`
+	PrivilegedSupported       bool                         `json:"privilegedSupported,omitempty"`
+	PrometheusSupport         bool                         `json:"prometheusSupport"`
+	SidecarEnv                []v1.EnvVar                  `json:"sidecarEnv,omitempty"`
+	CassandraEnv              []v1.EnvVar                  `json:"cassandraEnv,omitempty"`
 	// ServiceAccount to assign to pods created by the operator
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }

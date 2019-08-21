@@ -29,6 +29,12 @@ spec:
           type: object
         spec:
           properties:
+            backupSecretVolumeSource:
+              type: object
+            cassandraEnv:
+              items:
+                type: object
+              type: array
             cassandraImage:
               type: string
             cluster:
@@ -46,15 +52,25 @@ spec:
             nodes:
               format: int32
               type: integer
+            privilegedSupported:
+              type: boolean
             prometheusSupport:
               type: boolean
             resources:
               type: object
+            sidecarEnv:
+              items:
+                type: object
+              type: array
             serviceAccountName:
               description: ServiceAccount to assign to pods created by the operator
               type: string
             sidecarImage:
               type: string
+            userConfigMapVolumeSource:
+              type: object
+            userSecretVolumeSource:
+              type: object
           required:
           - nodes
           - cassandraImage
