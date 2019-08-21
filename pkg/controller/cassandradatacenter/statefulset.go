@@ -121,6 +121,7 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluste
 }
 
 func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume *corev1.Volume, userSecretVolume, userConfigVolume *corev1.Volume, rack string) *corev1.Container {
+	cdc.Spec.CassandraEnv = append(cdc.Spec.CassandraEnv, corev1.EnvVar{Name: "CASSANDRA_RACK", Value: rack})
 	container := &corev1.Container{
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
@@ -155,7 +156,6 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 			{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath},
 			{Name: configVolume.Name, MountPath: OperatorConfigVolumeMountPath},
 		},
-		Env: []corev1.EnvVar{{Name: "CASSANDRA_RACK", Value: rack}},
 	}
 
 	if userConfigVolume != nil {
