@@ -20,6 +20,27 @@ spec:
   cassandraImage: "gcr.io/cassandra-operator/cassandra:3.11.3"
   sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
   imagePullPolicy: IfNotPresent
+  imagePullSecrets:
+    - name: regcred
+  backupSecretVolumeSource:
+    # example from doc/backup_restore.md
+    secretName: gcp-auth-reference
+    #     type is a workaround for https://github.com/kubernetes/kubernetes/issues/68466
+    type: array
+    items:
+      - key: my-service-key.json
+        path: my-service-key.json
+  sidecarEnv:
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: "/tmp/backup-creds/my-service-key.json"
+  userConfigMapVolumeSource:
+    # example from doc/providers/pks.md
+    # the name of the ConfigMap
+    name: concurrent-data
+    # ConfigMap keys -> file paths (relative to /etc/cassandra)
+    items:
+      - key: 100-concurrent-yaml
+        path: cassandra.yaml.d/100-concurrent.yaml
   resources:
     limits:
       memory: 1Gi
