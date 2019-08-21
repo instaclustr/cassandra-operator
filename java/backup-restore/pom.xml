@@ -14,7 +14,7 @@
     <properties>
         <azure-storage.version>8.3.0</azure-storage.version>
         <google-cloud-storage.version>1.84.0</google-cloud-storage.version>
-        <aws-java-sdk.version>1.11.599</aws-java-sdk.version>
+        <aws-java-sdk.version>1.11.614</aws-java-sdk.version>
         <jakarta-el.version>3.0.2</jakarta-el.version>
     </properties>
 

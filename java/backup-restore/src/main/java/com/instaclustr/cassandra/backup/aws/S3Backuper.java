@@ -46,18 +46,20 @@ public class S3Backuper extends Backuper {
     private final Optional<String> kmsId;
 
     @AssistedInject
-    public S3Backuper(final TransferManagerProvider transferManagerProvider,
-                      final ExecutorServiceSupplier executorSupplier,
-                      @Assisted final BackupOperationRequest request) {
+    public S3Backuper(
+            final TransferManagerProvider transferManagerProvider,
+            final ExecutorServiceSupplier executorSupplier,
+            @Assisted final BackupOperationRequest request) {
         super(request, executorSupplier);
         this.transferManager = transferManagerProvider.get();
         this.kmsId = Optional.empty();
     }
 
     @AssistedInject
-    public S3Backuper(final TransferManagerProvider transferManagerProvider,
-                      final ExecutorServiceSupplier executorServiceSupplier,
-                      @Assisted final BackupCommitLogsOperationRequest request) {
+    public S3Backuper(
+            final TransferManagerProvider transferManagerProvider,
+            final ExecutorServiceSupplier executorServiceSupplier,
+            @Assisted final BackupCommitLogsOperationRequest request) {
         super(request, executorServiceSupplier);
         this.transferManager = transferManagerProvider.get();
         this.kmsId = Optional.empty();
@@ -100,10 +102,11 @@ public class S3Backuper extends Backuper {
     }
 
     @Override
-    public void uploadFile(final long size,
-                           final InputStream localFileStream,
-                           final RemoteObjectReference object,
-                           final OperationProgressTracker operationProgressTracker) throws Exception {
+    public void uploadFile(
+            final long size,
+            final InputStream localFileStream,
+            final RemoteObjectReference object,
+            final OperationProgressTracker operationProgressTracker) throws Exception {
         final S3RemoteObjectReference s3RemoteObjectReference = (S3RemoteObjectReference) object;
 
         final PutObjectRequest putObjectRequest = new PutObjectRequest(request.storageLocation.bucket,
@@ -169,9 +172,14 @@ public class S3Backuper extends Backuper {
         try {
             // TODO cleanupMultipartUploads gets access denied, INS-2326 is meant to fix this
             cleanupMultipartUploads();
-
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.warn("Failed to cleanup multipart uploads.", e);
+        }
+
+        try {
+            transferManager.shutdownNow(true);
+        } catch (final Exception ex) {
+            logger.warn("Exception occurred while shutting down transfer manager for S3Backuper", ex);
         }
     }
 
@@ -189,17 +197,17 @@ public class S3Backuper extends Backuper {
             final MultipartUploadListing multipartUploadListing = s3Client.listMultipartUploads(listMultipartUploadsRequest);
 
             multipartUploadListing.getMultipartUploads().stream()
-                    .filter(u -> u.getInitiated().toInstant().isBefore(yesterdayInstant))
-                    .forEach(u -> {
-                        logger.info("Aborting multi-part upload for key \"{}\" initiated on {}", u.getKey(), u.getInitiated().toInstant());
+                                  .filter(u -> u.getInitiated().toInstant().isBefore(yesterdayInstant))
+                                  .forEach(u -> {
+                                      logger.info("Aborting multi-part upload for key \"{}\" initiated on {}", u.getKey(), u.getInitiated().toInstant());
 
-                        try {
-                            s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(request.storageLocation.bucket, u.getKey(), u.getUploadId()));
+                                      try {
+                                          s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(request.storageLocation.bucket, u.getKey(), u.getUploadId()));
 
-                        } catch (final AmazonClientException e) {
-                            logger.error("Failed to abort multipart upload for key \"{}\".", u.getKey(), e);
-                        }
-                    });
+                                      } catch (final AmazonClientException e) {
+                                          logger.error("Failed to abort multipart upload for key \"{}\".", u.getKey(), e);
+                                      }
+                                  });
 
             if (!multipartUploadListing.isTruncated())
                 break;

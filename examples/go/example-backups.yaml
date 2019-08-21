@@ -6,6 +6,5 @@ metadata:
     app: cassandra
 spec:
   cdc: test-dc-cassandra
-  destinationUri: "s3://instaclustr_k8/tmp/2"
-  snapshotName: "alex2"
-  keyspaces: ["alex1", "alex2"]
+  storageLocation: "s3://stefan-cassandra-testdc-bucket"
+  snapshotTag: "mySnapshotTag"

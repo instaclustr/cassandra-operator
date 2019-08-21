@@ -19,7 +19,6 @@ import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.backup.BackupCommitLogsOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.cassandra.backup.impl.backup.Backuper;
-import com.instaclustr.threading.Executors;
 import com.instaclustr.threading.Executors.ExecutorServiceSupplier;
 
 public class GCPBackuper extends Backuper {

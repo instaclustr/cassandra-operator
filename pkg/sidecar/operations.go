@@ -93,9 +93,13 @@ func (c *CleanupRequest) Init() {
 
 type BackupRequest struct {
 	Operation
-	DestinationUri string   `json:"destinationUri"`
-	Keyspaces      []string `json:"keyspaces"`
-	SnapshotName   string   `json:"snapshotName"`
+	StorageLocation       string   `json:"storageLocation,omitempty"`
+	SnapshotTag           string   `json:"snapshotTag,omitempty"`
+	Duration              string   `json:"duration,omitempty"`
+	Bandwidth             string   `json:"bandwidth,omitempty"`
+	ConcurrentConnections int      `json:"concurrentConnections,omitempty"`
+	Table                 string   `json:"table,omitempty"`
+	Keyspaces             []string `json:"keyspaces,omitempty"`
 }
 
 func (b *BackupRequest) Init() {

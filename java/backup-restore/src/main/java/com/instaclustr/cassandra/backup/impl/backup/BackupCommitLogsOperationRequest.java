@@ -8,19 +8,17 @@ import com.google.common.base.MoreObjects;
 import com.instaclustr.cassandra.backup.impl.StorageLocation;
 import com.instaclustr.measure.DataRate;
 import com.instaclustr.measure.Time;
-import picocli.CommandLine;
+import picocli.CommandLine.Option;
 
 @ValidBackupCommitLogsOperationRequest
 public class BackupCommitLogsOperationRequest extends BaseBackupOperationRequest {
 
-    @CommandLine.Option(
-            names = {"--cl-archive"},
-            description = "Override path to the commitlog archive directory, relative to the container root."
-    )
+    @Option(names = {"--cl-archive"},
+            description = "Override path to the commitlog archive directory, relative to the container root.")
     public Path commitLogArchiveOverride;
 
     public BackupCommitLogsOperationRequest() {
-        super();
+        // for picocli
     }
 
     @JsonCreator

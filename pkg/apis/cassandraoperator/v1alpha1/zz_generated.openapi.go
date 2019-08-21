@@ -55,14 +55,26 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackup(ref common.Refer
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Ref: ref("github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.CassandraBackupStatus"),
 									},
 								},
 							},
+						},
+					},
+					"globalStatus": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"globalProgress": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
 				},
@@ -86,11 +98,42 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 							Format:      "",
 						},
 					},
-					"destinationUri": {
+					"storageLocation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The uri for the backup target location e.g. s3 bucket, filepath",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"snapshotTag": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The snapshot tag for the backup",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"duration": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"bandwidth": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"concurrentConnections": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"table": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
 					"keyspaces": {
@@ -107,15 +150,8 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 							},
 						},
 					},
-					"snapshotName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The snapshot name for the backup",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 				},
-				Required: []string{"cdc", "destinationUri", "keyspaces", "snapshotName"},
+				Required: []string{"cdc", "storageLocation", "snapshotTag"},
 			},
 		},
 		Dependencies: []string{},
@@ -128,6 +164,13 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupStatus(ref common
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackupStatus defines the observed state of CassandraBackup",
 				Properties: map[string]spec.Schema{
+					"node": {
+						SchemaProps: spec.SchemaProps{
+							Description: "name of pod / node",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"state": {
 						SchemaProps: spec.SchemaProps{
 							Description: "State shows the status of the operation",
@@ -143,7 +186,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupStatus(ref common
 						},
 					},
 				},
-				Required: []string{"state", "progress"},
+				Required: []string{"node", "state", "progress"},
 			},
 		},
 		Dependencies: []string{},
