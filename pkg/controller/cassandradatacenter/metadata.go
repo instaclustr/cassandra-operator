@@ -6,16 +6,33 @@ import (
 	"strings"
 )
 
+const (
+	rackKey = "cassandra-operator.instaclustr.com/rack"
+	cdcKey  = "cassandra-operator.instaclustr.com/datacenter"
+)
+
 func DataCenterLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
 	return map[string]string{
-		"cassandra-operator.instaclustr.com/datacenter": cdc.Name,
-		"app.kubernetes.io/managed-by":                  "com.instaclustr.cassandra-operator",
+		cdcKey:                         cdc.Name,
+		"app.kubernetes.io/managed-by": "com.instaclustr.cassandra-operator",
 	}
 }
 
+func StatefulSetLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack string) map[string]string {
+	cdcLabels := DataCenterLabels(cdc)
+	addStatefulSetLabels(&cdcLabels, rack)
+	return cdcLabels
+}
+
+func addStatefulSetLabels(labels *map[string]string, rack string) {
+	(*labels)[rackKey] = rack
+}
+
 func applyDataCenterLabels(labels *map[string]string, cdc *cassandraoperatorv1alpha1.CassandraDataCenter) {
-	(*labels)["cassandra-operator.instaclustr.com/datacenter"] = cdc.Name
-	(*labels)["app.kubernetes.io/managed-by"] = "com.instaclustr.cassandra-operator"
+	cdcLabels := DataCenterLabels(cdc)
+	for label, val := range cdcLabels {
+		(*labels)[label] = val
+	}
 }
 
 //func applyDataCenterLabels(obj metav1.Object, cdc *cassandraoperatorv1alpha1.CassandraDataCenter) {
@@ -31,6 +48,16 @@ func DataCenterResourceMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCent
 		Namespace: cdc.Namespace,
 		Name:      "cassandra-" + cdc.Name + suffix,
 		Labels:    DataCenterLabels(cdc),
+	}
+}
+
+func StatefulSetMetadata(rctx *reconciliationRequestContext, rack string, suffixes ...string) metav1.ObjectMeta {
+	suffix := strings.Join(append([]string{""}, suffixes...), "-")
+	labels := StatefulSetLabels(rctx.cdc, rack)
+	return metav1.ObjectMeta{
+		Namespace: rctx.cdc.Namespace,
+		Name:      "cassandra-" + rctx.cdc.Name + "-" + rack + suffix,
+		Labels:    labels,
 	}
 }
 

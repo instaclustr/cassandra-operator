@@ -15,7 +15,7 @@ const (
 	DRAINED        = NodeState("DRAINED")
 	ERROR          = NodeState("ERROR")
 )
+
 type Status struct {
 	NodeState NodeState `json:"nodeState"`
 }
-

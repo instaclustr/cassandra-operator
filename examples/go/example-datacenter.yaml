@@ -6,7 +6,17 @@ metadata:
     app: cassandra
 spec:
   cluster: "test-cluster"
-  nodes: 3
+  nodes: 4
+  racks:
+    - name: "west1-b"
+      labels:
+        failure-domain.beta.kubernetes.io/zone: europe-west1-b
+    - name: "west1-c"
+      labels:
+        failure-domain.beta.kubernetes.io/zone: europe-west1-c
+    - name: "west1-a"
+      labels:
+        failure-domain.beta.kubernetes.io/zone: europe-west1-a
   cassandraImage: "gcr.io/cassandra-operator/cassandra:3.11.3"
   sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
   imagePullPolicy: IfNotPresent

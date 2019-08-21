@@ -56,15 +56,29 @@ spec:
               type: boolean
             prometheusSupport:
               type: boolean
+            racks:
+              items:
+                properties:
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  name:
+                    type: string
+                required:
+                - name
+                - labels
+                type: object
+              type: array
             resources:
               type: object
+            serviceAccountName:
+              description: ServiceAccount to assign to pods created by the operator
+              type: string
             sidecarEnv:
               items:
                 type: object
               type: array
-            serviceAccountName:
-              description: ServiceAccount to assign to pods created by the operator
-              type: string
             sidecarImage:
               type: string
             userConfigMapVolumeSource:
@@ -75,6 +89,7 @@ spec:
           - nodes
           - cassandraImage
           - sidecarImage
+          - racks
           - imagePullPolicy
           - resources
           - dataVolumeClaimSpec

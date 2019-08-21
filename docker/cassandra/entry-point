@@ -12,4 +12,10 @@ do
 done
 )
 
+# Update the rack settings from env
+if [[ ! -z ${CASSANDRA_RACK} ]]; then
+    echo "Updating Rack definition"
+    sed -i'' "s/rack=.*$/rack=${CASSANDRA_RACK}/g" /etc/cassandra/cassandra-rackdc.properties
+fi
+
 exec /usr/sbin/cassandra

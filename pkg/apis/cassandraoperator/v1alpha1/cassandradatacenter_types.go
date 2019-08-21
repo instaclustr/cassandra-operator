@@ -14,6 +14,7 @@ type CassandraDataCenterSpec struct {
 	Nodes                     int32                        `json:"nodes"`
 	CassandraImage            string                       `json:"cassandraImage"`
 	SidecarImage              string                       `json:"sidecarImage"`
+	Racks                     []Rack                       `json:"racks"`
 	ImagePullPolicy           v1.PullPolicy                `json:"imagePullPolicy"`
 	ImagePullSecrets          []v1.LocalObjectReference    `json:"imagePullSecrets,omitempty"`
 	BackupSecretVolumeSource  *v1.SecretVolumeSource       `json:"backupSecretVolumeSource,omitempty"`
@@ -58,4 +59,9 @@ type CassandraDataCenterList struct {
 
 func init() {
 	SchemeBuilder.Register(&CassandraDataCenter{}, &CassandraDataCenterList{})
+}
+
+type Rack struct {
+	Name   string            `json:"name"`
+	Labels map[string]string `json:"labels"`
 }

@@ -41,7 +41,7 @@ func TestDemarshalling(t *testing.T) {
 
 	client.testResponse = &resty.Response{
 		RawResponse: &http.Response{
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(`{ "operationMode": "NORMAL"}`))),
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(`{ "nodeState": "NORMAL"}`))),
 			Status:     "200 OK",
 			StatusCode: 200,
 		},

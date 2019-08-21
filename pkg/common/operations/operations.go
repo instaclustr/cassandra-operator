@@ -8,4 +8,3 @@ const (
 	COMPLETED = OperationState("COMPLETED")
 	FAILED    = OperationState("FAILED")
 )
-

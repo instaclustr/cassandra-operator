@@ -67,7 +67,7 @@ func addCassandraGossipingPropertyFileSnitchProperties(cdc *cassandraoperatorv1a
 
 	properties := map[string]string{
 		"dc":           cdc.Name,
-		"rack":         "rack1",
+		"rack":         "NORACK",
 		"prefer_local": "true",
 	}
 
