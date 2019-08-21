@@ -33,7 +33,7 @@ public @interface ValidBackupOperationRequest {
 
             context.disableDefaultConstraintViolation();
 
-            if (value.columnFamily != null && (value.keyspaces == null || value.keyspaces.size() != 1)) {
+            if (value.table != null && (value.keyspaces == null || value.keyspaces.size() != 1)) {
                 context
                         .buildConstraintViolationWithTemplate("{com.instaclustr.cassandra.backup.impl.backup.ValidBackupOperationRequest.BackupOperationRequestValidator.oneKeyspaceForColumnFamily}")
                         .addConstraintViolation();

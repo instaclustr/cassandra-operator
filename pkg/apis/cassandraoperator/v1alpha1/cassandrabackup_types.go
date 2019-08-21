@@ -10,16 +10,22 @@ type CassandraBackupSpec struct {
 	// Cassandra DC name to back up. Used to find the pods in the CDC
 	CDC string `json:"cdc"`
 	// The uri for the backup target location e.g. s3 bucket, filepath
-	DestinationUri string `json:"destinationUri"`
+	StorageLocation string `json:"storageLocation"`
+	// The snapshot tag for the backup
+	SnapshotTag           string `json:"snapshotTag"`
+	Duration              string `json:"duration,omitempty"`
+	Bandwidth             string `json:"bandwidth,omitempty"`
+	ConcurrentConnections int    `json:"concurrentConnections,omitempty"`
+	Table                 string `json:"table,omitempty"`
 	// The list of keyspaces to back up
-	Keyspaces []string `json:"keyspaces"`
-	// The snapshot name for the backup
-	SnapshotName string `json:"snapshotName"`
+	Keyspaces []string `json:"keyspaces,omitempty"`
 }
 
 // CassandraBackupStatus defines the observed state of CassandraBackup
 // +k8s:openapi-gen=true
 type CassandraBackupStatus struct {
+	// name of pod / node
+	Node string `json:"node"`
 	// State shows the status of the operation
 	State string `json:"state"`
 	// Progress shows the percentage of the operation done
@@ -30,16 +36,16 @@ type CassandraBackupStatus struct {
 
 // CassandraBackup is the Schema for the cassandrabackups API
 // +k8s:openapi-gen=true
-// +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="Backup operation state"
-// +kubebuilder:printcolumn:name="Progress",type="string",JSONPath=".status.progress",description="Backup operation progress"
-// TODO: apply state/progress appropriately for every node, not the whole operation
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".globalStatus",description="Backup operation status"
+// +kubebuilder:printcolumn:name="Progress",type="string",JSONPath=".globalProgress",description="Backup operation progress"
 type CassandraBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CassandraBackupSpec               `json:"spec,omitempty"`
-	Status map[string]*CassandraBackupStatus `json:"status,omitempty"`
+	Spec           CassandraBackupSpec      `json:"spec,omitempty"`
+	Status         []*CassandraBackupStatus `json:"status,omitempty"`
+	GlobalStatus   string                   `json:"globalStatus,omitempty"`
+	GlobalProgress string                   `json:"globalProgress,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

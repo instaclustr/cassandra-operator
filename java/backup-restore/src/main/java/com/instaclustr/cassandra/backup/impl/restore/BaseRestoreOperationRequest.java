@@ -10,12 +10,11 @@ import com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationSeri
 import com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationTypeConverter;
 import com.instaclustr.cassandra.backup.impl.StorageLocation.ValidStorageLocation;
 import com.instaclustr.sidecar.operations.OperationRequest;
-import picocli.CommandLine;
+import picocli.CommandLine.Option;
 
 public class BaseRestoreOperationRequest extends OperationRequest {
 
-    @CommandLine.Option(
-            names = {"--sl", "--storage-location"},
+    @Option(names = {"--sl", "--storage-location"},
             converter = StorageLocationTypeConverter.class,
             description = "Location from which files will be fetched for restore, in form " +
                     "cloudProvider://bucketName/clusterId/nodeId or file:///some/path/bucketName/clusterId/nodeId. " +
@@ -28,15 +27,13 @@ public class BaseRestoreOperationRequest extends OperationRequest {
     @JsonDeserialize(using = StorageLocationDeserializer.class)
     public StorageLocation storageLocation;
 
-    @CommandLine.Option(
-            names = {"--cc", "--concurrent-connections"},
+    @Option(names = {"--cc", "--concurrent-connections"},
             description = "Number of files (or file parts) to download concurrently. Higher values will increase throughput. Default is 10.",
             defaultValue = "10"
     )
     public Integer concurrentConnections = 10;
 
-    @CommandLine.Option(
-            names = {"-w", "--waitForLock"},
+    @Option(names = {"-w", "--waitForLock"},
             description = "Wait to acquire the global transfer lock (which prevents more than one backup or restore from running)."
     )
     public boolean waitForLock = true;

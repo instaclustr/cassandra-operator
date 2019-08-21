@@ -20,65 +20,51 @@ import picocli.CommandLine.Option;
 
 public class RestoreOperationRequest extends BaseRestoreOperationRequest {
 
-    @Option(
-            names = {"--dd", "--data-directory"},
+    @Option(names = {"--dd", "--data-directory"},
             description = "Base directory that contains the Cassandra data, cache and commitlog directories",
             converter = PathTypeConverter.class,
-            defaultValue = "/var/lib/cassandra/"
-    )
+            defaultValue = "/var/lib/cassandra/")
     @JsonDeserialize(using = PathDeserializer.class)
     @JsonSerialize(using = PathSerializer.class)
     public Path cassandraDirectory;
 
-    @Option(
-            names = {"-p", "--shared-path"},
+    @Option(names = {"-p", "--shared-path"},
             description = "Shared Container path for pod",
             converter = PathTypeConverter.class,
-            defaultValue = "/"
-    )
+            defaultValue = "/")
     @JsonDeserialize(using = PathDeserializer.class)
     @JsonSerialize(using = PathSerializer.class)
     public Path sharedContainerPath;
 
-    @Option(
-            names = {"--cd", "--config-directory"},
+    @Option(names = {"--cd", "--config-directory"},
             description = "Directory where configuration of Cassandra is stored.",
             converter = PathTypeConverter.class,
-            defaultValue = "/etc/cassandra/"
-    )
+            defaultValue = "/etc/cassandra/")
     @JsonDeserialize(using = PathDeserializer.class)
     @JsonSerialize(using = PathSerializer.class)
     public Path cassandraConfigDirectory;
 
-    @Option(
-            names = {"--rs", "--restore-system-keyspace"},
-            description = "Restore system keyspace. Use this to prevent bootstrapping, when restoring on only a single node."
-    )
+    @Option(names = {"--rs", "--restore-system-keyspace"},
+            description = "Restore system keyspace. Use this to prevent bootstrapping, when restoring on only a single node.")
     public boolean restoreSystemKeyspace;
 
-    @Option(
-            names = {"--cl-archive"},
-            description = "Override path to the commit log archive directory, relative to the container root."
-    )
+    @Option(names = {"--cl-archive"},
+            description = "Override path to the commit log archive directory, relative to the container root.")
     public Path commitLogArchiveOverride;
 
-    @Option(
-            names = {"-s", "--st", "--snapshot-tag"},
+    @Option(names = {"-s", "--st", "--snapshot-tag"},
             description = "Snapshot to download and restore.",
-            required = true
-    )
+            required = true)
     @NotBlank
     public String snapshotTag;
 
-    @Option(
-            names = {"--kt", "--keyspace-tables"},
+    @Option(names = {"--kt", "--keyspace-tables"},
             description = "Comma separated list of tables to restore. Must include keyspace name in the format <keyspace.table>",
-            converter = KeyspaceTablePairsConverter.class
-    )
+            converter = KeyspaceTablePairsConverter.class)
     public Multimap<String, String> keyspaceTables = ImmutableMultimap.of();
 
     public RestoreOperationRequest() {
-        super();
+        // for picocli
     }
 
     @JsonCreator

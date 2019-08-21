@@ -122,6 +122,6 @@ public class S3Restorer extends Restorer {
 
     @Override
     public void cleanup() {
-        // Nothing to cleanup
+        transferManager.shutdownNow();
     }
 }

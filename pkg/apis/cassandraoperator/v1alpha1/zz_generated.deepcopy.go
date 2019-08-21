@@ -17,17 +17,13 @@ func (in *CassandraBackup) DeepCopyInto(out *CassandraBackup) {
 	in.Spec.DeepCopyInto(&out.Spec)
 	if in.Status != nil {
 		in, out := &in.Status, &out.Status
-		*out = make(map[string]*CassandraBackupStatus, len(*in))
-		for key, val := range *in {
-			var outVal *CassandraBackupStatus
-			if val == nil {
-				(*out)[key] = nil
-			} else {
-				in, out := &val, &outVal
+		*out = make([]*CassandraBackupStatus, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
 				*out = new(CassandraBackupStatus)
 				**out = **in
 			}
-			(*out)[key] = outVal
 		}
 	}
 	return

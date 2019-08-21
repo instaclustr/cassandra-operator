@@ -41,9 +41,10 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
     private final Map<String, BackuperFactory> backuperFactoryMap;
 
     @Inject
-    public BackupOperation(final Provider<StorageServiceMBean> storageServiceMBeanProvider,
-                           final Map<String, BackuperFactory> backuperFactoryMap,
-                           @Assisted final BackupOperationRequest request) {
+    public BackupOperation(
+            final Provider<StorageServiceMBean> storageServiceMBeanProvider,
+            final Map<String, BackuperFactory> backuperFactoryMap,
+            @Assisted final BackupOperationRequest request) {
         super(request);
         this.storageServiceMBeanProvider = storageServiceMBeanProvider;
         this.backuperFactoryMap = backuperFactoryMap;
@@ -67,7 +68,7 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
             new TakeSnapshotOperation(storageServiceMBean,
                                       new TakeSnapshotOperation.TakeSnapshotOperationRequest(request.keyspaces,
                                                                                              request.snapshotTag,
-                                                                                             request.columnFamily)).run0();
+                                                                                             request.table)).run0();
             executeUpload(storageServiceMBean.getTokens());
         } finally {
             new ClearSnapshotOperation(storageServiceMBean,
@@ -88,9 +89,10 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
         }
     }
 
-    private Collection<ManifestEntry> generateManifest(final List<String> keyspaces,
-                                                       final String snapshotTag,
-                                                       final Path cassandraDataDirectory) throws IOException {
+    private Collection<ManifestEntry> generateManifest(
+            final List<String> keyspaces,
+            final String snapshotTag,
+            final Path cassandraDataDirectory) throws IOException {
         // find files belonging to snapshot
         final Map<String, ? extends Iterable<KeyspaceColumnFamilySnapshot>> snapshots = findKeyspaceColumnFamilySnapshots(cassandraDataDirectory);
 
@@ -111,7 +113,7 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
 
         // add snapshot files to the manifest
         for (final KeyspaceColumnFamilySnapshot keyspaceColumnFamilySnapshot : keyspaceColumnFamilySnapshots) {
-            final Path bucketKey = Paths.get("data").resolve(Paths.get(keyspaceColumnFamilySnapshot.keyspace, keyspaceColumnFamilySnapshot.columnFamily));
+            final Path bucketKey = Paths.get("data").resolve(Paths.get(keyspaceColumnFamilySnapshot.keyspace, keyspaceColumnFamilySnapshot.table));
             Iterables.addAll(manifest, SSTableUtils.ssTableManifest(keyspaceColumnFamilySnapshot.snapshotDirectory, bucketKey).collect(toList()));
         }
 
@@ -125,10 +127,11 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
     }
 
     private Iterable<ManifestEntry> saveManifest(final Iterable<ManifestEntry> manifest, String tag) throws IOException {
+        final Path snapshotManifestDirectory = Files.createDirectories(request.sharedContainerPath.resolve(Paths.get("tmp/cassandra-operator/manifests")));
+        final Path manifestFilePath = snapshotManifestDirectory.resolve(tag);
 
-        Path snapshotManifestDirectory = Files.createDirectories(request.sharedContainerPath.resolve(Paths.get("cassandra-operator/manifests")));
-
-        final Path manifestFilePath = Files.createFile(snapshotManifestDirectory.resolve(tag));
+        Files.deleteIfExists(manifestFilePath);
+        Files.createFile(manifestFilePath);
 
         try (final OutputStream stream = Files.newOutputStream(manifestFilePath);
              final PrintStream writer = new PrintStream(stream)) {
@@ -137,6 +140,7 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
             }
         }
 
+        // TODO - clean this up! dont wait until jvm is shut down, what if this runs in sidecar?
         manifestFilePath.toFile().deleteOnExit();
 
         return ImmutableList.of(new ManifestEntry(Paths.get("manifests").resolve(manifestFilePath.getFileName()),
@@ -145,10 +149,11 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
     }
 
     private Iterable<ManifestEntry> saveTokenList(List<String> tokens) throws IOException {
-
-        final Path tokensDirectory = Files.createDirectories(request.sharedContainerPath.resolve(Paths.get("cassandra-operator/tokens")));
-
+        final Path tokensDirectory = Files.createDirectories(request.sharedContainerPath.resolve(Paths.get("tmp/cassandra-operator/tokens")));
         final Path tokensFilePath = tokensDirectory.resolve(format("%s-tokens.yaml", request.snapshotTag));
+
+        Files.deleteIfExists(tokensFilePath);
+        Files.createFile(tokensFilePath);
 
         try (final OutputStream stream = Files.newOutputStream(tokensFilePath);
              final PrintStream writer = new PrintStream(stream)) {
@@ -157,6 +162,7 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
             writer.printf("initial_token: %s%n", Joiner.on(',').join(tokens));
         }
 
+        // TODO - clean this up! dont wait until jvm is shut down, what if this runs in sidecar?
         tokensFilePath.toFile().deleteOnExit();
 
         return ImmutableList.of(new ManifestEntry(Paths.get("tokens").resolve(tokensFilePath.getFileName()),
@@ -169,12 +175,12 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
         return Files.find(cassandraDataDirectory,
                           4,
                           (path, basicFileAttributes) -> path.getParent().endsWith("snapshots"))
-                .map((KeyspaceColumnFamilySnapshot::new))
-                .collect(groupingBy(k -> k.snapshotDirectory.getFileName().toString()));
+                    .map((KeyspaceColumnFamilySnapshot::new))
+                    .collect(groupingBy(k -> k.snapshotDirectory.getFileName().toString()));
     }
 
     static class KeyspaceColumnFamilySnapshot {
-        final String keyspace, columnFamily;
+        final String keyspace, table;
         final Path snapshotDirectory;
 
         KeyspaceColumnFamilySnapshot(final Path snapshotDirectory) {
@@ -182,7 +188,7 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
 
             final Path columnFamilyDirectory = snapshotDirectory.getParent().getParent();
 
-            this.columnFamily = columnFamilyDirectory.getFileName().toString();
+            this.table = columnFamilyDirectory.getFileName().toString();
             this.keyspace = columnFamilyDirectory.getParent().getFileName().toString();
             this.snapshotDirectory = snapshotDirectory;
         }
@@ -190,10 +196,10 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
-                    .add("keyspace", keyspace)
-                    .add("columnFamily", columnFamily)
-                    .add("snapshotDirectory", snapshotDirectory)
-                    .toString();
+                              .add("keyspace", keyspace)
+                              .add("table", table)
+                              .add("snapshotDirectory", snapshotDirectory)
+                              .toString();
         }
     }
 
@@ -203,8 +209,9 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
         private final StorageServiceMBean storageServiceMBean;
         private boolean hasRun = false;
 
-        ClearSnapshotOperation(final StorageServiceMBean storageServiceMBean,
-                               final ClearSnapshotOperationRequest request) {
+        ClearSnapshotOperation(
+                final StorageServiceMBean storageServiceMBean,
+                final ClearSnapshotOperationRequest request) {
             super(request);
             this.storageServiceMBean = storageServiceMBean;
         }
@@ -242,8 +249,9 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
         private final TakeSnapshotOperationRequest request;
         private final StorageServiceMBean storageServiceMBean;
 
-        TakeSnapshotOperation(final StorageServiceMBean storageServiceMBean,
-                              final TakeSnapshotOperationRequest request) {
+        TakeSnapshotOperation(
+                final StorageServiceMBean storageServiceMBean,
+                final TakeSnapshotOperationRequest request) {
             super(request);
             this.request = request;
             this.storageServiceMBean = storageServiceMBean;
@@ -251,13 +259,13 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
 
         @Override
         protected void run0() throws Exception {
-            if (request.columnFamily != null) {
+            if (request.table != null) {
                 final String keyspace = Iterables.getOnlyElement(request.keyspaces);
 
-                logger.info("Taking snapshot {} on {}.{}.", request.tag, keyspace, request.columnFamily);
+                logger.info("Taking snapshot {} on {}.{}.", request.tag, keyspace, request.table);
                 // Currently only supported option by Cassandra during snapshot is to skipFlush
                 // An empty map is used as skipping flush is currently not implemented.
-                storageServiceMBean.takeTableSnapshot(keyspace, request.columnFamily, request.tag);
+                storageServiceMBean.takeTableSnapshot(keyspace, request.table, request.tag);
 
             } else {
                 logger.info("Taking snapshot \"{}\" on {}.", request.tag, (request.keyspaces.isEmpty() ? "\"all\"" : request.keyspaces));
@@ -268,14 +276,15 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
         static class TakeSnapshotOperationRequest extends OperationRequest {
             final List<String> keyspaces;
             final String tag;
-            final String columnFamily;
+            final String table;
 
-            TakeSnapshotOperationRequest(final List<String> keyspaces,
-                                         final String tag,
-                                         final String columnFamily) {
+            TakeSnapshotOperationRequest(
+                    final List<String> keyspaces,
+                    final String tag,
+                    final String table) {
                 this.keyspaces = keyspaces == null ? ImmutableList.of() : keyspaces;
                 this.tag = tag;
-                this.columnFamily = columnFamily;
+                this.table = table;
             }
         }
     }

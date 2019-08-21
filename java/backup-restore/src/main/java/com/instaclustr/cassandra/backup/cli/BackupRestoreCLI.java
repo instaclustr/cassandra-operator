@@ -39,8 +39,7 @@ public class BackupRestoreCLI extends CLIApplication implements Runnable {
 
     @Option(names = {"-V", "--version"},
             versionHelp = true,
-            description = "print version information and exit"
-    )
+            description = "print version information and exit")
     private boolean version;
 
     @Spec

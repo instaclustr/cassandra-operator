@@ -19,3 +19,4 @@ vendor/
 /cmd/manager/manager
 /**/classes
 /**/.attach*
+/examples/go/backup-secrets.yaml

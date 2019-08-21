@@ -14,67 +14,53 @@ import com.instaclustr.jackson.PathDeserializer;
 import com.instaclustr.jackson.PathSerializer;
 import com.instaclustr.picocli.typeconverter.KeyspaceTablePairsConverter;
 import com.instaclustr.picocli.typeconverter.PathTypeConverter;
-import picocli.CommandLine;
+import picocli.CommandLine.Option;
 
 public class RestoreCommitLogsOperationRequest extends BaseRestoreOperationRequest {
 
-    @CommandLine.Option(
-            names = {"--dd", "--data-directory"},
+    @Option(names = {"--dd", "--data-directory"},
             description = "Base directory that contains the Cassandra data, cache and commitlog directories",
             converter = PathTypeConverter.class,
-            defaultValue = "/var/lib/cassandra/"
-    )
+            defaultValue = "/var/lib/cassandra/")
     @JsonDeserialize(using = PathDeserializer.class)
     @JsonSerialize(using = PathSerializer.class)
     public Path cassandraDirectory;
 
-    @CommandLine.Option(
-            names = {"-p", "--shared-path"},
+    @Option(names = {"-p", "--shared-path"},
             description = "Shared Container path for pod",
             converter = PathTypeConverter.class,
-            defaultValue = "/"
-    )
+            defaultValue = "/")
     @JsonDeserialize(using = PathDeserializer.class)
     @JsonSerialize(using = PathSerializer.class)
     public Path sharedContainerPath;
 
-    @CommandLine.Option(
-            names = {"--cd", "--config-directory"},
+    @Option(names = {"--cd", "--config-directory"},
             description = "Directory where configuration of Cassandra is stored.",
             converter = PathTypeConverter.class,
-            defaultValue = "/etc/cassandra/"
-    )
+            defaultValue = "/etc/cassandra/")
     @JsonDeserialize(using = PathDeserializer.class)
     @JsonSerialize(using = PathSerializer.class)
     public Path cassandraConfigDirectory;
 
-    @CommandLine.Option(
-            names = {"--cl-archive"},
-            description = "Override path to the commit log archive directory, relative to the container root."
-    )
+    @Option(names = {"--cl-archive"},
+            description = "Override path to the commit log archive directory, relative to the container root.")
     public Path commitLogArchiveOverride;
 
-    @CommandLine.Option(
-            names = {"--ts", "--timestamp-start"},
+    @Option(names = {"--ts", "--timestamp-start"},
             description = "When the base snapshot was taken. Only relevant if archived commitlogs are available.",
-            required = true
-    )
+            required = true)
     @NotNull
     public long timestampStart;
 
-    @CommandLine.Option(
-            names = {"--te", "--timestamp-end"},
+    @Option(names = {"--te", "--timestamp-end"},
             description = "Point-in-time to restore up to. Only relevant if archived commitlogs are available.",
-            required = true
-    )
+            required = true)
     @NotNull
     public long timestampEnd;
 
-    @CommandLine.Option(
-            names = {"--kt", "--keyspace-tables"},
+    @Option(names = {"--kt", "--keyspace-tables"},
             description = "Comma separated list of tables to restore. Must include keyspace name in the format <keyspace.table>",
-            converter = KeyspaceTablePairsConverter.class
-    )
+            converter = KeyspaceTablePairsConverter.class)
     public Multimap<String, String> keyspaceTables = ImmutableMultimap.of();
 
     public RestoreCommitLogsOperationRequest() {

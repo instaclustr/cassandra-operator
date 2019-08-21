@@ -3,36 +3,33 @@ package cassandrabackup
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
-	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	"github.com/instaclustr/cassandra-operator/pkg/controller/cassandradatacenter"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 var log = logf.Log.WithName("controller_cassandrabackup")
-
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
 
 // Add creates a new CassandraBackup Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -53,7 +50,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO: do we want this
 	// Filter event types for BackupCRD
 	pred := predicate.Funcs{
 		// Always handle create events
@@ -72,7 +68,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner CassandraBackup
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
@@ -99,11 +94,6 @@ type ReconcileCassandraBackup struct {
 
 // Reconcile reads that state of the cluster for a CassandraBackup object and makes changes based on the state read
 // and what is in the CassandraBackup.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
-// Note:
-// The Controller will requeue the Request to be processed again if the returned error is non-nil or
-// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling CassandraBackup")
@@ -122,9 +112,13 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	// instance.Status is special because it's a map of host statuses, so if not yet initialised, do it here.
-	if instance.Status == nil {
-		instance.Status = make(map[string]*cassandraoperatorv1alpha1.CassandraBackupStatus)
+	if instance.Status != nil && len(instance.Status) != 0 {
+		// when operator is restarted, nothing stops it to react on that CRD and it starts to backup again
+		reqLogger.Info("Reconcilliation stopped as backup was already run")
+		return reconcile.Result{}, nil
+	} else {
+		// instance.Status is special because it's a map of host statuses, so if not yet initialised, do it here.
+		instance.Status = []*cassandraoperatorv1alpha1.CassandraBackupStatus{}
 	}
 
 	// Get Pod Clients.
@@ -144,61 +138,155 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	// Use the following for testing:
 	sidecarClients := sidecar.SidecarClients(pods, &sidecar.DefaultSidecarClientOptions)
 
-	// Run backups
-	for _, sidecarClient := range sidecarClients {
+	wg := &sync.WaitGroup{}
+	wg.Add(len(sidecarClients))
 
-		// TODO: run this on goroutine so that all 3 are handled in parallel
-		backupRequest := &sidecar.BackupRequest{
-			DestinationUri: instance.Spec.DestinationUri,
-			SnapshotName:   instance.Spec.SnapshotName,
-			Keyspaces:      instance.Spec.Keyspaces,
-		}
+	podIpHostnameMap := podIpHostnameMap(pods)
 
-		// TODO - maybe log that backup request itself?
-		r.recorder.Event(instance, v1.EventTypeNormal, "Received Backup Request", "Starting backup")
+	syncedInstance := &syncedInstance{instance: instance, client: r.client}
 
-		operationID, err := sidecarClient.StartOperation(backupRequest)
-		if err != nil {
-			reqLogger.Error(err, "Could not submit backup request")
-			continue
-		} else {
-			go func() {
-				opState := operations.RUNNING
-				// TODO - what if getBackup will return FAILED for ever? This loop would never end ...
-				// TODO - maybe extract this to separate method so we can eventualy log error from this loop too?
-				for opState != operations.COMPLETED && opState != operations.FAILED {
-					backup, err := sidecarClient.FindBackup(operationID)
-					if err != nil {
-						reqLogger.Error(err, fmt.Sprintf("couldn't find backup operation %v on node %v", operationID, sidecarClient.Host))
-						return
-					}
-					instance.Status[sidecarClient.Host] = &cassandraoperatorv1alpha1.CassandraBackupStatus{
-						Progress: fmt.Sprintf("%v%%", strconv.Itoa(int(backup.Progress*100))),
-						State:    string(backup.State),
-					}
-					err = r.client.Update(context.TODO(), instance)
-					if err != nil {
-						reqLogger.Error(err, "could not update backup crd")
-					}
-					opState = backup.State
-					<-time.After(time.Second)
-				}
-
-				if opState == operations.FAILED {
-					log.Info(fmt.Sprintf("backup operation %v on node %v has failed", operationID, sidecarClient.Host))
-					r.recorder.Event(instance, v1.EventTypeWarning, "Operation Failed", fmt.Sprintf("Backup on node %v has failed", sidecarClient.Host))
-				} else if opState == operations.COMPLETED {
-					log.Info(fmt.Sprintf("backup operation %v on node %v has finished successfully", operationID, sidecarClient.Host))
-					r.recorder.Event(instance, v1.EventTypeNormal, "Operation Finished", fmt.Sprintf("Backup completed on node %v has finished successfully", sidecarClient.Host))
-				}
-
-			}()
-		}
-
+	for _, sc := range sidecarClients {
+		go backup(wg, sc, syncedInstance, podIpHostnameMap[sc.Host], reqLogger)
 	}
 
-	// TODO - logging is maybe better?
-	reqLogger.Info(fmt.Sprintf("Spec: %v\n", instance.Spec))
+	wg.Wait()
 
 	return reconcile.Result{}, nil
+}
+
+type syncedInstance struct {
+	sync.RWMutex
+	instance *cassandraoperatorv1alpha1.CassandraBackup
+	client   client.Client
+}
+
+func backup(
+	wg *sync.WaitGroup,
+	sidecarClient *sidecar.Client,
+	instance *syncedInstance,
+	podHostname string,
+	logging logr.Logger,
+) {
+
+	defer wg.Done()
+
+	backupRequest := &sidecar.BackupRequest{
+		StorageLocation:       fmt.Sprintf("%s/%s/%s", instance.instance.Spec.StorageLocation, instance.instance.Spec.CDC, podHostname),
+		SnapshotTag:           instance.instance.Spec.SnapshotTag,
+		Duration:              instance.instance.Spec.Duration,
+		Bandwidth:             instance.instance.Spec.Bandwidth,
+		ConcurrentConnections: instance.instance.Spec.ConcurrentConnections,
+		Table:                 instance.instance.Spec.Table,
+		Keyspaces:             instance.instance.Spec.Keyspaces,
+	}
+
+	if operationID, err := sidecarClient.StartOperation(backupRequest); err != nil {
+		logging.Error(err, fmt.Sprintf("Error while starting backup operation %v", backupRequest))
+	} else {
+		for _ = range time.NewTicker(2 * time.Second).C {
+			if r, err := sidecarClient.FindBackup(operationID); err != nil {
+				logging.Error(err, fmt.Sprintf("Error while finding submitted backup operation %v", operationID))
+				break
+			} else {
+				instance.updateStatus(podHostname, r)
+
+				if r.State == operations.FAILED {
+					logging.Info(fmt.Sprintf("Backup operation %v on node %s has failed", operationID, podHostname))
+					break
+				}
+
+				if r.State == operations.COMPLETED {
+					logging.Info(fmt.Sprintf("Backup operation %v on node %s was completed successfully", operationID, podHostname))
+					break
+				}
+			}
+		}
+	}
+}
+
+func podIpHostnameMap(pods []corev1.Pod) map[string]string {
+
+	var podIpHostnameMap = make(map[string]string)
+
+	// make map of pod ips and their hostnames for construction of backup requests
+	for _, pod := range pods {
+		podIpHostnameMap[pod.Status.PodIP] = pod.Spec.Hostname
+	}
+
+	return podIpHostnameMap
+}
+
+func (si *syncedInstance) updateStatus(podHostname string, r *sidecar.BackupResponse) {
+	defer si.Unlock()
+	si.Lock()
+
+	status := &cassandraoperatorv1alpha1.CassandraBackupStatus{Node: podHostname}
+
+	var existingStatus = false
+
+	for _, v := range si.instance.Status {
+		if v.Node == podHostname {
+			status = v
+			existingStatus = true
+			break
+		}
+	}
+
+	status.Progress = fmt.Sprintf("%v%%", strconv.Itoa(int(r.Progress*100)))
+	status.State = string(r.State)
+
+	if !existingStatus {
+		si.instance.Status = append(si.instance.Status, status)
+	}
+
+	si.instance.GlobalProgress = func() string {
+		var progresses = 0
+
+		for _, s := range si.instance.Status {
+			var i, _ = strconv.Atoi(strings.TrimSuffix(s.Progress, "%"))
+			progresses = progresses + i
+		}
+
+		return strconv.FormatInt(int64(progresses/len(si.instance.Status)), 10) + "%"
+	}()
+
+	si.instance.GlobalStatus = func() string {
+		var statuses Statuses = si.instance.Status
+
+		if statuses.contains("FAILED") {
+			return "FAILED"
+		} else if statuses.contains("PENDING") {
+			return "PENDING"
+		} else if statuses.contains("RUNNING") {
+			return "RUNNING"
+		} else if statuses.allMatch("COMPLETED") {
+			return "COMPLETED"
+		}
+
+		return "UNKNOWN"
+	}()
+
+	if err := si.client.Update(context.TODO(), si.instance); err != nil {
+		println("error updating CassandraBackup instance")
+	}
+}
+
+type Statuses []*cassandraoperatorv1alpha1.CassandraBackupStatus
+
+func (statuses Statuses) contains(state string) bool {
+	for _, s := range statuses {
+		if s.State == state {
+			return true
+		}
+	}
+	return false
+}
+
+func (statuses Statuses) allMatch(state string) bool {
+	for _, s := range statuses {
+		if s.State != state {
+			return false
+		}
+	}
+	return true
 }
