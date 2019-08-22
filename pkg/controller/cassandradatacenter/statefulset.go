@@ -26,6 +26,7 @@ import (
 const (
 	DataVolumeMountPath           = "/var/lib/cassandra"
 	OperatorConfigVolumeMountPath = "/tmp/operator-config"
+	RackConfigVolumeMountPath     = "/tmp/cassandra-rack-config"
 	UserConfigVolumeMountPath     = "/tmp/user-config"
 	UserSecretVolumeMountPath     = "/tmp/user-secret"
 	BackupSecretVolumeMountPath   = "/tmp/backup-secret"
@@ -40,7 +41,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 	}
 
 	// Init rack-relevant info
-	statefulSet := &v1beta2.StatefulSet{ObjectMeta: StatefulSetMetadata(rctx, rack.Name)}
+	statefulSet := &v1beta2.StatefulSet{ObjectMeta: RackMetadata(rctx, rack)}
 	logger := rctx.logger.WithValues("StatefulSet.Name", statefulSet.Name)
 
 	result, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, statefulSet, func(obj runtime.Object) error {
@@ -54,14 +55,18 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		backupSecretVolume := newBackupSecretVolume(rctx)
 		userSecretVolume := newUserSecretVolume(rctx)
 		userConfigVolume := newUserConfigVolume(rctx)
+		rackConfigVolume, err := createOrUpdateCassandraRackConfig(rctx, rack)
+		if err != nil {
+			return err
+		}
 
-		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, userSecretVolume, userConfigVolume, rack.Name)
+		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, rackConfigVolume, userSecretVolume, userConfigVolume)
 		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, podInfoVolume, backupSecretVolume)
 
 		sysctlLimitsContainer := newSysctlLimitsContainer(rctx.cdc)
 
 		podSpec := newPodSpec(rctx.cdc, rack,
-			[]corev1.Volume{*podInfoVolume, *configVolume},
+			[]corev1.Volume{*podInfoVolume, *configVolume, *rackConfigVolume},
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
 			[]corev1.Container{*sysctlLimitsContainer})
 
@@ -92,7 +97,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 }
 
 func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podSpec *corev1.PodSpec, dataVolumeClaim *corev1.PersistentVolumeClaim, rack *cluster.Rack) *v1beta2.StatefulSetSpec {
-	podLabels := StatefulSetLabels(cdc, rack.Name)
+	podLabels := RackLabels(cdc, rack)
 	return &v1beta2.StatefulSetSpec{
 		ServiceName: "cassandra", // TODO: correct service name? this service should already exist (apparently)
 		Replicas:    &rack.Replicas,
@@ -120,15 +125,14 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluste
 	return podSpec
 }
 
-func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume *corev1.Volume, userSecretVolume, userConfigVolume *corev1.Volume, rack string) *corev1.Container {
-	cdc.Spec.CassandraEnv = append(cdc.Spec.CassandraEnv, corev1.EnvVar{Name: "CASSANDRA_RACK", Value: rack})
+func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume, rackConfigVolume *corev1.Volume, userSecretVolume, userConfigVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
-		Args:            []string{OperatorConfigVolumeMountPath},
 		Ports:           ports{internodePort, internodeTlsPort, cqlPort, jmxPort}.asContainerPorts(),
 		Resources:       cdc.Spec.Resources,
+		Args:            []string{OperatorConfigVolumeMountPath, RackConfigVolumeMountPath},
 		SecurityContext: &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{
@@ -150,6 +154,7 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath},
 			{Name: configVolume.Name, MountPath: OperatorConfigVolumeMountPath},
+			{Name: rackConfigVolume.Name, MountPath: RackConfigVolumeMountPath},
 		},
 	}
 
@@ -279,7 +284,7 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 		log.Info("unable to list pods in the cdc")
 		return err
 	}
-	podsInRack, err := AllPodsInRack(rctx.client, rctx.cdc.Namespace, StatefulSetLabels(rctx.cdc, rack.Name))
+	podsInRack, err := AllPodsInRack(rctx.client, rctx.cdc.Namespace, RackLabels(rctx.cdc, rack))
 	if err != nil {
 		log.Info(fmt.Sprintf("unable to list pods in rack %v", rack.Name))
 		return err
@@ -376,17 +381,19 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 	podByOperationMode := make(map[*corev1.Pod]nodestate.NodeState)
 
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 
 	wg.Add(len(podClients))
 
 	for pod, c := range podClients {
 		go func(pod *corev1.Pod, client *sidecar.Client) {
+			mu.Lock()
 			if response, err := client.Status(); err != nil {
 				podByOperationMode[pod] = nodestate.ERROR
 			} else {
 				podByOperationMode[pod] = response.NodeState
 			}
-
+			mu.Unlock()
 			wg.Done()
 		}(pod, c)
 	}
