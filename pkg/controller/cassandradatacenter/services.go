@@ -17,15 +17,12 @@ func createOrUpdateNodesService(rctx *reconciliationRequestContext) (*corev1.Ser
 	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, nodesService, func(_ runtime.Object) error {
 		nodesService.Spec = corev1.ServiceSpec{
 			ClusterIP: "None",
-			Ports: []corev1.ServicePort{
-				{Name: "cql", Port: 9042},
-				{Name: "jmx", Port: 7199},
-			},
-			Selector: DataCenterLabels(rctx.cdc),
+			Ports:     ports{cqlPort, jmxPort}.asServicePorts(),
+			Selector:  DataCenterLabels(rctx.cdc),
 		}
 
 		if rctx.cdc.Spec.PrometheusSupport {
-			nodesService.Spec.Ports = append(nodesService.Spec.Ports, corev1.ServicePort{Name: "prometheus", Port: 9500})
+			nodesService.Spec.Ports = append(nodesService.Spec.Ports, prometheusPort.asServicePort())
 		}
 
 		if err := controllerutil.SetControllerReference(rctx.cdc, nodesService, rctx.scheme); err != nil {
@@ -51,10 +48,8 @@ func createOrUpdateSeedNodesService(rctx *reconciliationRequestContext) (*corev1
 
 	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, seedNodesService, func(_ runtime.Object) error {
 		seedNodesService.Spec = corev1.ServiceSpec{
-			ClusterIP: "None",
-			Ports: []corev1.ServicePort{
-				{Name: "internode", Port: 7000, Protocol: corev1.ProtocolTCP},
-			},
+			ClusterIP:                "None",
+			Ports:                    internodePort.asServicePorts(),
 			Selector:                 DataCenterLabels(rctx.cdc),
 			PublishNotReadyAddresses: true,
 		}

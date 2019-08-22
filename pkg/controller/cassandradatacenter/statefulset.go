@@ -127,13 +127,8 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Args:            []string{OperatorConfigVolumeMountPath},
-		Ports: []corev1.ContainerPort{
-			{Name: "internode", ContainerPort: 7000},
-			{Name: "internode-tls", ContainerPort: 7001},
-			{Name: "cql", ContainerPort: 9042},
-			{Name: "jmx", ContainerPort: 7199},
-		},
-		Resources: cdc.Spec.Resources,
+		Ports:           ports{internodePort, internodeTlsPort, cqlPort, jmxPort}.asContainerPorts(),
+		Resources:       cdc.Spec.Resources,
 		SecurityContext: &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{
@@ -168,7 +163,7 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 	}
 
 	if cdc.Spec.PrometheusSupport == true {
-		container.Ports = append(container.Ports, corev1.ContainerPort{Name: "promql", ContainerPort: 9500})
+		container.Ports = append(container.Ports, promqlPort.asContainerPort())
 	}
 
 	return container
@@ -179,10 +174,8 @@ func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dat
 		Name:            "sidecar",
 		Image:           cdc.Spec.SidecarImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
-		Ports: []corev1.ContainerPort{
-			{Name: "http", ContainerPort: sidecar.DefaultSidecarClientOptions.Port},
-		},
-		Env: cdc.Spec.SidecarEnv,
+		Ports:           sidecarPort.asContainerPorts(),
+		Env:             cdc.Spec.SidecarEnv,
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath},
 			{Name: podInfoVolume.Name, MountPath: "/etc/pod-info"},
@@ -268,7 +261,7 @@ func newDataVolumeClaim(dataVolumeClaimSpec *corev1.PersistentVolumeClaimSpec) *
 func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v1beta2.StatefulSet, newStatefulSetSpec *v1beta2.StatefulSetSpec, rack *cluster.Rack) error {
 
 	var (
-		currentSpecReplicas, // number of replicas set in the current spec
+		currentSpecReplicas,   // number of replicas set in the current spec
 		currentStatusReplicas, // currently running replicas
 		desiredSpecReplicas int32 // the new requested spec replicas
 	)
@@ -608,4 +601,3 @@ func sortDescending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
 
 	return sets
 }
-
