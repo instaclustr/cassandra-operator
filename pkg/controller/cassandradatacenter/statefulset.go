@@ -26,6 +26,7 @@ import (
 const (
 	DataVolumeMountPath           = "/var/lib/cassandra"
 	OperatorConfigVolumeMountPath = "/tmp/operator-config"
+	RackConfigVolumeMountPath     = "/tmp/cassandra-rack-config"
 	UserConfigVolumeMountPath     = "/tmp/user-config"
 	UserSecretVolumeMountPath     = "/tmp/user-secret"
 	BackupSecretVolumeMountPath   = "/tmp/backup-secret"
@@ -54,8 +55,12 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		backupSecretVolume := newBackupSecretVolume(rctx)
 		userSecretVolume := newUserSecretVolume(rctx)
 		userConfigVolume := newUserConfigVolume(rctx)
+		rackConfigVolume, err := createOrUpdateCassandraRackConfig(rctx, rack.Name)
+		if err != nil {
+			return err
+		}
 
-		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, userSecretVolume, userConfigVolume, rack.Name)
+		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, rackConfigVolume, userSecretVolume, userConfigVolume, rack.Name)
 		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, podInfoVolume, backupSecretVolume)
 
 		sysctlLimitsContainer := newSysctlLimitsContainer(rctx.cdc)
@@ -120,13 +125,12 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluste
 	return podSpec
 }
 
-func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume *corev1.Volume, userSecretVolume, userConfigVolume *corev1.Volume, rack string) *corev1.Container {
-	cdc.Spec.CassandraEnv = append(cdc.Spec.CassandraEnv, corev1.EnvVar{Name: "CASSANDRA_RACK", Value: rack})
+func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume, rackConfigVolume *corev1.Volume, userSecretVolume, userConfigVolume *corev1.Volume, rack string) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
-		Args:            []string{OperatorConfigVolumeMountPath},
+		Args:            []string{OperatorConfigVolumeMountPath, RackConfigVolumeMountPath},
 		Ports: []corev1.ContainerPort{
 			{Name: "internode", ContainerPort: 7000},
 			{Name: "internode-tls", ContainerPort: 7001},
@@ -155,6 +159,7 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath},
 			{Name: configVolume.Name, MountPath: OperatorConfigVolumeMountPath},
+			{Name: rackConfigVolume.Name, MountPath: RackConfigVolumeMountPath},
 		},
 	}
 
