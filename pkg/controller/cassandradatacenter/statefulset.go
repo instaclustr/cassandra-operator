@@ -66,7 +66,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		sysctlLimitsContainer := newSysctlLimitsContainer(rctx.cdc)
 
 		podSpec := newPodSpec(rctx.cdc, rack,
-			[]corev1.Volume{*podInfoVolume, *configVolume},
+			[]corev1.Volume{*podInfoVolume, *configVolume, *rackConfigVolume},
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
 			[]corev1.Container{*sysctlLimitsContainer})
 
