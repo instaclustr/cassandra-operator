@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,7 +28,7 @@ type CassandraBackupStatus struct {
 	// name of pod / node
 	Node string `json:"node"`
 	// State shows the status of the operation
-	State string `json:"state"`
+	State operations.OperationState `json:"state"`
 	// Progress shows the percentage of the operation done
 	Progress string `json:"progress"`
 }
@@ -42,10 +43,10 @@ type CassandraBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec           CassandraBackupSpec      `json:"spec,omitempty"`
-	Status         []*CassandraBackupStatus `json:"status,omitempty"`
-	GlobalStatus   string                   `json:"globalStatus,omitempty"`
-	GlobalProgress string                   `json:"globalProgress,omitempty"`
+	Spec           CassandraBackupSpec       `json:"spec,omitempty"`
+	Status         []*CassandraBackupStatus  `json:"status,omitempty"`
+	GlobalStatus   operations.OperationState `json:"globalStatus,omitempty"`
+	GlobalProgress string                    `json:"globalProgress,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

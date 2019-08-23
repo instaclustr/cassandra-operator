@@ -7,4 +7,5 @@ const (
 	PENDING   = OperationState("PENDING")
 	COMPLETED = OperationState("COMPLETED")
 	FAILED    = OperationState("FAILED")
+	UNKNOWN   = OperationState("UNKNOWN")
 )

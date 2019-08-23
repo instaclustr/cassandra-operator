@@ -98,7 +98,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling CassandraBackup")
 
-	// Fetch the CassandraBackup instance
+	// Fetch the CassandraBackup backup
 	instance := &cassandraoperatorv1alpha1.CassandraBackup{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
@@ -117,11 +117,10 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		reqLogger.Info("Reconcilliation stopped as backup was already run")
 		return reconcile.Result{}, nil
 	} else {
-		// instance.Status is special because it's a map of host statuses, so if not yet initialised, do it here.
 		instance.Status = []*cassandraoperatorv1alpha1.CassandraBackupStatus{}
 	}
 
-	// Get Pod Clients.
+	// Get CDC.
 	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
 	if err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CDC, Namespace: instance.Namespace}, cdc); err != nil {
 		if errors.IsNotFound(err) {
@@ -130,12 +129,12 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
+	// Get Pod clients
 	pods, err := cassandradatacenter.AllPodsInCDC(r.client, cdc)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to list pods")
 	}
 
-	// Use the following for testing:
 	sidecarClients := sidecar.SidecarClients(pods, &sidecar.DefaultSidecarClientOptions)
 
 	wg := &sync.WaitGroup{}
@@ -143,7 +142,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 
 	podIpHostnameMap := podIpHostnameMap(pods)
 
-	syncedInstance := &syncedInstance{instance: instance, client: r.client}
+	syncedInstance := &syncedInstance{backup: instance, client: r.client}
 
 	for _, sc := range sidecarClients {
 		go backup(wg, sc, syncedInstance, podIpHostnameMap[sc.Host], reqLogger)
@@ -156,8 +155,8 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 
 type syncedInstance struct {
 	sync.RWMutex
-	instance *cassandraoperatorv1alpha1.CassandraBackup
-	client   client.Client
+	backup *cassandraoperatorv1alpha1.CassandraBackup
+	client client.Client
 }
 
 func backup(
@@ -171,13 +170,13 @@ func backup(
 	defer wg.Done()
 
 	backupRequest := &sidecar.BackupRequest{
-		StorageLocation:       fmt.Sprintf("%s/%s/%s", instance.instance.Spec.StorageLocation, instance.instance.Spec.CDC, podHostname),
-		SnapshotTag:           instance.instance.Spec.SnapshotTag,
-		Duration:              instance.instance.Spec.Duration,
-		Bandwidth:             instance.instance.Spec.Bandwidth,
-		ConcurrentConnections: instance.instance.Spec.ConcurrentConnections,
-		Table:                 instance.instance.Spec.Table,
-		Keyspaces:             instance.instance.Spec.Keyspaces,
+		StorageLocation:       fmt.Sprintf("%s/%s/%s", instance.backup.Spec.StorageLocation, instance.backup.Spec.CDC, podHostname),
+		SnapshotTag:           instance.backup.Spec.SnapshotTag,
+		Duration:              instance.backup.Spec.Duration,
+		Bandwidth:             instance.backup.Spec.Bandwidth,
+		ConcurrentConnections: instance.backup.Spec.ConcurrentConnections,
+		Table:                 instance.backup.Spec.Table,
+		Keyspaces:             instance.backup.Spec.Keyspaces,
 	}
 
 	if operationID, err := sidecarClient.StartOperation(backupRequest); err != nil {
@@ -217,14 +216,14 @@ func podIpHostnameMap(pods []corev1.Pod) map[string]string {
 }
 
 func (si *syncedInstance) updateStatus(podHostname string, r *sidecar.BackupResponse) {
-	defer si.Unlock()
 	si.Lock()
+	defer si.Unlock()
 
 	status := &cassandraoperatorv1alpha1.CassandraBackupStatus{Node: podHostname}
 
 	var existingStatus = false
 
-	for _, v := range si.instance.Status {
+	for _, v := range si.backup.Status {
 		if v.Node == podHostname {
 			status = v
 			existingStatus = true
@@ -233,47 +232,47 @@ func (si *syncedInstance) updateStatus(podHostname string, r *sidecar.BackupResp
 	}
 
 	status.Progress = fmt.Sprintf("%v%%", strconv.Itoa(int(r.Progress*100)))
-	status.State = string(r.State)
+	status.State = r.State
 
 	if !existingStatus {
-		si.instance.Status = append(si.instance.Status, status)
+		si.backup.Status = append(si.backup.Status, status)
 	}
 
-	si.instance.GlobalProgress = func() string {
+	si.backup.GlobalProgress = func() string {
 		var progresses = 0
 
-		for _, s := range si.instance.Status {
+		for _, s := range si.backup.Status {
 			var i, _ = strconv.Atoi(strings.TrimSuffix(s.Progress, "%"))
 			progresses = progresses + i
 		}
 
-		return strconv.FormatInt(int64(progresses/len(si.instance.Status)), 10) + "%"
+		return strconv.FormatInt(int64(progresses/len(si.backup.Status)), 10) + "%"
 	}()
 
-	si.instance.GlobalStatus = func() string {
-		var statuses Statuses = si.instance.Status
+	si.backup.GlobalStatus = func() operations.OperationState {
+		var statuses Statuses = si.backup.Status
 
-		if statuses.contains("FAILED") {
-			return "FAILED"
-		} else if statuses.contains("PENDING") {
-			return "PENDING"
-		} else if statuses.contains("RUNNING") {
-			return "RUNNING"
-		} else if statuses.allMatch("COMPLETED") {
-			return "COMPLETED"
+		if statuses.contains(operations.FAILED) {
+			return operations.FAILED
+		} else if statuses.contains(operations.PENDING) {
+			return operations.PENDING
+		} else if statuses.contains(operations.RUNNING) {
+			return operations.RUNNING
+		} else if statuses.allMatch(operations.COMPLETED) {
+			return operations.COMPLETED
 		}
 
-		return "UNKNOWN"
+		return operations.UNKNOWN
 	}()
 
-	if err := si.client.Update(context.TODO(), si.instance); err != nil {
-		println("error updating CassandraBackup instance")
+	if err := si.client.Update(context.TODO(), si.backup); err != nil {
+		println("error updating CassandraBackup backup")
 	}
 }
 
 type Statuses []*cassandraoperatorv1alpha1.CassandraBackupStatus
 
-func (statuses Statuses) contains(state string) bool {
+func (statuses Statuses) contains(state operations.OperationState) bool {
 	for _, s := range statuses {
 		if s.State == state {
 			return true
@@ -282,7 +281,7 @@ func (statuses Statuses) contains(state string) bool {
 	return false
 }
 
-func (statuses Statuses) allMatch(state string) bool {
+func (statuses Statuses) allMatch(state operations.OperationState) bool {
 	for _, s := range statuses {
 		if s.State != state {
 			return false
