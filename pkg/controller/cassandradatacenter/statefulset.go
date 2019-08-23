@@ -55,12 +55,12 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		backupSecretVolume := newBackupSecretVolume(rctx)
 		userSecretVolume := newUserSecretVolume(rctx)
 		userConfigVolume := newUserConfigVolume(rctx)
-		rackConfigVolume, err := createOrUpdateCassandraRackConfig(rctx, rack.Name)
+		rackConfigVolume, err := createOrUpdateCassandraRackConfig(rctx, rack)
 		if err != nil {
 			return err
 		}
 
-		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, rackConfigVolume, userSecretVolume, userConfigVolume, rack.Name)
+		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, rackConfigVolume, userSecretVolume, userConfigVolume)
 		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, podInfoVolume, backupSecretVolume)
 
 		sysctlLimitsContainer := newSysctlLimitsContainer(rctx.cdc)
@@ -125,7 +125,7 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluste
 	return podSpec
 }
 
-func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume, rackConfigVolume *corev1.Volume, userSecretVolume, userConfigVolume *corev1.Volume, rack string) *corev1.Container {
+func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume, rackConfigVolume *corev1.Volume, userSecretVolume, userConfigVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
