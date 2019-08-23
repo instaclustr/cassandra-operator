@@ -41,7 +41,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 	}
 
 	// Init rack-relevant info
-	statefulSet := &v1beta2.StatefulSet{ObjectMeta: StatefulSetMetadata(rctx, rack.Name)}
+	statefulSet := &v1beta2.StatefulSet{ObjectMeta: RackMetadata(rctx, rack)}
 	logger := rctx.logger.WithValues("StatefulSet.Name", statefulSet.Name)
 
 	result, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, statefulSet, func(obj runtime.Object) error {
@@ -97,7 +97,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 }
 
 func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podSpec *corev1.PodSpec, dataVolumeClaim *corev1.PersistentVolumeClaim, rack *cluster.Rack) *v1beta2.StatefulSetSpec {
-	podLabels := StatefulSetLabels(cdc, rack.Name)
+	podLabels := RackLabels(cdc, rack)
 	return &v1beta2.StatefulSetSpec{
 		ServiceName: "cassandra", // TODO: correct service name? this service should already exist (apparently)
 		Replicas:    &rack.Replicas,
@@ -291,7 +291,7 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 		log.Info("unable to list pods in the cdc")
 		return err
 	}
-	podsInRack, err := AllPodsInRack(rctx.client, rctx.cdc.Namespace, StatefulSetLabels(rctx.cdc, rack.Name))
+	podsInRack, err := AllPodsInRack(rctx.client, rctx.cdc.Namespace, RackLabels(rctx.cdc, rack))
 	if err != nil {
 		log.Info(fmt.Sprintf("unable to list pods in rack %v", rack.Name))
 		return err
@@ -388,17 +388,19 @@ func cassandraStatuses(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.P
 	podByOperationMode := make(map[*corev1.Pod]nodestate.NodeState)
 
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 
 	wg.Add(len(podClients))
 
 	for pod, c := range podClients {
 		go func(pod *corev1.Pod, client *sidecar.Client) {
+			mu.Lock()
 			if response, err := client.Status(); err != nil {
 				podByOperationMode[pod] = nodestate.ERROR
 			} else {
 				podByOperationMode[pod] = response.NodeState
 			}
-
+			mu.Unlock()
 			wg.Done()
 		}(pod, c)
 	}

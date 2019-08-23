@@ -2,6 +2,7 @@ package cassandradatacenter
 
 import (
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
+	"github.com/instaclustr/cassandra-operator/pkg/common/cluster"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 )
@@ -18,14 +19,12 @@ func DataCenterLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[st
 	}
 }
 
-func StatefulSetLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack string) map[string]string {
-	cdcLabels := DataCenterLabels(cdc)
-	addStatefulSetLabels(&cdcLabels, rack)
-	return cdcLabels
-}
-
-func addStatefulSetLabels(labels *map[string]string, rack string) {
-	(*labels)[rackKey] = rack
+func RackLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluster.Rack) map[string]string {
+	// Fetch cdc labels
+	rackLabels := DataCenterLabels(cdc)
+	// Add rack info
+	rackLabels[rackKey] = rack.Name
+	return rackLabels
 }
 
 func applyDataCenterLabels(labels *map[string]string, cdc *cassandraoperatorv1alpha1.CassandraDataCenter) {
@@ -34,12 +33,6 @@ func applyDataCenterLabels(labels *map[string]string, cdc *cassandraoperatorv1al
 		(*labels)[label] = val
 	}
 }
-
-//func applyDataCenterLabels(obj metav1.Object, cdc *cassandraoperatorv1alpha1.CassandraDataCenter) {
-//	labels := obj.GetLabels()
-//	applyDataCenterLabels(&labels, cdc)
-//	obj.SetLabels(labels)
-//}
 
 func DataCenterResourceMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, suffixes ...string) metav1.ObjectMeta {
 	suffix := strings.Join(append([]string{""}, suffixes...), "-")
@@ -51,13 +44,12 @@ func DataCenterResourceMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCent
 	}
 }
 
-func StatefulSetMetadata(rctx *reconciliationRequestContext, rack string, suffixes ...string) metav1.ObjectMeta {
+func RackMetadata(rctx *reconciliationRequestContext, rack *cluster.Rack, suffixes ...string) metav1.ObjectMeta {
 	suffix := strings.Join(append([]string{""}, suffixes...), "-")
-	labels := StatefulSetLabels(rctx.cdc, rack)
 	return metav1.ObjectMeta{
 		Namespace: rctx.cdc.Namespace,
-		Name:      "cassandra-" + rctx.cdc.Name + "-" + rack + suffix,
-		Labels:    labels,
+		Name:      "cassandra-" + rctx.cdc.Name + suffix + "-" + rack.Name,
+		Labels:    RackLabels(rctx.cdc, rack),
 	}
 }
 
