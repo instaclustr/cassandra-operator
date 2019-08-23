@@ -5,8 +5,16 @@ ARG version
 # Create a user so that operator can run as non-root
 RUN useradd -u 999 cassandra-operator
 
-COPY . /code
 WORKDIR /code
+
+# Copy go.mod and go.sum separately to ensure we re-download dependencies only
+# when these files change
+COPY go.mod go.sum ./
+
+# Fetch Go modules in a separate layer for better caching
+RUN go mod download
+
+COPY . ./
 
 # Build binary
 RUN cd cmd/manager \
