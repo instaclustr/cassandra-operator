@@ -24,14 +24,6 @@ const (
 	scrub
 )
 
-//func GetType(s string) Kind {
-//	kind, ok := _KindNameToValue[s]
-//	if !ok {
-//		return noop
-//	}
-//	return kind
-//}
-
 type OperationsFilter struct {
 	Types  []Kind
 	States []operations.OperationState
@@ -181,12 +173,12 @@ func (c *CleanupOperationResponse) String() string {
 
 func (client *Client) ListCleanups() ([]*CleanupOperationResponse, error) {
 	var cleanups []*CleanupOperationResponse
-	operations, err := client.GetFilteredOperations(&OperationsFilter{Types: []Kind{cleanup}})
-	if operations == nil || err != nil {
+	ops, err := client.GetFilteredOperations(&OperationsFilter{Types: []Kind{cleanup}})
+	if ops == nil || err != nil {
 		return cleanups, err
 	}
 
-	for _, op := range *operations {
+	for _, op := range *ops {
 		cleanOp, err := ParseOperation(op, cleanup)
 		if err != nil {
 			return []*CleanupOperationResponse{}, err
@@ -227,14 +219,14 @@ func (client *Client) ListBackups() ([]*BackupResponse, error) {
 		return []*BackupResponse{}, err
 	}
 
-	operations, err := FilterOperations(*ops, backup)
+	backupOps, err := FilterOperations(*ops, backup)
 	if err != nil {
 		return []*BackupResponse{}, err
 
 	}
 
 	var backups []*BackupResponse
-	for _, op := range operations {
+	for _, op := range backupOps {
 		backups = append(backups, op.(*BackupResponse))
 	}
 

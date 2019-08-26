@@ -3,6 +3,7 @@ package sidecar
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,11 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
 
-	// Workaround for https://github.com/go-resty/resty/issues/230.
-	// TODO: Check if we can change import path to `github.com/go-resty/resty`.
-	// See Resty v2.0.0 release notes for more info:
-	// https://github.com/go-resty/resty/releases/tag/v2.0.0
-	"gopkg.in/resty.v1"
 	corev1 "k8s.io/api/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -42,7 +38,6 @@ type Client struct {
 
 type ClientOptions struct {
 	Secure   bool
-	HttpMode bool
 	Port     int32
 	Timeout  time.Duration
 }
@@ -52,7 +47,6 @@ func NewSidecarClient(host string, options *ClientOptions) *Client {
 	if options == nil {
 		options = &ClientOptions{
 			Secure:   true,
-			HttpMode: false,
 		}
 	}
 
@@ -79,10 +73,6 @@ func NewSidecarClient(host string, options *ClientOptions) *Client {
 	}
 
 	restyClient.SetHostURL(fmt.Sprintf("%s://%s%s", protocol, client.Host, port))
-
-	if client.Options.HttpMode {
-		restyClient.SetHTTPMode()
-	}
 
 	restyClient.SetTimeout(client.Options.Timeout)
 

@@ -8,15 +8,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
 	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
 	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 
-	// Workaround for https://github.com/go-resty/resty/issues/230.
-	// TODO: Check if we can change import path to `github.com/go-resty/resty`.
-	// See Resty v2.0.0 release notes for more info:
-	// https://github.com/go-resty/resty/releases/tag/v2.0.0
-	"gopkg.in/resty.v1"
 	"gotest.tools/assert"
 )
 
@@ -173,9 +169,8 @@ func TestClient_BackupNode(t *testing.T) {
 	fmt.Println(backups[0])
 
 	request := &BackupRequest{
-		DestinationUri: "/tmp/backup_test",
-		Keyspaces:      []string{"test_keyspace"},
-		SnapshotName:   "testSnapshot",
+		StorageLocation: "s3://my-bucket/cassandra-dc/test-node-0",
+		SnapshotTag: "mySnapshot",
 	}
 
 	if operationID, err := client.StartOperation(request); err != nil {
