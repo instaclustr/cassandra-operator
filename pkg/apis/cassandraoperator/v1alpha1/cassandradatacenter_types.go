@@ -23,7 +23,7 @@ type CassandraDataCenterSpec struct {
 	UserConfigMapVolumeSource *v1.ConfigMapVolumeSource    `json:"userConfigMapVolumeSource,omitempty"`
 	Resources                 v1.ResourceRequirements      `json:"resources"`
 	DataVolumeClaimSpec       v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec"`
-	PrivilegedSupported       bool                         `json:"privilegedSupported,omitempty"`
+	OptimizeKernelParams      bool                         `json:"optimizeKernelParams,omitempty"`
 	PrometheusSupport         bool                         `json:"prometheusSupport"`
 	SidecarEnv                []v1.EnvVar                  `json:"sidecarEnv,omitempty"`
 	CassandraEnv              []v1.EnvVar                  `json:"cassandraEnv,omitempty"`

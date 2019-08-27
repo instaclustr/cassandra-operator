@@ -81,3 +81,8 @@ func rackExist(name string, sets []v1.StatefulSet) bool {
 	}
 	return false
 }
+
+// boolPointer returns a pointer to bool b.
+func boolPointer(b bool) *bool {
+	return &b
+}

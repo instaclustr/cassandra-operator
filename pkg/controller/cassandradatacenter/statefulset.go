@@ -7,8 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/common/cluster"
 	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
@@ -19,6 +17,7 @@ import (
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -63,23 +62,27 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, rackConfigVolume, userSecretVolume, userConfigVolume)
 		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, podInfoVolume, backupSecretVolume)
 
-		sysctlLimitsContainer := newSysctlLimitsContainer(rctx.cdc)
-
 		restoreContainer, err := newRestoreContainer(rctx.cdc, rctx.client, dataVolumeClaim, backupSecretVolume)
 		if err != nil {
 			return err
 		}
 
-		initContainers := []corev1.Container{*sysctlLimitsContainer}
+		initContainers := []corev1.Container{}
 
 		if restoreContainer != nil {
 			initContainers = append(initContainers, *restoreContainer)
 		}
 
+		// Create sysctl init container only when user specifies `optimizeKernelParams: true`.
+		if rctx.cdc.Spec.OptimizeKernelParams {
+			initContainers = append(initContainers, *newSysctlLimitsContainer(rctx.cdc))
+		}
+
 		podSpec := newPodSpec(rctx.cdc, rack,
 			[]corev1.Volume{*podInfoVolume, *configVolume, *rackConfigVolume},
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
-			initContainers)
+			initContainers,
+		)
 
 		if backupSecretVolume != nil {
 			podSpec.Volumes = append(podSpec.Volumes, *backupSecretVolume)
@@ -147,15 +150,7 @@ func newCassandraContainer(
 		Ports:           ports{internodePort, internodeTlsPort, cqlPort, jmxPort}.asContainerPorts(),
 		Resources:       cdc.Spec.Resources,
 		Args:            []string{OperatorConfigVolumeMountPath, RackConfigVolumeMountPath},
-		SecurityContext: &corev1.SecurityContext{
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{
-					"IPC_LOCK",     // C* wants to mlock/mlockall
-					"SYS_RESOURCE", // permit ulimit adjustments
-				},
-			},
-		},
-		Env: cdc.Spec.CassandraEnv,
+		Env:             cdc.Spec.CassandraEnv,
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				Exec: &corev1.ExecAction{
@@ -170,6 +165,19 @@ func newCassandraContainer(
 			{Name: configVolume.Name, MountPath: OperatorConfigVolumeMountPath},
 			{Name: rackConfigVolume.Name, MountPath: RackConfigVolumeMountPath},
 		},
+	}
+
+	// Create C* container with capabilities required for performance tweaks only when user
+	// specifies `optimizeKernelParams: true`.
+	if cdc.Spec.OptimizeKernelParams {
+		container.SecurityContext = &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{
+					"IPC_LOCK",     // C* wants to mlock/mlockall
+					"SYS_RESOURCE", // permit ulimit adjustments
+				},
+			},
+		}
 	}
 
 	if userConfigVolume != nil {
@@ -218,11 +226,11 @@ func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: &cdc.Spec.PrivilegedSupported,
+			Privileged: boolPointer(true),
 		},
 		Command: []string{"bash", "-xuec"},
 		Args: []string{
-			`sysctl -w vm.max_map_count=1048575 || true`,
+			`sysctl -w vm.max_map_count=1048575`,
 		},
 	}
 }
