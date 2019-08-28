@@ -89,7 +89,6 @@ spec:
           - nodes
           - cassandraImage
           - sidecarImage
-          - racks
           - imagePullPolicy
           - resources
           - dataVolumeClaimSpec

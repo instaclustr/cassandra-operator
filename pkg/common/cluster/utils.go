@@ -7,10 +7,16 @@ import (
 
 func BuildRacksDistribution(spec v1alpha1.CassandraDataCenterSpec) (racksDistribution Racks) {
 
-	// Sort racks alphabetically by name
-	sort.SliceStable(spec.Racks, func(i, j int) bool {
-		return spec.Racks[i].Name < spec.Racks[j].Name
-	})
+	// If racks are not provided, we place everything in 1 Rack
+	if spec.Racks == nil {
+		spec.Racks = []v1alpha1.Rack{{Name: "rack1"}}
+	} else  {
+		// Sort racks alphabetically by name
+		sort.SliceStable(spec.Racks, func(i, j int) bool {
+			return spec.Racks[i].Name < spec.Racks[j].Name
+		})
+	}
+
 
 
 	// Now build the distribution

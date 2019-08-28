@@ -14,7 +14,7 @@ type CassandraDataCenterSpec struct {
 	Nodes                     int32                        `json:"nodes"`
 	CassandraImage            string                       `json:"cassandraImage"`
 	SidecarImage              string                       `json:"sidecarImage"`
-	Racks                     []Rack                       `json:"racks"`
+	Racks                     []Rack                       `json:"racks,omitempty"`
 	ImagePullPolicy           v1.PullPolicy                `json:"imagePullPolicy"`
 	ImagePullSecrets          []v1.LocalObjectReference    `json:"imagePullSecrets,omitempty"`
 	BackupSecretVolumeSource  *v1.SecretVolumeSource       `json:"backupSecretVolumeSource,omitempty"`

@@ -433,7 +433,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 						},
 					},
 				},
-				Required: []string{"nodes", "cassandraImage", "sidecarImage", "racks", "imagePullPolicy", "resources", "dataVolumeClaimSpec", "prometheusSupport"},
+				Required: []string{"nodes", "cassandraImage", "sidecarImage", "imagePullPolicy", "resources", "dataVolumeClaimSpec", "prometheusSupport"},
 			},
 		},
 		Dependencies: []string{
