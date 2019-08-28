@@ -2,11 +2,13 @@ package com.instaclustr.cassandra.backup.impl.restore;
 
 import javax.validation.constraints.NotNull;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.instaclustr.cassandra.backup.impl.StorageLocation;
@@ -42,10 +44,6 @@ public class RestoreCommitLogsOperationRequest extends BaseRestoreOperationReque
     @JsonSerialize(using = PathSerializer.class)
     public Path cassandraConfigDirectory;
 
-    @Option(names = {"--cl-archive"},
-            description = "Override path to the commit log archive directory, relative to the container root.")
-    public Path commitLogArchiveOverride;
-
     @Option(names = {"--ts", "--timestamp-start"},
             description = "When the base snapshot was taken. Only relevant if archived commitlogs are available.",
             required = true)
@@ -74,17 +72,31 @@ public class RestoreCommitLogsOperationRequest extends BaseRestoreOperationReque
                                              @JsonProperty("cassandraDirectory") final Path cassandraDirectory,
                                              @JsonProperty("sharedContainerPath") final Path sharedContainerPath,
                                              @JsonProperty("cassandraConfigDirectory") final Path cassandraConfigDirectory,
-                                             @JsonProperty("commitLogArchiveOverride") final Path commitLogArchiveOverride,
+                                             @JsonProperty("commitLogRestoreDirectory") final Path commitLogRestoreDirectory,
                                              @JsonProperty("timestampStart") final long timestampStart,
                                              @JsonProperty("timestampEnd") final long timestampEnd,
                                              @JsonProperty("keyspaceTables") final Multimap<String, String> keyspaceTables) {
         super(storageLocation, concurrentConnections, waitForLock);
-        this.cassandraDirectory = cassandraDirectory;
-        this.sharedContainerPath = sharedContainerPath;
-        this.cassandraConfigDirectory = cassandraConfigDirectory;
-        this.commitLogArchiveOverride = commitLogArchiveOverride;
+        this.cassandraDirectory = cassandraDirectory == null ? Paths.get("/var/lib/cassandra") : cassandraDirectory;
+        this.sharedContainerPath = sharedContainerPath == null ? Paths.get("/") : sharedContainerPath;
+        this.cassandraConfigDirectory = cassandraConfigDirectory == null ? Paths.get("/etc/cassandra") : cassandraConfigDirectory;
         this.timestampStart = timestampStart;
         this.timestampEnd = timestampEnd;
         this.keyspaceTables = keyspaceTables;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("storageLocation", storageLocation)
+                          .add("concurrentConnections", concurrentConnections)
+                          .add("waitForLock", waitForLock)
+                          .add("cassandraDirectory", cassandraDirectory)
+                          .add("sharedContainerPath", sharedContainerPath)
+                          .add("cassandraConfigDirectory", cassandraConfigDirectory)
+                          .add("timestampStart", timestampStart)
+                          .add("timestampEnd", timestampEnd)
+                          .add("keyspaceTables", keyspaceTables)
+                          .toString();
     }
 }

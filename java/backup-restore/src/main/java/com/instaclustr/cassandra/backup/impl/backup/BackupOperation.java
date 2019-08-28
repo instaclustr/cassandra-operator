@@ -162,9 +162,6 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
             writer.printf("initial_token: %s%n", Joiner.on(',').join(tokens));
         }
 
-        // TODO - clean this up! dont wait until jvm is shut down, what if this runs in sidecar?
-        tokensFilePath.toFile().deleteOnExit();
-
         return ImmutableList.of(new ManifestEntry(Paths.get("tokens").resolve(tokensFilePath.getFileName()),
                                                   tokensFilePath,
                                                   ManifestEntry.Type.FILE));

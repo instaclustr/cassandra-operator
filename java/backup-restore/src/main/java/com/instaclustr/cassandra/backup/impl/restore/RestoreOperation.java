@@ -20,13 +20,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.backup.guice.RestorerFactory;
 import com.instaclustr.cassandra.backup.impl.ManifestEntry;
-import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
 import com.instaclustr.cassandra.backup.impl.SSTableUtils;
+import com.instaclustr.io.FileUtils;
 import com.instaclustr.io.GlobalLock;
 import com.instaclustr.sidecar.operations.Operation;
 import org.slf4j.Logger;
@@ -36,36 +35,34 @@ public class RestoreOperation extends Operation<RestoreOperationRequest> {
     private static final Logger logger = LoggerFactory.getLogger(RestoreOperation.class);
 
     private final static String CASSANDRA_DATA = "data";
-    private final static String CASSANDRA_COMMIT_LOGS = "commitlog";
-    private final static String CASSANDRA_COMMIT_RESTORE = "commitlog_restore";
 
     private final Map<String, RestorerFactory> restorerFactoryMap;
 
-    // maybe not necessary?
-    private final Path commitLogRestoreDirectory;
-    private final Path fullCommitLogRestoreDirectory;
+    private final Path cassandraYaml;
+    private final Path tokens;
 
     @Inject
     public RestoreOperation(final Map<String, RestorerFactory> restorerFactoryMap,
                             @Assisted final RestoreOperationRequest request) {
         super(request);
         this.restorerFactoryMap = restorerFactoryMap;
-
-        this.commitLogRestoreDirectory = request.cassandraDirectory.resolve(CASSANDRA_COMMIT_RESTORE); //TODO: hardcoded path, make this an argument when we get to supporting CL
-        this.fullCommitLogRestoreDirectory = request.sharedContainerPath.resolve(this.commitLogRestoreDirectory.subpath(0, this.commitLogRestoreDirectory.getNameCount()));
+        cassandraYaml = request.cassandraConfigDirectory.resolve("cassandra.yaml");
+        tokens = request.cassandraDirectory.resolve("tokens.yaml");
     }
 
     @Override
     protected void run0() throws Exception {
         try (final Restorer restorer = restorerFactoryMap.get(request.storageLocation.storageProvider).createRestorer(request)) {
             restore(restorer);
-            setTokens(restorer);
-            disableAutoBootstrap();
+            // K8S will handle copying over tokens.yaml fragment and disabling bootstrap fragment to right directory to be picked up by Cassandra
+            // "standalone / vanilla" Cassandra installations has to cover this manually for now.
+            // in the future, we might implement automatic configuration of cassandra.yaml for standalone installations
+            //setTokens();
+            //disableAutoBootstrap();
         }
     }
 
     private void restore(final Restorer restorer) throws Exception {
-        // 1. TODO: Check cassandra still running. Halt if running? Make this restore task a pre-start container for the pod to avoid this check
 
         new GlobalLock(request.sharedContainerPath).waitForLock(request.waitForLock);
 
@@ -75,25 +72,13 @@ public class RestoreOperation extends Operation<RestoreOperationRequest> {
         // 3. Download the manifest
         logger.info("Retrieving manifest for snapshot: {}", request.snapshotTag);
         final Path sourceManifest = Paths.get("manifests/" + request.snapshotTag);
-        final Path localManifest = request.sharedContainerPath.resolve(sourceManifest);
+        final Path localManifest = request.cassandraDirectory.resolve(sourceManifest);
 
-        final RemoteObjectReference manifestRemoteObjectReference = restorer.objectKeyToRemoteReference(sourceManifest);
-
-        try {
-            restorer.downloadFile(localManifest, manifestRemoteObjectReference);
-        } catch (AmazonS3Exception e) {
-            if (e.getStatusCode() == 404) {
-                logger.error("Remote object reference {} does not exist.", manifestRemoteObjectReference);
-
-                throw e;
-
-            }
-        }
+        restorer.downloadFile(localManifest, restorer.objectKeyToRemoteReference(sourceManifest));
 
         // 4. Clean out old data
-        cleanDirectory(fullCommitLogRestoreDirectory.toFile());
-        cleanDirectory(request.cassandraDirectory.resolve("hints").toFile());
-        cleanDirectory(request.cassandraDirectory.resolve("saved_caches").toFile());
+        cleanDirectory(request.cassandraDirectory.resolve("hints"));
+        cleanDirectory(request.cassandraDirectory.resolve("saved_caches"));
 
         // 5. Build a list of all SSTables currently present, that are candidates for deleting
         final Set<Path> existingSstableList = new HashSet<>();
@@ -105,8 +90,8 @@ public class RestoreOperation extends Operation<RestoreOperationRequest> {
             try (Stream<Path> paths = Files.walk(cassandraSstablesDirectory, skipBackupsAndSnapshotsFolders)) {
                 if (isTableSubsetOnly) {
                     paths.filter(Files::isRegularFile)
-                            .filter(isSubsetTable(request.keyspaceTables))
-                            .forEach(existingSstableList::add);
+                         .filter(isSubsetTable(request.keyspaceTables))
+                         .forEach(existingSstableList::add);
                 } else {
                     paths.filter(Files::isRegularFile).forEach(existingSstableList::add);
                 }
@@ -125,22 +110,22 @@ public class RestoreOperation extends Operation<RestoreOperationRequest> {
             if (isRestoringToExistingCluster) {
                 if (isTableSubsetOnly) {
                     filteredManifest = manifestStream.lines()
-                            .filter(getManifestFilesForSubsetExistingRestore(request.keyspaceTables, request.restoreSystemKeyspace))
-                            .collect(toList());
+                                                     .filter(getManifestFilesForSubsetExistingRestore(request.keyspaceTables, request.restoreSystemKeyspace))
+                                                     .collect(toList());
                 } else {
                     filteredManifest = manifestStream.lines()
-                            .filter(getManifestFilesForFullExistingRestore(request.restoreSystemKeyspace))
-                            .collect(toList());
+                                                     .filter(getManifestFilesForFullExistingRestore(request.restoreSystemKeyspace))
+                                                     .collect(toList());
                 }
             } else {
                 if (isTableSubsetOnly) {
                     filteredManifest = manifestStream.lines()
-                            .filter(getManifestFilesForSubsetNewRestore(request.keyspaceTables, request.restoreSystemKeyspace))
-                            .collect(toList());
+                                                     .filter(getManifestFilesForSubsetNewRestore(request.keyspaceTables, request.restoreSystemKeyspace))
+                                                     .collect(toList());
                 } else {
                     filteredManifest = manifestStream.lines()
-                            .filter(getManifestFilesForFullNewRestore(request.restoreSystemKeyspace))
-                            .collect(toList());
+                                                     .filter(getManifestFilesForFullNewRestore(request.restoreSystemKeyspace))
+                                                     .collect(toList());
                 }
             }
 
@@ -176,6 +161,7 @@ public class RestoreOperation extends Operation<RestoreOperationRequest> {
         restorer.downloadFiles(downloadManifest);
 
         // 8. download tokens
+        downloadTokens(restorer);
     }
 
     /**
@@ -202,24 +188,15 @@ public class RestoreOperation extends Operation<RestoreOperationRequest> {
         return false;
     }
 
-    private void setTokens(final Restorer restorer) throws Exception {
-        final RemoteObjectReference tokens = restorer.objectKeyToRemoteReference(Paths.get("tokens/" + request.snapshotTag + "-tokens.yaml"));
-        final Path tokensPath = request.cassandraDirectory.resolve("tokens.yaml");
-        // TODO this should be added to one of directories for configuration as it is a config fragment to yaml
-        restorer.downloadFile(tokensPath, tokens);
+    private void downloadTokens(final Restorer restorer) throws Exception {
+        restorer.downloadFile(tokens, restorer.objectKeyToRemoteReference(Paths.get("tokens/" + request.snapshotTag + "-tokens.yaml")));
     }
 
-    private void disableAutoBootstrap() {
-        // TODO prepare fragment and place it to dir cassandra picks up to configure itself
-//        final StringBuilder stringBuilder = new StringBuilder();
-//        final String contents = new String(Files.readAllBytes(cassandraConfigDirectory.resolve("cassandra.yaml")));
-//        // Just replace. In case nodepoint later doesn't write auto_bootstrap, just delete here and append later to guarantee we're setting it
-//        stringBuilder.append(contents.replace("auto_bootstrap: true", ""));
-//
-//        stringBuilder.append(System.lineSeparator());
-//        stringBuilder.append(new String(Files.readAllBytes(tokensPath)));
-//        // Don't stream on Cassandra startup, as tokens and SSTables are already present on node
-//        stringBuilder.append("auto_bootstrap: false");
-//        Files.write(cassandraConfigDirectory.resolve("cassandra.yaml"), ImmutableList.of(stringBuilder.toString()), StandardOpenOption.WRITE, StandardOpenOption.CREATE);
+    private void setTokens() throws IOException {
+        FileUtils.appendToFile(cassandraYaml, tokens);
+    }
+
+    private void disableAutoBootstrap() throws IOException {
+        FileUtils.replaceInFile(cassandraYaml, "auto_bootstrap: true", "auto_bootstrap: false");
     }
 }

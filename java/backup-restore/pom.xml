@@ -8,7 +8,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>backup-restore</artifactId>
+    <artifactId>cassandra-backup-restore</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>

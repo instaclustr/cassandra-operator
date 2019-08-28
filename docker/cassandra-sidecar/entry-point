@@ -1,0 +1,8 @@
+#!/bin/bash -ue
+
+if [ "${1-unset}" == "backup" ] || [ "${1-unset}" == "restore" ]; then
+    cassandra-backup-restore $@
+    exit $?
+else
+    cassandra-sidecar $@
+fi

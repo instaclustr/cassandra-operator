@@ -48,5 +48,9 @@ public class CommitLogBackupApplication implements Runnable {
         final Operation operation = operationsService.submitOperationRequest(request);
 
         await().forever().until(() -> operation.state.isTerminalState());
+
+        if (operation.state == Operation.State.FAILED) {
+            throw new IllegalStateException("Commitlog backup operation was not successful.");
+        }
     }
 }

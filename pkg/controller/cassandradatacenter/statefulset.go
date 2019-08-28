@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"sort"
 	"strings"
 	"sync"
@@ -65,10 +66,21 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 
 		sysctlLimitsContainer := newSysctlLimitsContainer(rctx.cdc)
 
+		restoreContainer, err := newRestoreContainer(rctx.cdc, rctx.client, dataVolumeClaim, backupSecretVolume)
+		if err != nil {
+			return err
+		}
+
+		initContainers := []corev1.Container{*sysctlLimitsContainer}
+
+		if restoreContainer != nil {
+			initContainers = append(initContainers, *restoreContainer)
+		}
+
 		podSpec := newPodSpec(rctx.cdc, rack,
 			[]corev1.Volume{*podInfoVolume, *configVolume, *rackConfigVolume},
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
-			[]corev1.Container{*sysctlLimitsContainer})
+			initContainers)
 
 		if backupSecretVolume != nil {
 			podSpec.Volumes = append(podSpec.Volumes, *backupSecretVolume)
@@ -125,7 +137,10 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluste
 	return podSpec
 }
 
-func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, configVolume, rackConfigVolume *corev1.Volume, userSecretVolume, userConfigVolume *corev1.Volume) *corev1.Container {
+func newCassandraContainer(
+	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
+	dataVolumeClaim *corev1.PersistentVolumeClaim,
+	configVolume, rackConfigVolume, userSecretVolume, userConfigVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
@@ -174,7 +189,11 @@ func newCassandraContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, d
 	return container
 }
 
-func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, dataVolumeClaim *corev1.PersistentVolumeClaim, podInfoVolume *corev1.Volume, backupSecretVolume *corev1.Volume) *corev1.Container {
+func newSidecarContainer(
+	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
+	dataVolumeClaim *corev1.PersistentVolumeClaim,
+	podInfoVolume *corev1.Volume,
+	backupSecretVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "sidecar",
 		Image:           cdc.Spec.SidecarImage,
@@ -207,6 +226,61 @@ func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter
 			`sysctl -w vm.max_map_count=1048575 || true`,
 		},
 	}
+}
+
+func newRestoreContainer(
+	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
+	client client.Client,
+	dataVolumeClaim *corev1.PersistentVolumeClaim,
+	backupSecretVolume *corev1.Volume,
+) (*corev1.Container, error) {
+
+	// no restores
+	if len(cdc.Spec.RestoreFromBackup) == 0 {
+		return nil, nil
+	}
+
+	backup := &cassandraoperatorv1alpha1.CassandraBackup{}
+	if err := client.Get(context.TODO(), types.NamespacedName{Name: cdc.Spec.RestoreFromBackup, Namespace: cdc.Namespace}, backup); err != nil {
+		return nil, err
+	}
+
+	if len(backup.Spec.CDC) == 0 {
+		return nil, errors.New(fmt.Sprintf("cdc field in backup CRD %s was not set!", cdc.Spec.RestoreFromBackup))
+	}
+
+	if len(backup.Spec.SnapshotTag) == 0 {
+		return nil, errors.New(fmt.Sprintf("snapshotTag field in backup CRD %s was not set!", cdc.Spec.RestoreFromBackup))
+	}
+
+	if len(backup.Spec.StorageLocation) == 0 {
+		return nil, errors.New(fmt.Sprintf("storageLocation field in backup CRD %s was not set!", cdc.Spec.RestoreFromBackup))
+	}
+
+	restoreArgs := []string{
+		"restore",
+		"--snapshot-tag=" + backup.Spec.SnapshotTag,
+		"--storage-location=" + backup.Spec.StorageLocation + "/" + backup.Spec.CDC,
+	}
+
+	container := &corev1.Container{
+		Name:            "restore",
+		Image:           cdc.Spec.SidecarImage,
+		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
+		Args:            restoreArgs,
+		Env:             cdc.Spec.SidecarEnv,
+		VolumeMounts: []corev1.VolumeMount{
+			{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath},
+		},
+	}
+
+	if backupSecretVolume != nil {
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: backupSecretVolume.Name, MountPath: BackupSecretVolumeMountPath})
+	} else {
+		return nil, errors.New(fmt.Sprintf("Restoring backup from %s is not possible because backupSecretVolumeSource field in CDC %s was not set!", cdc.Spec.RestoreFromBackup, cdc.Name))
+	}
+
+	return container, nil
 }
 
 func newUserConfigVolume(rctx *reconciliationRequestContext) *corev1.Volume {

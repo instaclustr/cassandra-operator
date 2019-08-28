@@ -1,20 +1,12 @@
 package com.instaclustr.cassandra.backup.impl.restore;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-import java.io.BufferedReader;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,12 +28,10 @@ public class RestoreCommitLogsOperation extends Operation<RestoreCommitLogsOpera
     private static final Logger logger = LoggerFactory.getLogger(RestoreCommitLogsOperation.class);
 
     private final static String CASSANDRA_COMMIT_LOGS = "commitlog";
-    private final static String CASSANDRA_COMMIT_RESTORE = "commitlog_restore";
 
     private final Map<String, RestorerFactory> restorerFactoryMap;
 
-    private final Path fullCommitLogRestoreDirectory;
-    private final Path commitLogRestoreDirectory;
+    private final Path commitlogsPath;
 
     @Inject
     public RestoreCommitLogsOperation(final Map<String, RestorerFactory> restorerFactoryMap,
@@ -49,31 +39,21 @@ public class RestoreCommitLogsOperation extends Operation<RestoreCommitLogsOpera
         super(request);
 
         this.restorerFactoryMap = restorerFactoryMap;
-
-        this.commitLogRestoreDirectory = request.cassandraDirectory.resolve(CASSANDRA_COMMIT_RESTORE); //TODO: hardcoded path, make this an argument when we get to supporting CL
-        this.fullCommitLogRestoreDirectory = request.sharedContainerPath.resolve(this.commitLogRestoreDirectory.subpath(0, this.commitLogRestoreDirectory.getNameCount()));
+        commitlogsPath = request.cassandraDirectory.resolve(CASSANDRA_COMMIT_LOGS);
     }
 
     @Override
     protected void run0() throws Exception {
         try (final Restorer restorer = restorerFactoryMap.get(request.storageLocation.storageProvider).createCommitLogRestorer(request)) {
-            // TODO this is not necessary too as "normal" restore was covered by different operation / CLI command
-            //restorer.restore();
-
+            backupCurrentCommitLogs();
             downloadCommitLogs(restorer);
-
-            // TODO is this even necessary?
-            //updateConfigurationForRestoreInitiation();
-
             writeConfigOptions();
         }
     }
 
-    private void downloadCommitLogs(final Restorer restorer) throws Exception {
+    private void backupCurrentCommitLogs() throws Exception {
         final Set<Path> existingCommitlogsList = new HashSet<>();
-        final Path commitlogsPath = request.cassandraDirectory.resolve(CASSANDRA_COMMIT_LOGS);
 
-        // this part seems like moving "old" commit logs to other directory
         if (commitlogsPath.toFile().exists())
             try (Stream<Path> paths = Files.list(commitlogsPath)) {
                 paths.filter(Files::isRegularFile).forEach(existingCommitlogsList::add);
@@ -89,7 +69,9 @@ public class RestoreCommitLogsOperation extends Operation<RestoreCommitLogsOpera
                 Files.move(file, currentCommitlogsPath.resolve(file.getFileName()));
             }
         }
+    }
 
+    private void downloadCommitLogs(final Restorer restorer) throws Exception {
         final RemoteObjectReference remoteObjectReference = restorer.objectKeyToRemoteReference(Paths.get("commitlog"));
         final Pattern commitlogPattern = Pattern.compile(".*(CommitLog-\\d+-\\d+\\.log)\\.(\\d+)");
         final HashSet<ManifestEntry> parsedCommitlogList = new HashSet<>();
@@ -107,14 +89,14 @@ public class RestoreCommitLogsOperation extends Operation<RestoreCommitLogsOpera
 
                 if (commitlogTimestamp >= request.timestampStart && commitlogTimestamp <= request.timestampEnd) {
                     parsedCommitlogList.add(new ManifestEntry(commitlogFile.getObjectKey(),
-                                                              fullCommitLogRestoreDirectory.resolve(matcherCommitlog.group(1)),
+                                                              commitlogsPath.resolve(matcherCommitlog.group(1)),
                                                               ManifestEntry.Type.FILE,
                                                               0));
                 } else if (commitlogTimestamp > request.timestampEnd && commitlogTimestamp < overhangingTimestamp.get()) {
                     // Make sure we also catch the first commitlog that goes past the end of the timestamp
                     overhangingTimestamp.set(commitlogTimestamp);
                     overhangingManifestEntry.set(new ManifestEntry(commitlogFile.getObjectKey(),
-                                                                   fullCommitLogRestoreDirectory.resolve(matcherCommitlog.group(1)),
+                                                                   commitlogsPath.resolve(matcherCommitlog.group(1)),
                                                                    ManifestEntry.Type.FILE,
                                                                    0));
                 }
@@ -132,32 +114,6 @@ public class RestoreCommitLogsOperation extends Operation<RestoreCommitLogsOpera
         }
 
         restorer.downloadFiles(parsedCommitlogList);
-    }
-
-    private void updateConfigurationForRestoreInitiation() {
-        final Path commitlogArchivingPropertiesPath = request.cassandraDirectory.resolve("commitlog_archiving.properties");
-        final Properties commitlogArchivingProperties = new Properties();
-
-        if (commitlogArchivingPropertiesPath.toFile().exists())
-            try (final BufferedReader reader = Files.newBufferedReader(commitlogArchivingPropertiesPath, UTF_8)) {
-                commitlogArchivingProperties.load(reader);
-            } catch (final IOException e) {
-                logger.warn("Failed to load file \"{}\".", commitlogArchivingPropertiesPath, e);
-            }
-
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
-
-        commitlogArchivingProperties.setProperty("restore_command", "cp -f %from %to");
-        commitlogArchivingProperties.setProperty("restore_directories", commitLogRestoreDirectory.toString());
-        // Restore mutations created up to and including this timestamp in GMT.
-        // Format: yyyy:MM:dd HH:mm:ss (2012:04:31 20:43:12)
-        commitlogArchivingProperties.setProperty("restore_point_in_time", dateFormat.format(new Date(request.timestampEnd)));
-
-        try (OutputStream output = new FileOutputStream(commitlogArchivingPropertiesPath.toFile())) {
-            commitlogArchivingProperties.store(output, null);
-        } catch (final IOException e) {
-            logger.warn("Failed to write to file \"{}\".", commitlogArchivingPropertiesPath, e);
-        }
     }
 
     /**

@@ -48,10 +48,6 @@ public class RestoreOperationRequest extends BaseRestoreOperationRequest {
             description = "Restore system keyspace. Use this to prevent bootstrapping, when restoring on only a single node.")
     public boolean restoreSystemKeyspace;
 
-    @Option(names = {"--cl-archive"},
-            description = "Override path to the commit log archive directory, relative to the container root.")
-    public Path commitLogArchiveOverride;
-
     @Option(names = {"-s", "--st", "--snapshot-tag"},
             description = "Snapshot to download and restore.",
             required = true)
@@ -72,12 +68,14 @@ public class RestoreOperationRequest extends BaseRestoreOperationRequest {
                                    @JsonProperty("concurrentConnections") final Integer concurrentConnections,
                                    @JsonProperty("waitForLock") final boolean waitForLock,
                                    @JsonProperty("cassandraDirectory") final Path cassandraDirectory,
+                                   @JsonProperty("cassandraConfigDirectory") final Path cassandraConfigDirectory,
                                    @JsonProperty("sharedContainerPath") final Path sharedContainerPath,
                                    @JsonProperty("restoreSystemKeyspace") final boolean restoreSystemKeyspace,
                                    @JsonProperty("snapshotTag") final String snapshotTag,
                                    @JsonProperty("keyspaceTables") final Multimap<String, String> keyspaceTables) {
         super(storageLocation, concurrentConnections, waitForLock);
         this.cassandraDirectory = cassandraDirectory == null ? Paths.get("/var/lib/cassandra") : cassandraDirectory;
+        this.cassandraConfigDirectory = cassandraConfigDirectory == null ? Paths.get("/etc/cassandra") : cassandraConfigDirectory;
         this.sharedContainerPath = sharedContainerPath == null ? Paths.get("/") : sharedContainerPath;
         this.restoreSystemKeyspace = restoreSystemKeyspace;
         this.snapshotTag = snapshotTag;
@@ -87,13 +85,14 @@ public class RestoreOperationRequest extends BaseRestoreOperationRequest {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("storageLocation", storageLocation)
-                .add("waitForLock", waitForLock)
-                .add("cassandraDirectory", cassandraDirectory)
-                .add("sharedContainerPath", sharedContainerPath)
-                .add("restoreSystemKeyspace", restoreSystemKeyspace)
-                .add("snapshotTag", snapshotTag)
-                .add("keyspaceTables", keyspaceTables)
-                .toString();
+                          .add("storageLocation", storageLocation)
+                          .add("waitForLock", waitForLock)
+                          .add("concurrentConnections", concurrentConnections)
+                          .add("cassandraDirectory", cassandraDirectory)
+                          .add("sharedContainerPath", sharedContainerPath)
+                          .add("restoreSystemKeyspace", restoreSystemKeyspace)
+                          .add("snapshotTag", snapshotTag)
+                          .add("keyspaceTables", keyspaceTables)
+                          .toString();
     }
 }

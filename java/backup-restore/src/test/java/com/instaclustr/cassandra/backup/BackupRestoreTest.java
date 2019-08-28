@@ -38,8 +38,8 @@ import com.instaclustr.cassandra.backup.impl.restore.RestoreOperationRequest;
 import com.instaclustr.cassandra.backup.impl.restore.Restorer;
 import com.instaclustr.cassandra.backup.local.LocalFileBackuper;
 import com.instaclustr.cassandra.backup.local.LocalFileRestorer;
-import jmx.org.apache.cassandra.CassandraVersion;
 import com.instaclustr.threading.Executors.FixedTasksExecutor;
+import jmx.org.apache.cassandra.CassandraVersion;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -93,7 +93,9 @@ public class BackupRestoreTest {
     }
 
 
-    private void testBackupAndRestore(final BackupOperationRequest backupRequest, final RestoreOperationRequest restoreRequest, final TestFileConfig testFileConfig) throws Exception {
+    private void testBackupAndRestore(final BackupOperationRequest backupRequest,
+                                      final RestoreOperationRequest restoreRequest,
+                                      final TestFileConfig testFileConfig) throws Exception {
         final Path sharedContainerRoot = backupRequest.sharedContainerPath;
         final File manifestFile = new File(sharedContainerRoot.resolve("manifests/" + testSnapshotName).toString());
 
@@ -222,6 +224,7 @@ public class BackupRestoreTest {
                     storageLocation,
                     10,
                     true,
+                    sharedContainerRoot,
                     sharedContainerRoot,
                     sharedContainerRoot,
                     true,

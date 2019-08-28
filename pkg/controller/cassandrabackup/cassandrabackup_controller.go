@@ -114,7 +114,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 
 	if instance.Status != nil && len(instance.Status) != 0 {
 		// when operator is restarted, nothing stops it to react on that CRD and it starts to backup again
-		reqLogger.Info("Reconcilliation stopped as backup was already run")
+		reqLogger.Info(fmt.Sprintf("Reconcilliation of %s stopped as backup was already run", request.NamespacedName))
 		return reconcile.Result{}, nil
 	} else {
 		instance.Status = []*cassandraoperatorv1alpha1.CassandraBackupStatus{}
