@@ -2,7 +2,6 @@ package cassandradatacenter
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"k8s.io/api/apps/v1beta2"
@@ -16,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"time"
 )
 
 var log = logf.Log.WithName("controller_cassandradatacenter")
@@ -122,8 +122,13 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 	}
 
 	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume)
-	if err != nil && err != ErrorCDCNotReady {
-		return reconcile.Result{}, err
+	if err != nil {
+		if err == ErrorCDCNotReady {
+			// If something is not ready, wait a minute and retry
+			return reconcile.Result{RequeueAfter: time.Minute}, nil
+		} else {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// TODO:

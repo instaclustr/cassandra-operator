@@ -36,7 +36,10 @@ func createOrUpdateNodesService(rctx *reconciliationRequestContext) (*corev1.Ser
 		return nil, err
 	}
 
-	logger.Info(fmt.Sprintf("Service %s.", opresult))
+	// Only log if something has changed
+	if opresult != controllerutil.OperationResultNone {
+		logger.Info(fmt.Sprintf("Service %s %s.", nodesService.Name, opresult))
+	}
 
 	return nodesService, err
 }
@@ -69,7 +72,10 @@ func createOrUpdateSeedNodesService(rctx *reconciliationRequestContext) (*corev1
 		return nil, err
 	}
 
-	logger.Info(fmt.Sprintf("Service %s.", opresult))
+	// Only log if something has changed
+	if opresult != controllerutil.OperationResultNone {
+		logger.Info(fmt.Sprintf("Service %s %s.", seedNodesService.Name, opresult))
+	}
 
 	return seedNodesService, err
 }

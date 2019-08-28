@@ -49,7 +49,10 @@ func createOrUpdateOperatorConfigMap(rctx *reconciliationRequestContext, seedNod
 		return nil, err
 	}
 
-	logger.Info(fmt.Sprintf("ConfigMap %s.", opresult))
+	// Only log if something has changed
+	if opresult != controllerutil.OperationResultNone {
+		logger.Info(fmt.Sprintf("ConfigMap %s %s.", configMap.Name, opresult))
+	}
 
 	configVolume := &corev1.Volume{
 		Name:         "operator-config-volume",
@@ -85,7 +88,11 @@ func createOrUpdateCassandraRackConfig(rctx *reconciliationRequestContext, rack 
 		return nil, err
 	}
 
-	logger.Info(fmt.Sprintf("ConfigMap %s.", opresult))
+
+	// Only log if something has changed
+	if opresult != controllerutil.OperationResultNone {
+		logger.Info(fmt.Sprintf("ConfigMap %s %s.", configMap.Name, opresult))
+	}
 
 	configVolume := &corev1.Volume{
 		Name:         "operator-rack-config-volume-" + rack.Name,

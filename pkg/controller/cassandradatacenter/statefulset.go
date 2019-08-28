@@ -294,8 +294,8 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 	decommissionedNodes := decommissionedCassandras(statuses)
 
 	// Check the current replicas/pods/cassandra state
-	if valid := checkState(currentSpecReplicas, currentStatusReplicas, desiredSpecReplicas, allPods, statuses); !valid {
-		return ErrorCDCNotReady
+	if clusterReady, err := checkState(currentSpecReplicas, currentStatusReplicas, desiredSpecReplicas, allPods, statuses); !clusterReady {
+		return err
 	}
 
 	if existingStatefulSet.CreationTimestamp.IsZero() {
@@ -443,18 +443,18 @@ func badPods(desiredReplicas int32, existingReplicas int32, statuses map[*corev1
 func checkState(
 	currentSpecReplicas, currentStatusReplicas, desiredSpecReplicas int32,
 	allPods []corev1.Pod,
-	statuses map[*corev1.Pod]nodestate.NodeState) bool {
+	statuses map[*corev1.Pod]nodestate.NodeState) (bool, error) {
 
 	// check if current running # of pods match the current spec of the stateful set
 	if currentStatusReplicas != currentSpecReplicas {
 		log.Info("skipping StatefulSet reconciliation as it is undergoing scaling operations", "current", currentStatusReplicas, "expected", currentSpecReplicas)
-		return false
+		return false, ErrorCDCNotReady
 	}
 
 	// check if all pods in the cluster are in a Running mode
 	if allRun, notRunningPods := allPodsAreRunning(allPods); allRun == false {
 		log.Info("Skipping reconciliation as some pods are not running yet: " + strings.Join(notRunningPods, " "))
-		return false
+		return false, ErrorCDCNotReady
 	}
 
 	// check if all Cassandras are ok to scale
@@ -465,11 +465,11 @@ func checkState(
 			for pod, status := range badPods {
 				log.Info(fmt.Sprintf("Pod: '%v', Status: '%v'", pod, status))
 			}
-			return false
+			return false, ErrorCDCNotReady
 		}
 	}
 
-	return true
+	return true, nil
 }
 
 func podsToString(pods []*corev1.Pod) []string {
