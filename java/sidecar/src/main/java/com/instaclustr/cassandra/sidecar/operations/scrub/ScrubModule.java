@@ -1,7 +1,7 @@
 package com.instaclustr.cassandra.sidecar.operations.scrub;
 
 import com.google.inject.AbstractModule;
-import com.instaclustr.sidecar.operations.OperationBindings;
+import com.instaclustr.operations.OperationBindings;
 
 public class ScrubModule extends AbstractModule {
     @Override

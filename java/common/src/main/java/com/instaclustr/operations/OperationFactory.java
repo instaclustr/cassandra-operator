@@ -1,4 +1,4 @@
-package com.instaclustr.sidecar.operations;
+package com.instaclustr.operations;
 
 @FunctionalInterface
 public interface OperationFactory<RequestT extends OperationRequest> {

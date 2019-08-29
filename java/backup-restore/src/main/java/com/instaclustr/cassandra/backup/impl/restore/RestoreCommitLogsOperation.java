@@ -20,7 +20,7 @@ import com.google.inject.assistedinject.Assisted;
 import com.instaclustr.cassandra.backup.guice.RestorerFactory;
 import com.instaclustr.cassandra.backup.impl.ManifestEntry;
 import com.instaclustr.cassandra.backup.impl.RemoteObjectReference;
-import com.instaclustr.sidecar.operations.Operation;
+import com.instaclustr.operations.Operation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

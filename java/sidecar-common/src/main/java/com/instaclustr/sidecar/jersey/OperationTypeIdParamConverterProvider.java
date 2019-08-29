@@ -12,13 +12,12 @@ import java.lang.reflect.Type;
 import java.util.Set;
 
 import com.google.inject.TypeLiteral;
-import com.instaclustr.sidecar.operations.Operation;
+import com.instaclustr.operations.Operation;
 import org.glassfish.jersey.server.validation.ValidationError;
 
 @Provider
 public class OperationTypeIdParamConverterProvider implements ParamConverterProvider {
-    private static final Type PARAMETER_TYPE = new TypeLiteral<Class<? extends Operation>>() {
-    }.getType();
+    private static final Type PARAMETER_TYPE = new TypeLiteral<Class<? extends Operation>>() {}.getType();
 
     private final Operation.TypeIdResolver typeIdResolver;
 
@@ -74,7 +73,7 @@ public class OperationTypeIdParamConverterProvider implements ParamConverterProv
                     .build();
         }
 
-        public InvalidTypeIdException(final String typeId, final Set<String> possibleTypes) {
+        InvalidTypeIdException(final String typeId, final Set<String> possibleTypes) {
             super(InvalidTypeIdException.buildResponse(typeId, possibleTypes));
         }
     }

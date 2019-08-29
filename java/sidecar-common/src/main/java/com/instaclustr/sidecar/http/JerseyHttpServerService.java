@@ -51,7 +51,12 @@ public class JerseyHttpServerService extends AbstractIdleService {
 
         if (logger.isInfoEnabled()) {
             final InetSocketAddress socketAddress = httpServer.getAddress();
-            final URI serverUrl = new URI("http", null, InetAddresses.toUriString(socketAddress.getAddress()), socketAddress.getPort(), "/", null, null);
+            final URI serverUrl = new URI("http",
+                                          null,
+                                          InetAddresses.toUriString(socketAddress.getAddress()), socketAddress.getPort(),
+                                          "/",
+                                          null,
+                                          null);
 
             logger.info("Started HTTP server on {}", serverUrl);
         }

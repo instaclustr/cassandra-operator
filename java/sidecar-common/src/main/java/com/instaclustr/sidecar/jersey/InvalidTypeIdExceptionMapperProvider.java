@@ -7,7 +7,8 @@ import javax.ws.rs.ext.Provider;
 import com.instaclustr.sidecar.jersey.OperationTypeIdParamConverterProvider.InvalidTypeIdException;
 
 @Provider
-public class InvalidTypeIdExceptionMapper implements ExceptionMapper<InvalidTypeIdException> {
+public class InvalidTypeIdExceptionMapperProvider implements ExceptionMapper<InvalidTypeIdException> {
+
     @Override
     public Response toResponse(final InvalidTypeIdException exception) {
         return exception.getResponse();

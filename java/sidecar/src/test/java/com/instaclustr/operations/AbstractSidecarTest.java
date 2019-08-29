@@ -36,7 +36,6 @@ import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTab
 import com.instaclustr.operations.SidecarClient.OperationResult;
 import com.instaclustr.sidecar.http.JerseyHttpServerModule;
 import com.instaclustr.sidecar.http.JerseyHttpServerService;
-import com.instaclustr.sidecar.operations.OperationsModule;
 import com.instaclustr.threading.ExecutorsModule;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 import org.apache.commons.lang3.tuple.Pair;
@@ -86,7 +85,11 @@ public abstract class AbstractSidecarTest {
                         // intentionally empty
                     }
 
-                    when(mock.scrub(anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(), anyString(), anyVararg())).thenReturn(0);
+                    try {
+                        when(mock.scrub(anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(), anyString(), anyVararg())).thenReturn(0);
+                    } catch (final Exception ex) {
+                        throw new RuntimeException(ex);
+                    }
 
                     try {
                         doNothing().when(mock).decommission();

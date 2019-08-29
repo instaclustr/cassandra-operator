@@ -1,7 +1,7 @@
 package com.instaclustr.cassandra.backup.impl;
 
-import com.instaclustr.sidecar.operations.Operation;
-import com.instaclustr.sidecar.operations.OperationRequest;
+import com.instaclustr.operations.Operation;
+import com.instaclustr.operations.OperationRequest;
 
 public class OperationProgressTracker {
     private final Operation<? extends OperationRequest> operation;

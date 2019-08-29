@@ -27,7 +27,7 @@ import com.instaclustr.cassandra.backup.impl.ManifestEntry;
 import com.instaclustr.cassandra.backup.impl.SSTableUtils;
 import com.instaclustr.io.FileUtils;
 import com.instaclustr.io.GlobalLock;
-import com.instaclustr.sidecar.operations.Operation;
+import com.instaclustr.operations.Operation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

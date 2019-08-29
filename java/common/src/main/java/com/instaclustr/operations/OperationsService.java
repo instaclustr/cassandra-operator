@@ -1,4 +1,4 @@
-package com.instaclustr.sidecar.operations;
+package com.instaclustr.operations;
 
 import javax.inject.Inject;
 import java.util.Collections;

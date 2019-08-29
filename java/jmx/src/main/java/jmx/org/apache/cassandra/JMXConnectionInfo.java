@@ -1,8 +1,12 @@
 package jmx.org.apache.cassandra;
 
 import javax.management.remote.JMXServiceURL;
-import java.nio.file.Path;
 
+import com.google.common.base.MoreObjects;
+
+/**
+ * Holder of JMX related information for setting up JMX connection to Cassandra node.
+ */
 public class JMXConnectionInfo {
     public final String jmxPassword;
     public final String jmxUser;
@@ -20,5 +24,16 @@ public class JMXConnectionInfo {
         this.jmxServiceURL = jmxServiceURL;
         this.trustStore = trustStore;
         this.trustStorePassword = trustStorePassword;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("jmxServiceURL", jmxServiceURL)
+                          .add("trustStore", trustStore)
+                          .add("jmxUser", jmxUser)
+                          .add("trustStorePassword", "redacted")
+                          .add("jmxPassword", "redacted")
+                          .toString();
     }
 }

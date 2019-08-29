@@ -1,7 +1,7 @@
 package com.instaclustr.sidecar.operations;
 
-import static com.instaclustr.sidecar.operations.Operation.State.RUNNING;
-import static com.instaclustr.sidecar.operations.OperationBindings.installOperationBindings;
+import static com.instaclustr.operations.Operation.State.RUNNING;
+import static com.instaclustr.operations.OperationBindings.installOperationBindings;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
@@ -13,6 +13,11 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.assistedinject.Assisted;
+import com.instaclustr.operations.Operation;
+import com.instaclustr.operations.OperationRequest;
+import com.instaclustr.operations.OperationsExpirationService;
+import com.instaclustr.operations.OperationsModule;
+import com.instaclustr.operations.OperationsService;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 

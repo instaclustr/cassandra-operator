@@ -7,7 +7,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.sidecar.operations.Operation;
+import com.instaclustr.operations.Operation;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 
 public class DecommissionOperation extends Operation<DecommissionOperationRequest> {

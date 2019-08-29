@@ -1,4 +1,4 @@
-package com.instaclustr.sidecar.operations;
+package com.instaclustr.operations;
 
 import static java.util.concurrent.TimeUnit.HOURS;
 

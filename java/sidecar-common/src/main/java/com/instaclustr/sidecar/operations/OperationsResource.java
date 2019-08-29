@@ -21,7 +21,14 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.google.common.collect.Collections2;
+import com.instaclustr.operations.Operation;
+import com.instaclustr.operations.OperationRequest;
+import com.instaclustr.operations.OperationsService;
 
+/**
+ * Common operation JAX-RS resource exposing operation endpoints.
+ * This resource is automatically used / registered in any Sidecar just by mere presence on the classpath.
+ */
 @Path("/operations")
 @Produces(APPLICATION_JSON)
 @Consumes(APPLICATION_JSON)
@@ -39,11 +46,23 @@ public class OperationsResource {
         Collection<Operation> operations = operationsService.operations().values();
 
         if (!operationTypesFilter.isEmpty()) {
-            operations = Collections2.filter(operations, input -> operationTypesFilter.contains(input.getClass()));
+            operations = Collections2.filter(operations, input -> {
+                if (input == null) {
+                    return false;
+                }
+
+                return operationTypesFilter.contains(input.getClass());
+            });
         }
 
         if (!statesFilter.isEmpty()) {
-            operations = Collections2.filter(operations, input -> statesFilter.contains(input.state));
+            operations = Collections2.filter(operations, input -> {
+                if (input == null) {
+                    return false;
+                }
+
+                return statesFilter.contains(input.state);
+            });
         }
 
         return operations;
@@ -60,8 +79,8 @@ public class OperationsResource {
         final Operation operation = operationsService.submitOperationRequest(request);
 
         final URI operationLocation = UriBuilder.fromResource(OperationsResource.class)
-                .path(OperationsResource.class, "getOperationById")
-                .build(operation.id);
+                                                .path(OperationsResource.class, "getOperationById")
+                                                .build(operation.id);
 
         return Response.created(operationLocation).entity(operation).build();
     }

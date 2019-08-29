@@ -18,7 +18,7 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoSet;
 import com.instaclustr.guice.GuiceInjectorHolder;
 import com.instaclustr.sidecar.jackson.GuiceJacksonHandlerInstantiator;
-import com.instaclustr.sidecar.jersey.DefaultExceptionMapper;
+import com.instaclustr.sidecar.jersey.DefaultExceptionMapperProvider;
 import com.instaclustr.sidecar.validation.ValidationConfigurationContextResolver;
 import org.glassfish.hk2.api.ServiceLocator;
 import org.glassfish.jersey.InjectionManagerProvider;
@@ -39,11 +39,6 @@ public class JerseyHttpServerModule extends AbstractModule {
         // for testing
     }
 
-    @Override
-    protected void configure() {
-//        ServiceBindings.bindService(binder(), JerseyHttpServerService.class);
-    }
-
     @ProvidesIntoSet()
     @Singleton
     Service provideHttpServerService(final ResourceConfig resourceConfig) {
@@ -62,7 +57,7 @@ public class JerseyHttpServerModule extends AbstractModule {
                 .packages("com.instaclustr")
                 .register(customObjectMapperFeature)
                 .register(guiceHK2BridgeFeature)
-                .register(DefaultExceptionMapper.class)
+                .register(DefaultExceptionMapperProvider.class)
                 .register(ValidationConfigurationContextResolver.class)
                 .property(ServerProperties.BV_SEND_ERROR_IN_RESPONSE, true);
     }
