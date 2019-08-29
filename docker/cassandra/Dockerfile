@@ -2,7 +2,7 @@ ARG openjre_image
 
 FROM ${openjre_image}
 
-ARG cassandra_version=3.11.2
+ARG cassandra_version=3.11.4
 ARG cassandra_k8s_addons_jar
 
 COPY install-cassandra /tmp/install-cassandra
