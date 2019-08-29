@@ -9,6 +9,10 @@ import com.instaclustr.picocli.typeconverter.ServerInetSocketAddressTypeConverte
 import com.instaclustr.picocli.typeconverter.TimeMeasureTypeConverter;
 import picocli.CommandLine.Option;
 
+/**
+ * Class holding default / common command line arguments.
+ * Other sidecars would reuse this class by injecting it as {@link picocli.CommandLine.Mixin}.
+ */
 public class SidecarSpec {
 
     private static final int DEFAULT_SIDECAR_HTTP_PORT = 4567;

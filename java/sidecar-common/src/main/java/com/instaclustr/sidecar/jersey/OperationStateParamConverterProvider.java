@@ -10,7 +10,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 
-import com.instaclustr.sidecar.operations.Operation;
+import com.instaclustr.operations.Operation;
 import org.glassfish.jersey.server.validation.ValidationError;
 
 @Provider
@@ -61,7 +61,7 @@ public class OperationStateParamConverterProvider implements ParamConverterProvi
                     .build();
         }
 
-        public InvalidOperationStateException(final String invalidState) {
+        InvalidOperationStateException(final String invalidState) {
             super(buildResponse(invalidState));
         }
     }

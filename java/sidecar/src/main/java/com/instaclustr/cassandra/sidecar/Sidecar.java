@@ -20,7 +20,7 @@ import com.instaclustr.guice.ServiceManagerModule;
 import com.instaclustr.picocli.CLIApplication;
 import com.instaclustr.picocli.CassandraJMXSpec;
 import com.instaclustr.sidecar.http.JerseyHttpServerModule;
-import com.instaclustr.sidecar.operations.OperationsModule;
+import com.instaclustr.operations.OperationsModule;
 import com.instaclustr.sidecar.picocli.SidecarSpec;
 import com.instaclustr.threading.ExecutorsModule;
 import com.instaclustr.version.VersionModule;

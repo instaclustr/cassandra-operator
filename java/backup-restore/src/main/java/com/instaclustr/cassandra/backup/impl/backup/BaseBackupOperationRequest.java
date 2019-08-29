@@ -18,7 +18,7 @@ import com.instaclustr.measure.Time;
 import com.instaclustr.picocli.typeconverter.DataRateMeasureTypeConverter;
 import com.instaclustr.picocli.typeconverter.PathTypeConverter;
 import com.instaclustr.picocli.typeconverter.TimeMeasureTypeConverter;
-import com.instaclustr.sidecar.operations.OperationRequest;
+import com.instaclustr.operations.OperationRequest;
 import picocli.CommandLine.Option;
 
 public class BaseBackupOperationRequest extends OperationRequest {

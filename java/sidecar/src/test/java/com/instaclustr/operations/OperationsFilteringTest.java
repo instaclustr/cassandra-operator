@@ -1,8 +1,8 @@
 package com.instaclustr.operations;
 
 import static com.google.common.collect.ImmutableList.of;
-import static com.instaclustr.sidecar.operations.Operation.State.COMPLETED;
-import static com.instaclustr.sidecar.operations.Operation.State.FAILED;
+import static com.instaclustr.operations.Operation.State.COMPLETED;
+import static com.instaclustr.operations.Operation.State.FAILED;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.awaitility.Awaitility.await;
 import static org.testng.Assert.assertEquals;

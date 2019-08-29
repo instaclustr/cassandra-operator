@@ -17,24 +17,18 @@ public class RateLimitedInputStream extends FilterInputStream {
     @Override
     public int read() throws IOException {
         limiter.acquire();
-//            uploadThroughputMeter.mark();
-
         return super.read();
     }
 
     @Override
     public int read(final byte[] b) throws IOException {
         limiter.acquire(Math.max(1, b.length));
-//            uploadThroughputMeter.mark(b.length);
-
         return super.read(b);
     }
 
     @Override
     public int read(final byte[] b, final int off, final int len) throws IOException {
         limiter.acquire(Math.max(1, len));
-//            uploadThroughputMeter.mark(len);
-
         return super.read(b, off, len);
     }
 }

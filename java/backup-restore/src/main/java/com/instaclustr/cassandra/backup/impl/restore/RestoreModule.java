@@ -1,6 +1,6 @@
 package com.instaclustr.cassandra.backup.impl.restore;
 
-import static com.instaclustr.sidecar.operations.OperationBindings.installOperationBindings;
+import static com.instaclustr.operations.OperationBindings.installOperationBindings;
 
 import com.google.inject.AbstractModule;
 

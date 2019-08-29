@@ -1,4 +1,4 @@
-package com.instaclustr.sidecar.operations;
+package com.instaclustr.operations;
 
 import java.time.Instant;
 import java.util.Map;

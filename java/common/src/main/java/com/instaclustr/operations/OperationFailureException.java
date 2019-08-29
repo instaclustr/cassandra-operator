@@ -1,4 +1,4 @@
-package com.instaclustr.sidecar.operations;
+package com.instaclustr.operations;
 
 public class OperationFailureException extends RuntimeException {
 

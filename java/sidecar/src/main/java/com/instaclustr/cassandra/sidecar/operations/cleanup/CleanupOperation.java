@@ -8,8 +8,8 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.assistedinject.Assisted;
-import com.instaclustr.sidecar.operations.Operation;
-import com.instaclustr.sidecar.operations.OperationFailureException;
+import com.instaclustr.operations.Operation;
+import com.instaclustr.operations.OperationFailureException;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 
 public class CleanupOperation extends Operation<CleanupOperationRequest> {

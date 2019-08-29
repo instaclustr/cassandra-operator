@@ -9,7 +9,7 @@ import com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationDese
 import com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationSerializer;
 import com.instaclustr.cassandra.backup.impl.StorageLocation.StorageLocationTypeConverter;
 import com.instaclustr.cassandra.backup.impl.StorageLocation.ValidStorageLocation;
-import com.instaclustr.sidecar.operations.OperationRequest;
+import com.instaclustr.operations.OperationRequest;
 import picocli.CommandLine.Option;
 
 public class BaseRestoreOperationRequest extends OperationRequest {

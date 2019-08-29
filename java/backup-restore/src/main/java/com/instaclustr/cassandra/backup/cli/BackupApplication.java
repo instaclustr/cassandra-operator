@@ -8,8 +8,8 @@ import static org.awaitility.Awaitility.await;
 import com.google.inject.Inject;
 import com.instaclustr.cassandra.backup.impl.backup.BackupOperationRequest;
 import com.instaclustr.picocli.CassandraJMXSpec;
-import com.instaclustr.sidecar.operations.Operation;
-import com.instaclustr.sidecar.operations.OperationsService;
+import com.instaclustr.operations.Operation;
+import com.instaclustr.operations.OperationsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -58,5 +58,9 @@ public class BackupApplication implements Runnable {
         final Operation operation = operationsService.submitOperationRequest(request);
 
         await().forever().until(() -> operation.state.isTerminalState());
+
+        if (operation.state == Operation.State.FAILED) {
+            throw new IllegalStateException("Backup operation was not successful.");
+        }
     }
 }

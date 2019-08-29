@@ -31,8 +31,6 @@ import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesOperation;
 import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesOperationRequest;
 import com.instaclustr.cassandra.sidecar.resource.StatusResource;
-import com.instaclustr.sidecar.operations.Operation;
-import com.instaclustr.sidecar.operations.OperationRequest;
 import org.glassfish.jersey.server.ResourceConfig;
 
 public class SidecarClient implements Closeable {

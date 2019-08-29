@@ -29,7 +29,7 @@ public class BackupCommitLogsOperationRequest extends BaseBackupOperationRequest
                                             @JsonProperty("waitForLock") final boolean waitForLock,
                                             @JsonProperty("sharedContainerPath") final Path sharedContainerPath,
                                             @JsonProperty("cassandraDirectory") final Path cassandraDirectory,
-                                            @JsonProperty("commitLogArchiveOverride") final Path commitLogArchiveOverride) {
+                                            @JsonProperty("commitLogRestoreDirectory") final Path commitLogArchiveOverride) {
         super(storageLocation, duration, bandwidth, concurrentConnections, waitForLock, sharedContainerPath, cassandraDirectory);
         this.commitLogArchiveOverride = commitLogArchiveOverride;
     }
@@ -44,7 +44,7 @@ public class BackupCommitLogsOperationRequest extends BaseBackupOperationRequest
                 .add("waitForLock", waitForLock)
                 .add("sharedContainerPath", sharedContainerPath)
                 .add("cassandraDirectory", cassandraDirectory)
-                .add("commitLogArchiveOverride", commitLogArchiveOverride)
+                .add("commitLogRestoreDirectory", commitLogArchiveOverride)
                 .toString();
     }
 }

@@ -72,6 +72,8 @@ spec:
               type: array
             resources:
               type: object
+            restoreFromBackup:
+              type: string
             serviceAccountName:
               description: ServiceAccount to assign to pods created by the operator
               type: string

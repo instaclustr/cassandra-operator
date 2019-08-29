@@ -1,4 +1,4 @@
-package com.instaclustr.sidecar.operations;
+package com.instaclustr.operations;
 
 import java.util.Collections;
 import java.util.Map;

@@ -28,8 +28,8 @@ import com.instaclustr.cassandra.backup.impl.ManifestEntry;
 import com.instaclustr.cassandra.backup.impl.OperationProgressTracker;
 import com.instaclustr.cassandra.backup.impl.SSTableUtils;
 import com.instaclustr.io.GlobalLock;
-import com.instaclustr.sidecar.operations.Operation;
-import com.instaclustr.sidecar.operations.OperationRequest;
+import com.instaclustr.operations.Operation;
+import com.instaclustr.operations.OperationRequest;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -161,9 +161,6 @@ public class BackupOperation extends Operation<BackupOperationRequest> {
             writer.println("# add the following to cassandra.yaml when restoring to a new cluster.");
             writer.printf("initial_token: %s%n", Joiner.on(',').join(tokens));
         }
-
-        // TODO - clean this up! dont wait until jvm is shut down, what if this runs in sidecar?
-        tokensFilePath.toFile().deleteOnExit();
 
         return ImmutableList.of(new ManifestEntry(Paths.get("tokens").resolve(tokensFilePath.getFileName()),
                                                   tokensFilePath,

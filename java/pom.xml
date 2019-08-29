@@ -9,7 +9,6 @@
 
     <modules>
         <module>common</module>
-        <module>operations</module>
         <module>sidecar-common</module>
         <module>jmx</module>
         <module>backup-restore</module>
@@ -18,18 +17,17 @@
     </modules>
 
     <properties>
-        <guice.version>4.2.0</guice.version>
+        <cassandra.version>3.11.4</cassandra.version>
+        <guice.version>4.2.2</guice.version>
         <guice.bridge.version>2.5.0-b42</guice.bridge.version>
         <jersey.version>2.28</jersey.version>
         <picocli.version>4.0.1</picocli.version>
         <apache.commons.lang3>3.4</apache.commons.lang3>
-        <args4j.version>2.33</args4j.version>
-        <guava.version>27.1-jre</guava.version>
+        <guava.version>28.1-jre</guava.version>
         <javax.inject.version>1</javax.inject.version>
         <validation-api.version>2.0.1.Final</validation-api.version>
         <hibernate-validator.version>6.0.11.Final</hibernate-validator.version>
         <jackson.bom.version>2.9.9</jackson.bom.version>
-        <cassandra.driver.version>3.7.1</cassandra.driver.version>
         <commons-lang3.version>3.4</commons-lang3.version>
         <commons-io.version>2.6</commons-io.version>
         <logback.version>1.2.3</logback.version>
@@ -146,12 +144,6 @@
                 <groupId>org.hibernate.validator</groupId>
                 <artifactId>hibernate-validator</artifactId>
                 <version>${hibernate-validator.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.datastax.cassandra</groupId>
-                <artifactId>cassandra-driver-core</artifactId>
-                <version>${cassandra.driver.version}</version>
             </dependency>
 
             <!-- logging -->

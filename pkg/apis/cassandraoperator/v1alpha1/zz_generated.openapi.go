@@ -369,6 +369,12 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 							Ref: ref("k8s.io/api/core/v1.SecretVolumeSource"),
 						},
 					},
+					"restoreFromBackup": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"userSecretVolumeSource": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/api/core/v1.SecretVolumeSource"),

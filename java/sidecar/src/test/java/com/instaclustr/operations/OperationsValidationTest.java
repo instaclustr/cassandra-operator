@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toSet;
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
 import static org.awaitility.Awaitility.await;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import javax.validation.ConstraintViolation;
@@ -38,9 +39,10 @@ public class OperationsValidationTest extends AbstractSidecarTest {
                                                                                                      null);
 
         Set<ConstraintViolation<RebuildOperationRequest>> missingKeyspaceViolations = validator.validate(missingKeyspaceForSpecificTokens);
-        assertTrue(!missingKeyspaceViolations.isEmpty());
+        assertFalse(missingKeyspaceViolations.isEmpty());
         assertEquals(missingKeyspaceViolations.size(), 1);
 
+        assertTrue(missingKeyspaceViolations.stream().findFirst().isPresent());
         assertEquals(missingKeyspaceViolations.stream().findFirst().get().getMessage(), "Cannot set specificTokens without specifying a keyspace");
     }
 

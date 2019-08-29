@@ -1,4 +1,4 @@
-package com.instaclustr.sidecar.operations;
+package com.instaclustr.operations;
 
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;

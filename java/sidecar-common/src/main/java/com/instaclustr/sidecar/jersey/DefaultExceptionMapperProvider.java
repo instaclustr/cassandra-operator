@@ -5,7 +5,7 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
 @Provider
-public class DefaultExceptionMapper implements ExceptionMapper<Throwable> {
+public class DefaultExceptionMapperProvider implements ExceptionMapper<Throwable> {
 
     @Override
     public Response toResponse(final Throwable exception) {
