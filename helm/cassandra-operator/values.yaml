@@ -7,7 +7,8 @@ replicaCount: 1
 apiVersion: stable.instaclustr.com/v1
 
 image:
-  repository: gcr.io/cassandra-operator/cassandra-operator
+  repository: cassandra-operator
+#  repository: gcr.io/cassandra-operator/cassandra-operator
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -24,6 +25,10 @@ nodeSelector: {}
 
 rbacEnable: true
 
+pspEnable: false
+
 tolerations: []
 
 affinity: {}
+
+namespace: "default"
