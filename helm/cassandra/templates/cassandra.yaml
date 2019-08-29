@@ -12,8 +12,8 @@ metadata:
 {{- end }}
 spec:
   nodes: {{ .Values.replicaCount }}
-  racks:
   {{- if .Values.racks }}
+  racks:
 {{ toYaml .Values.racks | indent 4 }}
   {{- end }}
   cassandraImage: "{{ .Values.image.cassandraRepository }}:{{ .Values.image.cassandraTag }}"

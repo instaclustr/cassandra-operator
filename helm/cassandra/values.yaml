@@ -57,12 +57,6 @@ dataVolumeClaim:
 #      labels:
 #        failure-domain.beta.kubernetes.io/zone: europe-west1-a#
 
-
-racks:
-  - name: "rack1"
-    labels:
-      placement-zone: europe-west1-b
-
 #Example authentication for AWS S3 based backups
 #env:
 #  - name: AWS_ACCESS_KEY_ID
