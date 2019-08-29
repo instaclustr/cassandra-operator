@@ -12,7 +12,7 @@ image:
 # Published images
   cassandraRepository: gcr.io/cassandra-operator/cassandra-dev
   sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar-dev
-  cassandraTag: 3.11.3
+  cassandraTag: 3.11.4
   sidecarTag: latest
 
 imagePullPolicy: IfNotPresent
