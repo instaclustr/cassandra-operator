@@ -20,6 +20,9 @@ imagePullSecret: ""
 
 privilegedSupported: true
 
+# Note these resource limits are not appropriate for production scenarios
+# Generally require 8GB for JVM heap + more see https://github.com/apache/cassandra/blob/a145a485206f6a32b07979dfb1b983addf49dd10/conf/cassandra-env.sh#L17-L176
+
 resources:
   limits:
     memory: 512Mi
