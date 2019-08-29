@@ -5,15 +5,23 @@
 replicaCount: 3
 
 image:
+# Dev images
+#  cassandraRepository: cassandra
+#  sidecarRepository: cassandra-sidecar
+
+# Published images
   cassandraRepository: gcr.io/cassandra-operator/cassandra-dev
   sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar-dev
-  cassandraTag: 3.11.3
+  cassandraTag: 3.11.4
   sidecarTag: latest
 
 imagePullPolicy: IfNotPresent
 imagePullSecret: ""
 
 privilegedSupported: true
+
+# Note these resource limits are not appropriate for production scenarios
+# Generally require 8GB for JVM heap + more see https://github.com/apache/cassandra/blob/a145a485206f6a32b07979dfb1b983addf49dd10/conf/cassandra-env.sh#L17-L176
 
 resources:
   limits:
@@ -26,6 +34,31 @@ dataVolumeClaim:
   resources:
     requests:
       storage: 100Mi
+
+#sidecarEnv:
+#  - name: GOOGLE_APPLICATION_CREDENTIALS
+#    value: "/tmp/backup-creds/my-service-key.json"
+
+
+#backupSecretVolumeSource:
+#  # example from doc/backup_restore.md
+#  secretName: gcp-auth-reference
+#  #     type is a workaround for https://github.com/kubernetes/kubernetes/issues/68466
+#  type: array
+#  items:
+#    - key: my-service-key.json
+#      path: my-service-key.json
+
+#  racks:
+#    - name: "west1-b"
+#      labels:
+#        failure-domain.beta.kubernetes.io/zone: europe-west1-b
+#    - name: "west1-c"
+#      labels:
+#        failure-domain.beta.kubernetes.io/zone: europe-west1-c
+#    - name: "west1-a"
+#      labels:
+#        failure-domain.beta.kubernetes.io/zone: europe-west1-a#
 
 #Example authentication for AWS S3 based backups
 #env:

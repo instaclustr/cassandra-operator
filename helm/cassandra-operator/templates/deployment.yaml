@@ -28,6 +28,18 @@ spec:
       {{- end }}
       containers:
         - name: {{ template "cassandra-operator.name" . }}
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "cassandra-operator"
+
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
 #          Uncomment and modify to change operator behaviour via start up flags

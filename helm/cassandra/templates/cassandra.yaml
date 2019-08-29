@@ -1,4 +1,4 @@
-apiVersion: stable.instaclustr.com/v1
+apiVersion: cassandraoperator.instaclustr.com/v1alpha1
 kind: CassandraDataCenter
 metadata:
   name: {{ template "cassandra.fullname" . }}
@@ -11,7 +11,11 @@ metadata:
 {{ toYaml .Values.labels | indent 4 }}
 {{- end }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  nodes: {{ .Values.replicaCount }}
+  {{- if .Values.racks }}
+  racks:
+{{ toYaml .Values.racks | indent 4 }}
+  {{- end }}
   cassandraImage: "{{ .Values.image.cassandraRepository }}:{{ .Values.image.cassandraTag }}"
   sidecarImage: "{{ .Values.image.sidecarRepository }}:{{ .Values.image.sidecarTag }}"
   imagePullPolicy: {{ .Values.imagePullPolicy }}
@@ -20,9 +24,18 @@ spec:
   {{- else }}
   imagePullSecret: ""
   {{- end }}
+
+  {{- if .Values.sidecarEnv }}
+  sidecarEnv:
+  {{- end }}
+
+  {{- if .Values.backupSecretVolumeSource }}
+  backupSecretVolumeSource:
+  {{- end }}
+
   resources:
 {{ toYaml .Values.resources | indent 4 }}
-  dataVolumeClaim:
+  dataVolumeClaimSpec:
 {{ toYaml .Values.dataVolumeClaim | indent 4 }}
 {{- if .Values.env }}
   env:
