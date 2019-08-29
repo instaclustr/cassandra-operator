@@ -11,10 +11,7 @@ minikube start --cpus 4 --memory 4096 --kubernetes-version v1.9.4
 eval $(minikube docker-env)
 
 #Build the operator
-mvn -f java/pom.xml clean package
-
-#Build the required docker images
-./buildenv/build-all
+make
 
 #Create the operator using the default bundle
 kubectl apply -f examples/common/rbac-bundle.yaml
@@ -61,14 +58,23 @@ Custom namespace support is somewhat limited at the moment primarily due to lazi
 To changes the namespace the operator watches (it can be deployed in a different namespace if you want), you will need to modify the deployment the operator gets deployed by (either the helm package or the example yaml) to include the following in the containers spec:
 
 ```yaml
-command: ["java"]
-args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--namespace=NAMESPACE"]
+  env:
+    - name: WATCH_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: OPERATOR_NAME
+      value: "cassandra-operator"
 ```
 
 The modified helm package (helm/cassandra-operator/templates/deployment.yaml) would look like:
 
 ```yaml
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
@@ -80,6 +86,11 @@ metadata:
   name: {{ template "cassandra-operator.fullname" . }}
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: {{ template "cassandra-operator.name" . }}
+      operator: cassandra
+      release: {{ .Release.Name }}
   template:
     metadata:
       labels:
@@ -87,12 +98,27 @@ spec:
         operator: cassandra
         release: {{ .Release.Name }}
     spec:
+      {{- with .Values.imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ . }}
+      {{- end }}
       containers:
         - name: {{ template "cassandra-operator.name" . }}
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "cassandra-operator"
+
+
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
-          command: ["java"]
-          args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--namespace=NAMESPACE"]
           ports:
             - containerPort: 8080
               name: http
@@ -111,7 +137,6 @@ spec:
       securityContext:
 {{ toYaml .Values.securityContext | indent 8 }}
 {{- end }}
-
 ```
  
 
@@ -127,7 +152,26 @@ That said, different workloads require tuning the configuration to achieve best 
 Hence custom user configuration overrides are also supported.
 
 
-### Basics
+### Rack Awareness
+The operator supports rack aware Cassandra deployments and will automatically configure and manage a seperate set of StatefulSets
+per defined racks. You can also assign node placement labels to each rack, so you can leverage kubernetes fault domains or other placement
+strategies. To define racks modify the racks object in the CRD. The operator will automatically balance replicas across your racks.
+
+```yaml
+  racks:
+    - name: "west1-b"
+      labels:
+        failure-domain.beta.kubernetes.io/zone: europe-west1-b
+    - name: "west1-c"
+      labels:
+        failure-domain.beta.kubernetes.io/zone: europe-west1-c
+    - name: "west1-a"
+      labels:
+        failure-domain.beta.kubernetes.io/zone: europe-west1-a#
+```
+
+
+### Cassandra.yaml and cassandra-env.sh
 
 cassandra-operator supports mounting a custom [ConfigMap](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#configmap-v1-core)
 (via a [ConfigMapVolumeSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#configmapvolumesource-v1-core)) into the Cassandra container.
@@ -220,7 +264,7 @@ Cassandra will load the `cassandra.yaml.d/100-concurrent.yaml` file as well as t
 ## Create and destroy an Cassandra cluster without Helm
 
 ```bash
-$ kubectl create -f example/common/test.yaml
+$ kubectl create -f examples/common/test.yaml
 ```
 
 A 3 member Cassandra cluster will be created.
@@ -254,10 +298,6 @@ In `example/common/test.yaml` the initial cluster size is 3.
 Modify the file and change `replicas` from 3 to 5.
 
 ```yaml
-apiVersion: stable.instaclustr.com/v1
-kind: CassandraDataCenter
-metadata:
-  name: test-dc
 spec:
   replicas: 5
   image: "gcr.io/cassandra-operator/cassandra:latest"
@@ -281,7 +321,7 @@ test-dc-4                       1/1       Running   0          1m
 Similarly we can decrease the size of cluster from 5 back to 3 by changing the size field again and reapplying the change.
 
 ```yaml
-apiVersion: stable.instaclustr.com/v1
+apiVersion: cassandraoperator.instaclustr.com/v1alpha1
 kind: CassandraDataCenter
 metadata:
   name: test-dc

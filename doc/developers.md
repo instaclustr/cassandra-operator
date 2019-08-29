@@ -1,10 +1,7 @@
 ## Developers Guide
-The Cassandra operator is primarily written in Java and uses Maven as the build and dependency management system.
-
 ### Operator
-The main logic for the controller portion of the Cassandra operator can in found in the operator/ module. The Cassandra
-sidecar also sits within this module as ends up being built in the same jar (with just a different main entry point), 
-this reduces the number of docker image layers that get pulled. 
+The main logic for the controller portion of the Cassandra operator can be found in cmd/ and pkg/ directories and is primarily 
+written in Go. The sidecar can be found in java/ and is written in Java.
 
 ### Model
 Defined kubernetes CRD objects can be found in the model/ module. These are defined by a json schema and there Java
@@ -20,19 +17,11 @@ This module contains add-on components that extend Cassandra and make it easier 
 The k8s-addon jar gets included Cassandra docker image and is dropped into the Cassandra classpath. 
 
 ## Building
-To build the project and generate relevant jars, from the project root, run: 
+To build the project, compile the go project, generate images and generate relevant jars, from the project root, run: 
 ```bash
-mvn clean package
-```
-This will build all the submodules defined in the parent pom.xml
-
-To build the relevant docker images, run:
-```bash
-./buildenv/build-all
+make
 ```
 
-This will by default build an images for the projects gcr.io development image repo, the component and the suffix `-dev` will be appended.
-The default tag is the git short hash.
-e.g. `gcr.io/cassandra-operator/cassandra-operator-dev:0cf96c3` 
+This will by default build an images for your local image repo.
 
 This behavior can be overridden by defining `NO_DEV`, `REGISTRY` and `TAG` environment variables. 

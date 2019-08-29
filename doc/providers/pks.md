@@ -44,62 +44,8 @@ kubectl apply -f operator.yaml
 You can also build the yaml by hand. Refer to the `examples` directory and the Helm templates for requirements. 
 
 ## Custom Namespace support
-Custom namespace support is somewhat limited at the moment primarily due to laziness. You can have the operator watch a different namespace (other than "defaul") by changing the namepsace it watches on startup. This is not an optimal way to do so (we should watch all namespaces... maybe), but it's the implementation as it stands.
+See the [ops guide](../op_guide.md)
 
-To changes the namespace the operator watches (it can be deployed in a different namespace if you want), you will need to modify the deployment the operator gets deployed by (either the Helm package or the example yaml) to include the following in the containers spec:
-
-```yaml
-command: ["java"]
-args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--namespace=NAMESPACE"]
-```
-
-The modified helm package (`helm/cassandra-operator/templates/deployment.yaml`) would look like:
-```yaml
-apiVersion: apps/v1beta1
-kind: Deployment
-metadata:
-  labels:
-    app: {{ template "cassandra-operator.name" . }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
-    heritage: {{ .Release.Service }}
-    operator: cassandra
-    release: {{ .Release.Name }}
-  name: {{ template "cassandra-operator.fullname" . }}
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: {{ template "cassandra-operator.name" . }}
-        operator: cassandra
-        release: {{ .Release.Name }}
-    spec:
-      containers:
-        - name: {{ template "cassandra-operator.name" . }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
-          command: ["java"]
-          args: ["-jar", "/opt/lib/cassandra-operator/cassandra-operator.jar", "--namespace=NAMESPACE"]
-          ports:
-            - containerPort: 8080
-              name: http
-          resources:
-{{ toYaml .Values.resources | indent 12 }}
-    {{- if .Values.nodeSelector }}
-      nodeSelector:
-{{ toYaml .Values.nodeSelector | indent 8 }}
-    {{- end }}
-    {{- if .Values.rbacEnable }}
-      serviceAccountName: {{ template "cassandra-operator.fullname" . }}
-    {{- end }}
-    {{- if .Values.tolerations }}
-      tolerations:
-{{ toYaml .Values.tolerations | indent 8 }}
-      securityContext:
-{{ toYaml .Values.securityContext | indent 8 }}
-{{- end }}
-
-```
 ## Deploying Cassandra
 You can now deploy Cassandra by using the Helm package (`helm/cassandra`) or my creating your own CDC object (see `examples` directory).
 Key configuration components are defined in a `values.yaml` file. You can either use the default or define your own (see example below):
@@ -113,15 +59,15 @@ Key configuration components are defined in a `values.yaml` file. You can either
 replicaCount: 3
 
 image:
-  cassandraRepository: cassandra
-  sidecarRepository: cassandra-sidecar
-  cassandraTag: 3.11.3
+  cassandraRepository: gcr.io/cassandra-operator/cassandra-dev
+  sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar-dev
+  cassandraTag: 3.11.4
   sidecarTag: latest
 
 imagePullPolicy: IfNotPresent
 imagePullSecret: ""
 
-privilegedSupported: false
+privilegedSupported: true
 
 resources:
   limits:
@@ -134,8 +80,6 @@ dataVolumeClaim:
   resources:
     requests:
       storage: 100Mi
-  storageClassName: fast # note this may not be applicable in your environment
-
 
 prometheusEnabled: false
 ```
@@ -234,7 +178,7 @@ Create a config map from that YAML file:
 Modify the CassandraDataCenter CRD to reference the newly created ConfigMap:
 
 ```yaml
-apiVersion: stable.instaclustr.com/v1
+apiVersion: cassandraoperator.instaclustr.com/v1alpha1
 kind: CassandraDataCenter
 metadata:
   name: example-cdc
