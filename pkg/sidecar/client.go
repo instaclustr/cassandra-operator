@@ -37,16 +37,16 @@ type Client struct {
 }
 
 type ClientOptions struct {
-	Secure   bool
-	Port     int32
-	Timeout  time.Duration
+	Secure  bool
+	Port    int32
+	Timeout time.Duration
 }
 
 func NewSidecarClient(host string, options *ClientOptions) *Client {
 
 	if options == nil {
 		options = &ClientOptions{
-			Secure:   true,
+			Secure: true,
 		}
 	}
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/go-logr/logr"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
+	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
+	v1 "k8s.io/api/apps/v1"
 	"k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -73,9 +75,21 @@ type ReconcileCassandraDataCenter struct {
 
 type reconciliationRequestContext struct {
 	ReconcileCassandraDataCenter
-	cdc    *cassandraoperatorv1alpha1.CassandraDataCenter
-	logger logr.Logger
+	logger         logr.Logger
+	cdc            *cassandraoperatorv1alpha1.CassandraDataCenter
+	sets           []v1.StatefulSet
+	operation      scalingOperation
+	allPods        []corev1.Pod
+	sidecarClients map[*corev1.Pod]*sidecar.Client
 }
+
+type scalingOperation string
+
+var (
+	scalingUp   = scalingOperation("ScaleUp")
+	scalingDown = scalingOperation("ScaleDown")
+	noScale     = scalingOperation("")
+)
 
 // Reconcile reads that state of the cluster for a CassandraDataCenter object and makes changes based on the state read
 // and what is in the CassandraDataCenter.Spec
@@ -100,10 +114,20 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 		return reconcile.Result{}, err
 	}
 
-	rctx := &reconciliationRequestContext{
-		ReconcileCassandraDataCenter: *r,
-		cdc:                          instance,
-		logger:                       reqLogger,
+	// Build new reconcile context
+	rctx, err := newReconciliationContext(r, reqLogger, instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// check cluster health
+	if clusterReady, err := checkClusterHealth(rctx); !clusterReady {
+		if err == ErrorClusterNotReady {
+			// If something is not ready, wait a minute and retry
+			return reconcile.Result{RequeueAfter: time.Minute}, nil
+		} else {
+			return reconcile.Result{}, err
+		}
 	}
 
 	nodesService, err := createOrUpdateNodesService(rctx)
@@ -123,12 +147,7 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 
 	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume)
 	if err != nil {
-		if err == ErrorCDCNotReady {
-			// If something is not ready, wait a minute and retry
-			return reconcile.Result{RequeueAfter: time.Minute}, nil
-		} else {
-			return reconcile.Result{}, err
-		}
+		return reconcile.Result{}, err
 	}
 
 	// TODO:
@@ -137,4 +156,38 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 	rctx.logger.Info("CassandraDataCenter reconciliation complete.")
 
 	return reconcile.Result{}, nil
+}
+
+func newReconciliationContext(r *ReconcileCassandraDataCenter, reqLogger logr.Logger, instance *cassandraoperatorv1alpha1.CassandraDataCenter) (*reconciliationRequestContext, error) {
+
+	// Figure out the scaling operation. If no change needed, then it's noop
+	allPods, err := AllPodsInCDC(r.client, instance)
+	if err != nil {
+		return nil, err
+	}
+
+	var op scalingOperation
+	if instance.Spec.Nodes > int32(len(allPods)) {
+		op = scalingUp
+	} else if instance.Spec.Nodes < int32(len(allPods)) {
+		op = scalingDown
+	}
+
+	// build out the context
+	rctx := &reconciliationRequestContext{
+		ReconcileCassandraDataCenter: *r,
+		cdc:                          instance,
+		operation:                    op,
+		allPods:                      allPods,
+		sidecarClients:               sidecar.SidecarClients(allPods, &sidecar.DefaultSidecarClientOptions),
+		logger:                       reqLogger,
+	}
+
+	// update the stateful sets
+	rctx.sets, err = getStatefulSets(rctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return rctx, nil
 }

@@ -170,7 +170,7 @@ func TestClient_BackupNode(t *testing.T) {
 
 	request := &BackupRequest{
 		StorageLocation: "s3://my-bucket/cassandra-dc/test-node-0",
-		SnapshotTag: "mySnapshot",
+		SnapshotTag:     "mySnapshot",
 	}
 
 	if operationID, err := client.StartOperation(request); err != nil {
