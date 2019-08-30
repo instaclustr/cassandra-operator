@@ -139,21 +139,18 @@ func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCente
 	}
 
 	type CassandraConfig struct {
-		ClusterName   string  `yaml:"cluster_name"`
-		ListenAddress *string `yaml:"listen_address"`
-		RPCAddress    *string `yaml:"rpc_address"`
-
-		SeedProvider []SeedProvider `yaml:"seed_provider"`
-
-		EndpointSnitch string `yaml:"endpoint_snitch"`
+		ClusterName    string         `yaml:"cluster_name"`
+		ListenAddress  *string        `yaml:"listen_address"`
+		RPCAddress     *string        `yaml:"rpc_address"`
+		SeedProvider   []SeedProvider `yaml:"seed_provider"`
+		EndpointSnitch string         `yaml:"endpoint_snitch"`
+		DiskAccessMode string         `yaml:"disk_access_mode,omitempty"`
 	}
 
-	data, err := yaml.Marshal(&CassandraConfig{
-		ClusterName: cdc.Spec.Cluster,
-
+	cc := &CassandraConfig{
+		ClusterName:   cdc.Spec.Cluster,
 		ListenAddress: nil, // let C* discover the listen address
 		RPCAddress:    nil, // let C* discover the rpc address
-
 		SeedProvider: []SeedProvider{
 			{
 				ClassName: "com.instaclustr.cassandra.k8s.SeedProvider",
@@ -162,10 +159,15 @@ func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCente
 				},
 			},
 		},
-
 		EndpointSnitch: "org.apache.cassandra.locator.GossipingPropertyFileSnitch", // TODO: custom snitch implementation?
-	})
+	}
 
+	// Set disk_access_mode to 'mmap' only when user specifies `optimizeKernelParams: true`.
+	if cdc.Spec.OptimizeKernelParams {
+		cc.DiskAccessMode = "mmap"
+	}
+
+	data, err := yaml.Marshal(cc)
 	if err != nil {
 		// we're serializing a known structure to YAML -- if that fails...
 		panic(err)
