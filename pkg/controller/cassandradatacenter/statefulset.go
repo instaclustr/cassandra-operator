@@ -178,6 +178,10 @@ func newCassandraContainer(
 				},
 			},
 		}
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  "MEMORY_LOCK",
+			Value: "true",
+		})
 	}
 
 	if userConfigVolume != nil {

@@ -22,7 +22,7 @@ dagi dpkg-dev cpio
 
 # install C*
 echo "deb file:${pkg_dir} ${arch}/" > /etc/apt/sources.list.d/cassandra.sources.list
-APT_GET_OPTS="--allow-unauthenticated" dagi cassandra cassandra-tools
+APT_GET_OPTS="--allow-unauthenticated" dagi cassandra cassandra-tools libcap2-bin
 
 # package "cleanup"
 mkdir /usr/share/cassandra/agents

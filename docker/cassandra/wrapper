@@ -1,0 +1,22 @@
+#!/bin/bash -xue
+
+# This wrapper script executes the entrypoint script using one of two interpreters:
+#
+# If the $MEMORY_LOCK environment variable is set to "true", the entrypoint script
+# is invoked using /bin/bash-mod, which is an exact copy of the /bin/bash binary
+# but it also has the following capabilities at the executable level (added using
+# `setcap`):
+# - IPC_LOCK - allows locking memory
+# - SYS_RESOURCE - allows changing ulimit values
+#
+# If the $MEMORY_LOCK environment isn't set to "true" or is simply unset, the
+# entrypoint script is invoked using the regualr /bin/bash.
+#
+# This is required in order to allow the entrypoint script to make ulimit changes
+# and for allowing Cassandra to lock memory.
+
+if [ -n "${MEMORY_LOCK-}" ] && [ "${MEMORY_LOCK}" == "true" ]; then
+    exec /bin/bash-mod -xue /usr/bin/entry-point
+else
+    exec /bin/bash -xue /usr/bin/entry-point
+fi
