@@ -223,12 +223,12 @@ func newSidecarContainer(
 func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) *corev1.Container {
 	return &corev1.Container{
 		Name:            "sysctl-limits",
-		Image:           cdc.Spec.CassandraImage,
+		Image:           "busybox:latest",
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		SecurityContext: &corev1.SecurityContext{
 			Privileged: boolPointer(true),
 		},
-		Command: []string{"bash", "-xuec"},
+		Command: []string{"sh", "-xuec"},
 		Args: []string{
 			`sysctl -w vm.max_map_count=1048575`,
 		},
