@@ -37,7 +37,6 @@ func createOrUpdateOperatorConfigMap(rctx *reconciliationRequestContext, seedNod
 
 		addPrometheusSupport(rctx.cdc, addFileFn)
 
-
 		if err := controllerutil.SetControllerReference(rctx.cdc, configMap, rctx.scheme); err != nil {
 			return err
 		}
@@ -87,7 +86,6 @@ func createOrUpdateCassandraRackConfig(rctx *reconciliationRequestContext, rack 
 	if err != nil {
 		return nil, err
 	}
-
 
 	// Only log if something has changed
 	if opresult != controllerutil.OperationResultNone {

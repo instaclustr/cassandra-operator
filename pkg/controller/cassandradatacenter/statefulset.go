@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"k8s.io/apimachinery/pkg/types"
-	"sort"
 	"strings"
 	"sync"
 
@@ -18,7 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -340,37 +338,24 @@ func newDataVolumeClaim(dataVolumeClaimSpec *corev1.PersistentVolumeClaimSpec) *
 func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v1beta2.StatefulSet, newStatefulSetSpec *v1beta2.StatefulSetSpec, rack *cluster.Rack) error {
 
 	var (
-		currentSpecReplicas,   // number of replicas set in the current spec
-		currentStatusReplicas, // currently running replicas
+		currentSpecReplicas, // number of replicas set in the current spec
 		desiredSpecReplicas int32 // the new requested spec replicas
 	)
 
 	// Get all replicas numbers
 	desiredSpecReplicas = rack.Replicas
-	currentStatusReplicas = existingStatefulSet.Status.Replicas
 	if existingStatefulSet.Spec.Replicas != nil {
 		currentSpecReplicas = *existingStatefulSet.Spec.Replicas
 	}
 
 	// Get pods, clients and states
-	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
-	if err != nil {
-		log.Info("unable to list pods in the cdc")
-		return err
-	}
 	podsInRack, err := AllPodsInRack(rctx.client, rctx.cdc.Namespace, RackLabels(rctx.cdc, rack))
 	if err != nil {
 		log.Info(fmt.Sprintf("unable to list pods in rack %v", rack.Name))
 		return err
 	}
-	clients := sidecar.SidecarClients(allPods, &sidecar.DefaultSidecarClientOptions)
-	states := cassandraStates(clients)
-	decommissionedNodes := decommissionedNodes(states)
-
-	// Check the current replicas/pods/cassandra state
-	if clusterReady, err := checkNodesStates(currentSpecReplicas, currentStatusReplicas, desiredSpecReplicas, allPods, states); !clusterReady {
-		return err
-	}
+	states := cassandraStates(rctx.sidecarClients)
+	decommissionedNodes := nodesInState(states, nodestate.DECOMMISSIONED)
 
 	if existingStatefulSet.CreationTimestamp.IsZero() {
 		// creating a new StatefulSet -- just set the Spec and we're done
@@ -388,7 +373,7 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 		newestPod := podsInRack[len(podsInRack)-1]
 		if len(decommissionedNodes) == 0 {
 			log.Info("No Cassandra nodes have been decommissioned. Decommissioning the newest one " + newestPod.Name)
-			if clientForNewestPod := sidecar.ClientFromPods(clients, newestPod); clientForNewestPod != nil {
+			if clientForNewestPod := sidecar.ClientFromPods(rctx.sidecarClients, newestPod); clientForNewestPod != nil {
 				if _, err := clientForNewestPod.StartOperation(&sidecar.DecommissionRequest{}); err != nil {
 					return fmt.Errorf("unable to decommission node %s: %v", newestPod.Name, err)
 				}
@@ -410,49 +395,6 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 	}
 
 	return nil
-}
-
-// helpers
-
-func AllPodsInCDC(c client.Client, cdc *cassandraoperatorv1alpha1.CassandraDataCenter) ([]corev1.Pod, error) {
-	return getPods(c, cdc.Namespace, DataCenterLabels(cdc))
-}
-
-func AllPodsInRack(c client.Client, namespace string, rackLabels map[string]string) ([]corev1.Pod, error) {
-	return getPods(c, namespace, rackLabels)
-}
-
-func getPods(c client.Client, namespace string, l map[string]string) ([]corev1.Pod, error) {
-	podList := corev1.PodList{}
-	listOps := &client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(l),
-	}
-
-	if err := c.List(context.TODO(), listOps, &podList); err != nil {
-		return nil, err
-	}
-
-	pods := podList.Items
-
-	//sort.Slice(pods, func(i, j int) bool {
-	//	return pods[i].Labels["cassandra-operator.instaclustr.com/rack"] < pods[j].Labels["cassandra-operator.instaclustr.com/rack"]
-	//})
-
-	return pods, nil
-}
-
-func allPodsAreRunning(pods []corev1.Pod) (bool, []string) {
-
-	var notRunningPodNames []string
-
-	for _, pod := range pods {
-		if pod.Status.Phase != corev1.PodRunning {
-			notRunningPodNames = append(notRunningPodNames, pod.Name)
-		}
-	}
-
-	return len(notRunningPodNames) == 0, notRunningPodNames
 }
 
 func cassandraStates(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]nodestate.NodeState {
@@ -483,30 +425,19 @@ func cassandraStates(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod
 }
 
 func nodesInState(statuses map[*corev1.Pod]nodestate.NodeState, state nodestate.NodeState) []*corev1.Pod {
-
 	var podsInState []*corev1.Pod
-
 	for pod, status := range statuses {
 		if status == state {
 			podsInState = append(podsInState, pod)
 		}
 	}
-
 	return podsInState
-}
-
-func decommissionedNodes(states map[*corev1.Pod]nodestate.NodeState) []*corev1.Pod {
-	return nodesInState(states, nodestate.DECOMMISSIONED)
-}
-
-func leavingNodes(states map[*corev1.Pod]nodestate.NodeState) []*corev1.Pod {
-	return nodesInState(states, nodestate.LEAVING)
 }
 
 type nodeStates []nodestate.NodeState
 
-var scaleUpOperationModes = []nodestate.NodeState{nodestate.NORMAL}
-var scaleDownOperationModes = []nodestate.NodeState{nodestate.NORMAL, nodestate.DECOMMISSIONED}
+var scaleUpOperationModes = nodeStates{nodestate.NORMAL}
+var scaleDownOperationModes = nodeStates{nodestate.NORMAL, nodestate.DECOMMISSIONED}
 
 func (states nodeStates) asString() string {
 
@@ -519,115 +450,79 @@ func (states nodeStates) asString() string {
 	return strings.Join(stringStates, ",")
 }
 
-func requiredModesForScaling(desiredReplicas int32, existingReplicas int32) nodeStates {
-	if desiredReplicas < existingReplicas {
-		return scaleDownOperationModes
-	} else {
-		return scaleUpOperationModes
+func (states nodeStates) contains(state nodestate.NodeState) bool {
+	for _, n := range states {
+		if state == n {
+			return true
+		}
 	}
+	return false
 }
 
-func badNodes(desiredReplicas int32, existingReplicas int32, statuses map[*corev1.Pod]nodestate.NodeState) map[string]nodestate.NodeState {
+func badNodes(rctx *reconciliationRequestContext) (map[string]nodestate.NodeState, string) {
+
+	// return map of [bad pods name]: [their state]
+	// return list of desired states appropriate to the current scaling operation as a string
+
+	states := cassandraStates(rctx.sidecarClients)
 
 	opModes := scaleUpOperationModes
-	if desiredReplicas < existingReplicas {
+	if rctx.operation == scalingDown {
 		opModes = scaleDownOperationModes
 	}
 
 	podsInBadState := make(map[string]nodestate.NodeState)
-	for pod, status := range statuses {
-		if !contains(opModes, status) {
-			podsInBadState[pod.Name] = status
+	for pod, state := range states {
+		if !opModes.contains(state) {
+			podsInBadState[pod.Name] = state
 		}
 	}
 
-	return podsInBadState
+	return podsInBadState, opModes.asString()
 }
 
-func checkNodesStates(
-	currentSpecReplicas, currentStatusReplicas, desiredSpecReplicas int32,
-	allPods []corev1.Pod,
-	statuses map[*corev1.Pod]nodestate.NodeState) (bool, error) {
+func checkClusterHealth(rctx *reconciliationRequestContext) (bool, error) {
 
-	// check if current running # of pods match the current spec of the stateful set
-	if currentStatusReplicas != currentSpecReplicas {
-		log.Info("skipping StatefulSet reconciliation as it is undergoing scaling operations", "current", currentStatusReplicas, "expected", currentSpecReplicas)
-		return false, ErrorCDCNotReady
-	}
+	// Check the cluster health. If the cluster is not ready, do not reconcile and just wait.
 
-	// check if all pods in the cluster are in a Running mode
-	if allRun, notRunningPods := allPodsAreRunning(allPods); allRun == false {
+	// 1. Check all the currently existing pods, and make sure they're all in a Running state.
+	if allRun, notRunningPods := allPodsAreRunning(rctx.allPods); !allRun {
 		log.Info("Skipping reconciliation as some pods are not running yet: " + strings.Join(notRunningPods, " "))
-		return false, ErrorCDCNotReady
+		return false, ErrorClusterNotReady
 	}
 
-	// check if all Cassandras are ok to scale
-	if currentSpecReplicas > 0 {
-		badNodes := badNodes(desiredSpecReplicas, currentSpecReplicas, statuses)
-		if len(badNodes) > 0 {
-			requiredNodeStates := requiredModesForScaling(desiredSpecReplicas, currentSpecReplicas).asString()
-			log.Info(fmt.Sprintf("skipping StatefulSet reconciliation as some Cassandra nodes are not in modes %s", requiredNodeStates))
-			for pod, status := range badNodes {
-				log.Info(fmt.Sprintf("Pod: '%v', Status: '%v'", pod, status))
-			}
-			return false, ErrorCDCNotReady
+	// 2. Check all the currently existing C*, and make sure they're all in either NORMAL or DECOMMISSIONED state.
+	if badNodes, desiredNodeStates := badNodes(rctx); len(badNodes) > 0 {
+		log.Info(fmt.Sprintf("skipping StatefulSet reconciliation as some Cassandra nodes are not in modes %s", desiredNodeStates))
+		for pod, status := range badNodes {
+			log.Info(fmt.Sprintf("Pod: '%v', Status: '%v'", pod, status))
+		}
+		return false, ErrorClusterNotReady
+	}
+
+	// 3. Check that all stateful sets are not undergoing scale operations.
+	for _, set := range rctx.sets {
+		if set.Status.Replicas != *set.Spec.Replicas {
+			log.Info("skipping StatefulSet reconciliation as it is undergoing scaling operations", "current", set.Status.Replicas, "expected", set.Spec.Replicas)
+			return false, ErrorClusterNotReady
 		}
 	}
 
 	return true, nil
 }
 
-func podsToString(pods []*corev1.Pod) string {
-	var podNames []string
-	for _, pod := range pods {
-		podNames = append(podNames, pod.Name)
-	}
-	return strings.Join(podNames, ",")
-}
-
-// go does not have this built-in
-func contains(a []nodestate.NodeState, x nodestate.NodeState) bool {
-	for _, n := range a {
-		if x == n {
-			return true
-		}
-	}
-	return false
-}
-
-func rackExist(name string, sets []v1.StatefulSet) bool {
-	for _, set := range sets {
-		if set.Labels[rackKey] == name {
-			return true
-		}
-	}
-
-	return false
-}
-
 func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, error) {
 
-	// This currently works with the following logic:
 	// 1. Build the racks distribution numbers.
-	// 2. Fetch the running stateful sets sorted by number of currently running nodes (or in reverse when scaling down)
-	// 3. Check if all racks (stateful sets) have been created. If not, create a new missing one
-	// 4. If all racks are present, cycle through and check if the expected distribution
-	// replicas match the status, if not - reconcile by adding 1 to the current spec of the set.
-
 	racksDistribution := cluster.BuildRacksDistribution(rctx.cdc.Spec)
 
-	// Get all stateful sets, sorted
-	sets, err := getStatefulSets(rctx)
-	if err != nil {
-		log.Error(err, "Can't find Stateful Sets")
-		return nil, err
-	}
-
-	// check if all required racks are built. If not, create a missing one.
+	// 2. check if all required racks are built. If not, create a missing one.
 	for _, rack := range racksDistribution {
-		if !rackExist(rack.Name, sets) {
-			// make sure that replicas in the new set is <= 1 otherwise the set may launch more than 1 pod at a time,
-			// which may end up with uneven replicas distribution
+		if !rackExist(rack.Name, rctx.sets) {
+			// make sure that replicas in the new set are capped at 1, otherwise the set may launch more than 1 pod at a time,
+			// which may end up with uneven replicas distribution. We still honor the rack.Replicas == 0 for cases where
+			// distribution places 0 pods in a rack (i.e. 2 nodes in 3 racks, for example) and we still want to create an
+			// empty stateful set in this case.
 			if rack.Replicas > 1 {
 				rack.Replicas = 1
 			}
@@ -635,19 +530,19 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 		}
 	}
 
-	// Otherwise, we have all stateful sets running. Let's see which one we should reconcile.
-	for _, sts := range sets {
+	// 3. Otherwise, we have all stateful sets running. Let's see which one we should reconcile.
+	for _, sts := range rctx.sets {
 		rack := racksDistribution.GetRack(sts.Labels[rackKey])
 		if rack == nil {
 			log.Info("couldn't find the rack %v in the distribution\n", sts.Labels[rackKey])
 			continue
 		}
 		if rack.Replicas != *sts.Spec.Replicas {
-			// reconcile
+			// reconcile this rack.
 			// update the number of replicas in the rack with the current spec +1 or -1 depending on scale up or down.
-			if scaleUp(rctx) {
+			if rctx.operation == scalingUp {
 				rack.Replicas = *sts.Spec.Replicas + 1
-			} else if scaleDown(rctx) {
+			} else if rctx.operation == scalingDown {
 				rack.Replicas = *sts.Spec.Replicas - 1
 			}
 			return rack, nil
@@ -668,48 +563,12 @@ func getStatefulSets(rctx *reconciliationRequestContext) ([]v1.StatefulSet, erro
 		return []v1.StatefulSet{}, err
 	}
 
-	if scaleUp(rctx) {
-		// Scaling up
+	if rctx.operation == scalingUp {
 		return sortAscending(sts.Items), nil
-	} else if scaleDown(rctx) {
-		// Scaling down
+	} else if rctx.operation == scalingDown {
 		return sortDescending(sts.Items), nil
 	}
 
 	// if all nodes present or not scaling, no need to sort
 	return sts.Items, nil
-}
-
-func scaleUp(rctx *reconciliationRequestContext) bool {
-	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
-	if err != nil {
-		return false
-	}
-	return int32(len(allPods)) < rctx.cdc.Spec.Nodes
-}
-
-func scaleDown(rctx *reconciliationRequestContext) bool {
-	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
-	if err != nil {
-		return false
-	}
-	return int32(len(allPods)) > rctx.cdc.Spec.Nodes
-}
-
-func sortAscending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
-	// Sort sets from lowest to highest numerically by the number of the nodes in the set
-	sort.SliceStable(sets, func(i, j int) bool {
-		return sets[i].Status.Replicas < sets[j].Status.Replicas
-	})
-
-	return sets
-}
-
-func sortDescending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
-	// Sort sets from highest to lowest numerically by the number of the nodes in the set
-	sort.SliceStable(sets, func(i, j int) bool {
-		return sets[i].Status.Replicas > sets[j].Status.Replicas
-	})
-
-	return sets
 }

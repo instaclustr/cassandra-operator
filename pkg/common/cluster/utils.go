@@ -10,16 +10,14 @@ func BuildRacksDistribution(spec v1alpha1.CassandraDataCenterSpec) (racksDistrib
 	// If racks are not provided, we place everything in 1 Rack
 	if spec.Racks == nil {
 		spec.Racks = []v1alpha1.Rack{{Name: "rack1"}}
-	} else  {
+	} else {
 		// Sort racks alphabetically by name
 		sort.SliceStable(spec.Racks, func(i, j int) bool {
 			return spec.Racks[i].Name < spec.Racks[j].Name
 		})
 	}
 
-
-
-	// Now build the distribution
+	// otherwise, build the distribution
 	numRacks := int32(len(spec.Racks))
 	for i, rack := range spec.Racks {
 		replicas := spec.Nodes / numRacks
