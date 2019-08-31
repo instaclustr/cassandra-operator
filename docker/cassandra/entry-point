@@ -13,7 +13,7 @@ done
 )
 
 # Set unlimited memory locking only when running with kernel tweaks enabled.
-if [ -n "${MEMORY_LOCK-}" ] && [ "${MEMORY_LOCK}" == "true" ]; then
+if [ "${MEMORY_LOCK-unset}" == "true" ]; then
     ulimit -l unlimited
 fi
 

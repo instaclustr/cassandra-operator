@@ -15,7 +15,7 @@
 # This is required in order to allow the entrypoint script to make ulimit changes
 # and for allowing Cassandra to lock memory.
 
-if [ -n "${MEMORY_LOCK-}" ] && [ "${MEMORY_LOCK}" == "true" ]; then
+if [ "${MEMORY_LOCK-unset}" == "true" ]; then
     exec /bin/bash-mod -xue /usr/bin/entry-point "$@"
 else
     exec /bin/bash -xue /usr/bin/entry-point "$@"
