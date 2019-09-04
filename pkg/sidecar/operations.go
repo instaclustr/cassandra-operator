@@ -3,10 +3,11 @@ package sidecar
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 )
 
 //go:generate jsonenums -type=Kind

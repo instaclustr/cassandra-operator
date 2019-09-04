@@ -2,13 +2,14 @@ package cassandradatacenter
 
 import (
 	"context"
+	"sort"
+	"strings"
+
 	"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
-	"k8s.io/api/apps/v1"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sort"
-	"strings"
 )
 
 func sortAscending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
@@ -47,10 +48,6 @@ func getPods(c client.Client, namespace string, l map[string]string) ([]corev1.P
 	}
 
 	pods := podList.Items
-
-	//sort.Slice(pods, func(i, j int) bool {
-	//	return pods[i].Labels["cassandra-operator.instaclustr.com/rack"] < pods[j].Labels["cassandra-operator.instaclustr.com/rack"]
-	//})
 
 	return pods, nil
 }

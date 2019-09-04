@@ -3,11 +3,12 @@ package sidecar
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 
 	"github.com/google/uuid"
 	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"

@@ -1,8 +1,9 @@
 package cluster
 
 import (
-	"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"sort"
+
+	"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 )
 
 func BuildRacksDistribution(spec v1alpha1.CassandraDataCenterSpec) (racksDistribution Racks) {

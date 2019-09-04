@@ -3,9 +3,10 @@ package cassandradatacenter
 import (
 	"context"
 	"fmt"
-	"github.com/instaclustr/cassandra-operator/pkg/common/cluster"
 	"regexp"
 	"strings"
+
+	"github.com/instaclustr/cassandra-operator/pkg/common/cluster"
 
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"gopkg.in/yaml.v2"

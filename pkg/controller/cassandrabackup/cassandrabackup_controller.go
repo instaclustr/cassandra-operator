@@ -3,14 +3,15 @@ package cassandrabackup
 import (
 	"context"
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/go-logr/logr"
+	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/controller/cassandradatacenter"
