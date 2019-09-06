@@ -3,7 +3,7 @@ replicaCount: 3
 image:
   cassandraRepository: gcr.io/cassandra-operator/cassandra
   sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar
-  cassandraTag: 3.11.3
+  cassandraTag: 3.11.4
   tag: latest
 
 imagePullPolicy: Always
@@ -13,9 +13,9 @@ privilegedSupported: true
 
 resources:
   limits:
-    memory: 512Mi
+    memory: 1Gi
   requests:
-    memory: 512Mi
+    memory: 1Gi
 dataVolumeClaim:
   accessModes:
     - ReadWriteOnce
