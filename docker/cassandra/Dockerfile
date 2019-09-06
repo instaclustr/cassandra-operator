@@ -10,6 +10,13 @@ COPY install-cassandra /tmp/install-cassandra
 RUN /tmp/install-cassandra ${cassandra_version}
 
 COPY entry-point /usr/bin/entry-point
+COPY wrapper /usr/bin/wrapper
+
+# Allow entrypoint script to modify ulimit by creating a "patched" Bash executable
+# which is allowed to use the required capabilities
+RUN cp /bin/bash /bin/bash-mod \
+    && setcap cap_ipc_lock=+ep /bin/bash-mod \
+    && setcap cap_sys_resource=+ep /bin/bash-mod
 
 COPY cassandra /usr/sbin/cassandra
 COPY nodetool /usr/bin/nodetool
@@ -37,4 +44,4 @@ EXPOSE 7000 7001 7199 9042 9160
 # The user is created in ./install-cassandra
 USER 999
 
-ENTRYPOINT ["/usr/bin/entry-point"]
+ENTRYPOINT ["/usr/bin/wrapper"]

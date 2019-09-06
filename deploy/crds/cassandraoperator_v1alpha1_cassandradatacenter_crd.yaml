@@ -52,7 +52,7 @@ spec:
             nodes:
               format: int32
               type: integer
-            privilegedSupported:
+            optimizeKernelParams:
               type: boolean
             prometheusSupport:
               type: boolean

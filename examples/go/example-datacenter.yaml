@@ -55,4 +55,4 @@ spec:
         storage: 500Mi
 
   prometheusSupport: false
-  privilegedSupported: true
+  optimizeKernelParams: true

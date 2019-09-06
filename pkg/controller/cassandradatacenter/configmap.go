@@ -6,9 +6,10 @@ import (
 	"regexp"
 	"strings"
 
+	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/common/cluster"
 
-	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,7 +33,10 @@ func createOrUpdateOperatorConfigMap(rctx *reconciliationRequestContext, seedNod
 			configMapVolumeAddTextFile(configMap, volumeSource, path, data)
 		}
 
-		addCassandraYamlOverrides(rctx.cdc, seedNodesService, addFileFn)
+		err := addCassandraYamlOverrides(rctx.cdc, seedNodesService, addFileFn)
+		if err != nil {
+			return errors.Wrap(err, "adding Cassandra YAML overrides")
+		}
 
 		addCassandraJVMOptions(rctx.cdc, addFileFn)
 
@@ -132,28 +136,25 @@ func addPrometheusSupport(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, ad
 	}
 }
 
-func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, seedNodesService *corev1.Service, addFileFn func(path string, data string)) {
+func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, seedNodesService *corev1.Service, addFileFn func(path string, data string)) error {
 	type SeedProvider struct {
 		ClassName  string              `yaml:"class_name"`
 		Parameters []map[string]string `yaml:"parameters"`
 	}
 
 	type CassandraConfig struct {
-		ClusterName   string  `yaml:"cluster_name"`
-		ListenAddress *string `yaml:"listen_address"`
-		RPCAddress    *string `yaml:"rpc_address"`
-
-		SeedProvider []SeedProvider `yaml:"seed_provider"`
-
-		EndpointSnitch string `yaml:"endpoint_snitch"`
+		ClusterName    string         `yaml:"cluster_name"`
+		ListenAddress  *string        `yaml:"listen_address"`
+		RPCAddress     *string        `yaml:"rpc_address"`
+		SeedProvider   []SeedProvider `yaml:"seed_provider"`
+		EndpointSnitch string         `yaml:"endpoint_snitch"`
+		DiskAccessMode string         `yaml:"disk_access_mode,omitempty"`
 	}
 
-	data, err := yaml.Marshal(&CassandraConfig{
-		ClusterName: cdc.Spec.Cluster,
-
+	cc := &CassandraConfig{
+		ClusterName:   cdc.Spec.Cluster,
 		ListenAddress: nil, // let C* discover the listen address
 		RPCAddress:    nil, // let C* discover the rpc address
-
 		SeedProvider: []SeedProvider{
 			{
 				ClassName: "com.instaclustr.cassandra.k8s.SeedProvider",
@@ -162,16 +163,23 @@ func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCente
 				},
 			},
 		},
-
 		EndpointSnitch: "org.apache.cassandra.locator.GossipingPropertyFileSnitch", // TODO: custom snitch implementation?
-	})
+	}
 
+	// Set disk_access_mode to 'mmap' only when user specifies `optimizeKernelParams: true`.
+	if cdc.Spec.OptimizeKernelParams {
+		cc.DiskAccessMode = "mmap"
+	}
+
+	data, err := yaml.Marshal(cc)
 	if err != nil {
 		// we're serializing a known structure to YAML -- if that fails...
-		panic(err)
+		return errors.Wrap(err, "marshalling Cassandra YAML overrides")
 	}
 
 	addFileFn("cassandra.yaml.d/001-operator-overrides.yaml", string(data))
+
+	return nil
 }
 
 func addCassandraJVMOptions(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, addFileFn func(path string, data string)) {

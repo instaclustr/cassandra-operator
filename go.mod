@@ -7,6 +7,7 @@ require (
 	github.com/go-resty/resty/v2 v2.0.0
 	github.com/google/uuid v1.1.1
 	github.com/operator-framework/operator-sdk v0.10.1-0.20190809033248-9d6ffddcd86f
+	github.com/pkg/errors v0.8.1
 	github.com/spf13/pflag v1.0.3
 	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools v2.2.0+incompatible
