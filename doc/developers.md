@@ -17,11 +17,16 @@ This module contains add-on components that extend Cassandra and make it easier 
 The k8s-addon jar gets included Cassandra docker image and is dropped into the Cassandra classpath. 
 
 ## Building
+You will need to ensure your build environment has the following dependencies installed:
+* jdk 8
+* maven
+* docker 
+
 To build the project, compile the go project, generate images and generate relevant jars, from the project root, run: 
 ```bash
 make
 ```
 
-This will by default build an images for your local image repo.
+This will by default build an images for your local image repo. If you wish to run the operator images (e.g. from the example yaml files or the helm package). You will need to make sure the repo, image and tag all match the output of what you see when running `docker images`
 
 This behavior can be overridden by defining `NO_DEV`, `REGISTRY` and `TAG` environment variables. 
