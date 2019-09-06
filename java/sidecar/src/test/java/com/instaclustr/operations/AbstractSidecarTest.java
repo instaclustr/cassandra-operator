@@ -46,10 +46,6 @@ import org.testng.annotations.BeforeMethod;
 
 public abstract class AbstractSidecarTest {
 
-    static final String TEST_HOSTNAME = System.getProperty("SIDECAR_TEST_HOSTNAME", "localhost");
-
-    static final int TEST_PORT = Integer.getInteger("SIDECAR_TEST_PORT", 8080);
-
     @Inject
     ResourceConfig resourceConfig;
 
@@ -122,9 +118,13 @@ public abstract class AbstractSidecarTest {
 
         injector.injectMembers(this);
 
-        serverService = new JerseyHttpServerService(new InetSocketAddress(TEST_HOSTNAME, TEST_PORT), resourceConfig);
+        // Port 0 will be a randomly assigned ephemeral port by the OS - each concrete class will get it's own port
+        // Note we won't know the address till a socket actually binds on it, so we can't use this again, which is why
+        // we call getServerInetAddress from the serverService rather than using the passed in InetSocketAddress
 
-        sidecarClient = new SidecarClient.Builder().withHostname(TEST_HOSTNAME).withPort(TEST_PORT).build(resourceConfig);
+        serverService = new JerseyHttpServerService(new InetSocketAddress("localhost", 0), resourceConfig);
+
+        sidecarClient = new SidecarClient.Builder().withHostname(serverService.getServerInetAddress().getHostName()).withPort(serverService.getServerInetAddress().getPort()).build(resourceConfig);
 
         validator = Validation.byDefaultProvider().configure().buildValidatorFactory().getValidator();
     }
@@ -132,7 +132,7 @@ public abstract class AbstractSidecarTest {
     @AfterMethod
     public void teardown() {
         sidecarClient.close();
-        serverService.stopAsync();
+        serverService.stopAsync().awaitTerminated();
     }
 
     protected Pair<AtomicReference<List<OperationResult<?>>>, AtomicBoolean> performOnRunningServer(final Function<SidecarClient, List<OperationResult<?>>> requestExecutions) {
