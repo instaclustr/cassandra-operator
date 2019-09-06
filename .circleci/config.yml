@@ -21,6 +21,8 @@ jobs:
     steps:
       - checkout
 
+      - setup_remote_docker
+
       - run: make
 
   release-dev:
@@ -111,12 +113,11 @@ workflows:
             branches:
               ignore:
                 - master
+                - build-test
       - test-gcp:
           requires:
             - release-dev
       - release-dev:
-          requires:
-            - build
           filters:
             branches:
               only:
