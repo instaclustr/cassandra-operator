@@ -3,8 +3,8 @@ replicaCount: 3
 image:
   cassandraRepository: gcr.io/cassandra-operator/cassandra
   sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar
-  cassandraTag: 3.11.4
-  tag: latest
+  cassandraTag: 3.11.4-go
+  tag: latest-go
 
 imagePullPolicy: Always
 imagePullSecret: ""
