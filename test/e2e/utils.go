@@ -30,7 +30,7 @@ const (
 	pullSecret         = "OPERATOR_TEST_PULL_SECRET"
 )
 
-func initialise(t *testing.T) (*framework.TestCtx, *framework.Framework, *framework.CleanupOptions, string) {
+func initialise(t *testing.T, configMaps []*v1.ConfigMap) (*framework.TestCtx, *framework.Framework, *framework.CleanupOptions, string) {
 
 	ctx := framework.NewTestCtx(t)
 
@@ -52,7 +52,20 @@ func initialise(t *testing.T) (*framework.TestCtx, *framework.Framework, *framew
 		t.Fatalf("Timeout of Cassandra operator deployment has occurred: %v", err)
 	}
 
-	cleanupOptions := framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval}
+	for _, configMap := range configMaps {
+		configMap.Namespace = namespace
+		_ = f.Client.Create(goctx.TODO(), configMap, &framework.CleanupOptions{
+			TestContext:   ctx,
+			Timeout:       timeout,
+			RetryInterval: cleanupRetryInterval,
+		})
+	}
+
+	cleanupOptions := framework.CleanupOptions{
+		TestContext:   ctx,
+		Timeout:       cleanupTimeout,
+		RetryInterval: cleanupRetryInterval,
+	}
 
 	return ctx, f, &cleanupOptions, namespace
 }
@@ -152,7 +165,20 @@ func defaultNewCassandraDataCenterList() *operator.CassandraDataCenterList {
 	}
 }
 
-func defaultNewCassandraDataCenter(name string, namespace string, nodes, racks int32) *operator.CassandraDataCenter {
+func defaultMinimalCassandraDatacenter(name string, namespace string) *operator.CassandraDataCenter {
+	return &operator.CassandraDataCenter{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CassandraDataCenter",
+			APIVersion: "cassandraoperator.instaclustr.com/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
+func defaultNewCassandraDataCenter(name string, namespace string, nodes int32, racks []operator.Rack) *operator.CassandraDataCenter {
 
 	// should be done via flags but seems to be not supported yet https://github.com/operator-framework/operator-sdk/issues/1476
 
@@ -177,10 +203,9 @@ func defaultNewCassandraDataCenter(name string, namespace string, nodes, racks i
 			Racks:             racks,
 			CassandraImage:    cassandraImageName,
 			SidecarImage:      sidecarImageName,
-			Cluster:           "test-cluster",
 			PrometheusSupport: false,
 			ImagePullPolicy:   v1.PullAlways,
-			DataVolumeClaimSpec: v1.PersistentVolumeClaimSpec{
+			DataVolumeClaimSpec: &v1.PersistentVolumeClaimSpec{
 				AccessModes: []v1.PersistentVolumeAccessMode{
 					"ReadWriteOnce",
 				},
@@ -190,7 +215,7 @@ func defaultNewCassandraDataCenter(name string, namespace string, nodes, racks i
 					},
 				},
 			},
-			Resources: v1.ResourceRequirements{
+			Resources: &v1.ResourceRequirements{
 				Limits: v1.ResourceList{
 					"memory": memory,
 				},

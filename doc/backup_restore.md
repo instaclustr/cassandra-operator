@@ -111,8 +111,6 @@ metadata:
   labels:
     app: cassandra
 spec:
-  optimizeKernelParams: true
-  cluster: "test-cluster"
   nodes: 3
   cassandraImage: "gcr.io/cassandra-operator/cassandra:3.11.4"
   sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"

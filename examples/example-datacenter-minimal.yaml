@@ -1,0 +1,4 @@
+apiVersion: cassandraoperator.instaclustr.com/v1alpha1
+kind: CassandraDataCenter
+metadata:
+  name: test-dc-cassandra

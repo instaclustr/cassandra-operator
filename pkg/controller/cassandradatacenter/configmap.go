@@ -152,7 +152,7 @@ func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCente
 	}
 
 	cc := &CassandraConfig{
-		ClusterName:   cdc.Spec.Cluster,
+		ClusterName:   cdc.Name,
 		ListenAddress: nil, // let C* discover the listen address
 		RPCAddress:    nil, // let C* discover the rpc address
 		SeedProvider: []SeedProvider{

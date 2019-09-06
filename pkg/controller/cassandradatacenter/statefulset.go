@@ -49,7 +49,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			return err
 		}
 
-		dataVolumeClaim := newDataVolumeClaim(&rctx.cdc.Spec.DataVolumeClaimSpec)
+		dataVolumeClaim := newDataVolumeClaim(rctx.cdc.Spec.DataVolumeClaimSpec)
 		podInfoVolume := newPodInfoVolume()
 		backupSecretVolume := newBackupSecretVolume(rctx)
 		userSecretVolume := newUserSecretVolume(rctx)
@@ -67,7 +67,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			return err
 		}
 
-		initContainers := []corev1.Container{}
+		var initContainers []corev1.Container
 
 		if restoreContainer != nil {
 			initContainers = append(initContainers, *restoreContainer)
@@ -148,7 +148,7 @@ func newCassandraContainer(
 		Image:           cdc.Spec.CassandraImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Ports:           ports{internodePort, internodeTlsPort, cqlPort, jmxPort}.asContainerPorts(),
-		Resources:       cdc.Spec.Resources,
+		Resources:       *cdc.Spec.Resources,
 		Args:            []string{OperatorConfigVolumeMountPath, RackConfigVolumeMountPath},
 		Env:             cdc.Spec.CassandraEnv,
 		ReadinessProbe: &corev1.Probe{

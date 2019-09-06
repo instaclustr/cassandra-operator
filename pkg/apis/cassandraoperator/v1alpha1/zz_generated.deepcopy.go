@@ -301,8 +301,16 @@ func (in *CassandraDataCenterSpec) DeepCopyInto(out *CassandraDataCenterSpec) {
 		*out = new(v1.ConfigMapVolumeSource)
 		(*in).DeepCopyInto(*out)
 	}
-	in.Resources.DeepCopyInto(&out.Resources)
-	in.DataVolumeClaimSpec.DeepCopyInto(&out.DataVolumeClaimSpec)
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = new(v1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.DataVolumeClaimSpec != nil {
+		in, out := &in.DataVolumeClaimSpec, &out.DataVolumeClaimSpec
+		*out = new(v1.PersistentVolumeClaimSpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.SidecarEnv != nil {
 		in, out := &in.SidecarEnv, &out.SidecarEnv
 		*out = make([]v1.EnvVar, len(*in))

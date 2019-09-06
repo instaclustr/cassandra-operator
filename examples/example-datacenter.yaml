@@ -5,7 +5,6 @@ metadata:
   labels:
     app: cassandra
 spec:
-  cluster: "test-cluster"
   nodes: 4
   racks:
     - name: "west1-b"
@@ -23,16 +22,39 @@ spec:
   imagePullSecrets:
     - name: regcred
   backupSecretVolumeSource:
-    # example from doc/backup_restore.md
     secretName: gcp-auth-reference
-    #     type is a workaround for https://github.com/kubernetes/kubernetes/issues/68466
     type: array
     items:
-      - key: my-service-key.json
-        path: my-service-key.json
+      - key: gcp.json
+        path: gcp.json
   sidecarEnv:
     - name: GOOGLE_APPLICATION_CREDENTIALS
-      value: "/tmp/backup-creds/my-service-key.json"
+      value: "/tmp/backup-creds/gcp.json"
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: backup-secrets
+          key: awsaccesskeyid
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: backup-secrets
+          key: awssecretaccesskey
+    - name: AWS_REGION
+      valueFrom:
+        secretKeyRef:
+          name: backup-secrets
+          key: awsregion
+    - name: AZURE_STORAGE_ACCOUNT
+      valueFrom:
+        secretKeyRef:
+          name: backup-secrets
+          key: azurestorageaccount
+    - name: AZURE_STORAGE_KEY
+      valueFrom:
+        secretKeyRef:
+          name: backup-secrets
+          key: azurestoragekey
   userConfigMapVolumeSource:
     # example from doc/providers/pks.md
     # the name of the ConfigMap
@@ -52,7 +74,7 @@ spec:
       - ReadWriteOnce
     resources:
       requests:
-        storage: 500Mi
+        storage: 2Gi
 
   prometheusSupport: false
   optimizeKernelParams: true

@@ -309,13 +309,6 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraDataCenterSpec defines the desired state of CassandraDataCenter",
 				Properties: map[string]spec.Schema{
-					"cluster": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Cluster is either a string or v1.LocalObjectReference Cluster interface{} `json:\"cluster,omitempty\"`",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 					"nodes": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
@@ -433,13 +426,11 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 					},
 					"serviceAccountName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ServiceAccount to assign to pods created by the operator",
-							Type:        []string{"string"},
-							Format:      "",
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
 				},
-				Required: []string{"nodes", "cassandraImage", "sidecarImage", "imagePullPolicy", "resources", "dataVolumeClaimSpec", "prometheusSupport"},
 			},
 		},
 		Dependencies: []string{

@@ -2,6 +2,8 @@ package cassandradatacenter
 
 import (
 	"context"
+	"errors"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -10,7 +12,8 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -89,7 +92,6 @@ type scalingOperation string
 var (
 	scalingUp   = scalingOperation("ScaleUp")
 	scalingDown = scalingOperation("ScaleDown")
-	noScale     = scalingOperation("")
 )
 
 // Reconcile reads that state of the cluster for a CassandraDataCenter object and makes changes based on the state read
@@ -105,7 +107,7 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 	instance := &cassandraoperatorv1alpha1.CassandraDataCenter{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8sErrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -113,6 +115,20 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
+	}
+
+	if defaultOperatorConfig, err := getOperatorDefaultConfig(r.client, request.Namespace, "cassandra-operator-default-config"); err != nil {
+		reqLogger.Error(err, "Unable to resolve default operator config from config map 'cassandra-operator-default-config'")
+		return reconcile.Result{}, err
+	} else if populated, err := populateUnsetFields(instance, defaultOperatorConfig); err != nil {
+		reqLogger.Error(err, "Unable to populate unset fields on spec!")
+		return reconcile.Result{}, err
+	} else if populated == true {
+		if err := r.client.Update(context.TODO(), instance); err != nil {
+			return reconcile.Result{}, err
+		} else {
+			return reconcile.Result{}, nil
+		}
 	}
 
 	// Build new reconcile context
@@ -151,12 +167,112 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 		return reconcile.Result{}, err
 	}
 
-	// TODO:
 	_, _, _ = nodesService, seedNodesService, statefulSet
 
 	rctx.logger.Info("CassandraDataCenter reconciliation complete.")
 
 	return reconcile.Result{}, nil
+}
+
+func getOperatorDefaultConfig(c client.Client, namespace string, defaultOperatorConfigMapName string) (corev1.ConfigMap, error) {
+	defaultConfig := &corev1.ConfigMap{}
+
+	if err := c.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: defaultOperatorConfigMapName}, defaultConfig); err == nil {
+		return *defaultConfig, nil
+	} else if k8sErrors.IsNotFound(err) {
+		// if it is not found, just return empty config map
+		return *defaultConfig, nil
+	} else {
+		// otherwise there is something shady going on
+		return *defaultConfig, err
+	}
+}
+
+func populateUnsetFields(instance *cassandraoperatorv1alpha1.CassandraDataCenter, configMap corev1.ConfigMap) (bool, error) {
+	populated := false
+	if instance.Spec.Nodes == 0 {
+		if nodes, ok := configMap.Data["nodes"]; ok {
+			if nodes64, err := strconv.ParseInt(nodes, 10, 32); err == nil {
+				instance.Spec.Nodes = int32(nodes64)
+				populated = true
+			} else {
+				return false, err
+			}
+		} else {
+			return false, errors.New("'nodes' value is not specified in cassandra-operator-default-config configMap!")
+		}
+	}
+
+	if len(instance.Spec.CassandraImage) == 0 {
+		if cassandraImage, ok := configMap.Data["cassandraImage"]; ok {
+			instance.Spec.CassandraImage = cassandraImage
+			populated = true
+		} else {
+			return false, errors.New("'cassandraImage' value is not specified in cassandra-operator-default-config configMap")
+		}
+	}
+
+	if len(instance.Spec.SidecarImage) == 0 {
+		if sidecarImage, ok := configMap.Data["sidecarImage"]; ok {
+			instance.Spec.SidecarImage = sidecarImage
+			populated = true
+		} else {
+			return false, errors.New("'sidecarImage' value is not specified in cassandra-operator-default-config configMap")
+		}
+	}
+
+	if len(instance.Spec.ImagePullPolicy) == 0 {
+		instance.Spec.ImagePullPolicy = corev1.PullIfNotPresent
+		populated = true
+	}
+
+	if instance.Spec.Resources == nil {
+		if memory, ok := configMap.Data["memory"]; ok {
+			parsedMemory, err := resource.ParseQuantity(memory)
+
+			if err != nil {
+				return false, err
+			}
+
+			instance.Spec.Resources = &corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					"memory": parsedMemory,
+				},
+				Requests: corev1.ResourceList{
+					"memory": parsedMemory,
+				},
+			}
+			populated = true
+		} else {
+			return false, errors.New("'memory' value is not specified in cassandra-operator-default-config configMap")
+		}
+	}
+
+	if instance.Spec.DataVolumeClaimSpec == nil {
+		if disk, ok := configMap.Data["disk"]; ok {
+			parsedDisk, err := resource.ParseQuantity(disk)
+
+			if err != nil {
+				return false, err
+			}
+
+			instance.Spec.DataVolumeClaimSpec = &corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{
+					"ReadWriteOnce",
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						"storage": parsedDisk,
+					},
+				},
+			}
+			populated = true
+		} else {
+			return false, errors.New("'disk' value is not specified in cassandra-operator-default-config configMap")
+		}
+	}
+
+	return populated, nil
 }
 
 func newReconciliationContext(r *ReconcileCassandraDataCenter, reqLogger logr.Logger, instance *cassandraoperatorv1alpha1.CassandraDataCenter) (*reconciliationRequestContext, error) {

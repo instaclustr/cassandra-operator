@@ -37,10 +37,6 @@ spec:
               type: array
             cassandraImage:
               type: string
-            cluster:
-              description: Cluster is either a string or v1.LocalObjectReference Cluster
-                interface{} `json:"cluster,omitempty"`
-              type: string
             dataVolumeClaimSpec:
               type: object
             imagePullPolicy:
@@ -75,7 +71,6 @@ spec:
             restoreFromBackup:
               type: string
             serviceAccountName:
-              description: ServiceAccount to assign to pods created by the operator
               type: string
             sidecarEnv:
               items:
@@ -87,14 +82,6 @@ spec:
               type: object
             userSecretVolumeSource:
               type: object
-          required:
-          - nodes
-          - cassandraImage
-          - sidecarImage
-          - imagePullPolicy
-          - resources
-          - dataVolumeClaimSpec
-          - prometheusSupport
           type: object
         status:
           type: object
