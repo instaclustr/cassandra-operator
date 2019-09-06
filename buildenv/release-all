@@ -25,8 +25,19 @@ fi
 
 export DONT_LOGIN="true"
 
-docker push "${REGISTRY}/base-openjre:latest"
-docker push "${REGISTRY}/cassandra-operator:latest"
-docker push "${REGISTRY}/cassandra-sidecar:latest"
-docker push "${REGISTRY}/cassandra:latest"
-docker push "${REGISTRY}/cassandra:3.11.3"
+# TODO: remove when we switch to a go branch as default deployment model
+# only push from CI environment and only push to a go tag for the moment
+if [[ "${CIRCLE_BRANCH}" != "" ]] && [[ "${CIRCLE_BRANCH}" != master ]]; then
+    docker push "${REGISTRY}/cassandra-operator:latest-go"
+    docker push "${REGISTRY}/cassandra-sidecar:latest-go"
+    docker push "${REGISTRY}/cassandra:latest-go"
+    docker push "${REGISTRY}/cassandra:3.11.4-go"
+fi
+
+# only push from CI environment and only push to a go tag for the moment
+if [[ "${CIRCLE_BRANCH}" == master ]]; then
+    docker push "${REGISTRY}/cassandra-operator:latest"
+    docker push "${REGISTRY}/cassandra-sidecar:latest"
+    docker push "${REGISTRY}/cassandra:latest"
+    docker push "${REGISTRY}/cassandra:3.11.4"
+fi

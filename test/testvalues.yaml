@@ -8,7 +8,7 @@ apiVersion: stable.instaclustr.com/v1
 
 image:
   repository: gcr.io/cassandra-operator/cassandra-operator
-  tag: latest
+  tag: latest-go
   pullPolicy: IfNotPresent
 
 resources: {}
