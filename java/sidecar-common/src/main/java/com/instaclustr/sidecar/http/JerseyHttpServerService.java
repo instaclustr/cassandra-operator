@@ -32,6 +32,7 @@ public class JerseyHttpServerService extends AbstractIdleService {
         try {
             httpServer = HttpServer.create(httpServerAddress, 0);
 
+
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -42,6 +43,11 @@ public class JerseyHttpServerService extends AbstractIdleService {
                 .build()));
 
         httpServer.createContext("/", container);
+    }
+
+    //Public for testing
+    public InetSocketAddress getServerInetAddress() {
+        return httpServer.getAddress();
     }
 
     @Override
