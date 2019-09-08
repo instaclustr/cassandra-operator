@@ -81,6 +81,19 @@
         "privilegedSupported": {
           "type": "boolean",
           "description": "Attempt to run privileged configuration options for better performance"
+        },
+        "affinity": {
+          "description": "Group of affinity scheduling rules. See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity",
+          "type": "object",
+          "javaType": "io.kubernetes.client.models.V1Affinity"
+        },
+        "tolerations": {
+          "description": "List of pod tolerations. See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "javaType": "io.kubernetes.client.models.V1Toleration"
+          }
         }
       }
     }

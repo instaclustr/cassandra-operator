@@ -1,6 +1,6 @@
 include ../../Makefile.inc
 
-OPENJRE_VERSION := 8u212-b01-1~deb9u1
+OPENJRE_VERSION := 8u222-b10-1~deb9u1
 OPENJRE_IMAGE_TAG := stretch-$(subst ~,-,$(OPENJRE_VERSION))
 OPENJRE_IMAGE := $(DOCKER_REPO)base-openjre:$(OPENJRE_IMAGE_TAG)
 
