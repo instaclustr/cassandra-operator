@@ -221,7 +221,12 @@ public class DataCenterReconciliationController {
                     .addVolumesItem(new V1Volume()
                             .name("sidecar-config-volume")
                             .emptyDir(new V1EmptyDirVolumeSource())
-                    );
+                    )
+                    .affinity(dataCenterSpec.getAffinity());
+            List<V1Toleration> tolerations = dataCenterSpec.getTolerations();
+            if(tolerations != null) {
+                tolerations.forEach((V1Toleration toleration) -> podSpec.addTolerationsItem(toleration));
+            }
 
             {
                 final String secret = dataCenterSpec.getImagePullSecret();

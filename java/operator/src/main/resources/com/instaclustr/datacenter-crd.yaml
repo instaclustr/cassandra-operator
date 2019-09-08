@@ -80,4 +80,11 @@ spec:
             privilegedSupported:
               type: boolean
               description: Attempt to run privileged configuration options for better performance.
+            affinity:
+              type: object
+              description: "Group of affinity scheduling rules. See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity"
+            tolerations:
+              type: array
+              description: "List of pod tolerations. See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/"
+
             
