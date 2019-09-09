@@ -67,3 +67,5 @@ dataVolumeClaim:
 #restoreFromBackup: backup-hostname
 
 prometheusEnabled: false
+tolerations: []
+affinity: {}

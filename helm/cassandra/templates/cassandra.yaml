@@ -41,3 +41,5 @@ spec:
 {{- end }}
   prometheusSupport: {{ .Values.prometheusEnabled }}
   privilegedSupported: {{ .Values.privilegedSupported }}
+  affinity: {{ .Values.affinity}}
+  tolerations: {{ .Values.tolerations}}
