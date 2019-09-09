@@ -41,5 +41,13 @@ spec:
 {{- end }}
   prometheusSupport: {{ .Values.prometheusEnabled }}
   privilegedSupported: {{ .Values.privilegedSupported }}
-  affinity: {{ .Values.affinity}}
-  tolerations: {{ .Values.tolerations}}
+
+{{- if .Values.affinity }}  
+  affinity: 
+{{ toYaml .Values.affinity | indent 4 }}  
+{{- end }}
+
+{{- if .Values.tolerations }}  
+  tolerations: 
+{{ toYaml .Values.tolerations | indent 4 }}  
+{{- end }}
