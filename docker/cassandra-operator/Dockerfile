@@ -1,8 +1,6 @@
-FROM golang AS builder
+FROM golang:1.13 AS builder
 
 ARG version
-
-ENV GOPROXY=https://proxy.golang.org
 
 # Create a user so that operator can run as non-root
 RUN useradd -u 999 cassandra-operator

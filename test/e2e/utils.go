@@ -3,6 +3,10 @@ package e2e
 import (
 	goctx "context"
 	"fmt"
+	"os"
+	"testing"
+	"time"
+
 	operator "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
@@ -14,9 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"os"
-	"testing"
-	"time"
 )
 
 const (

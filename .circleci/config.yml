@@ -1,9 +1,35 @@
 # Java Maven CircleCI 2.0 configuration file
 #
-# Check https://circleci.com/docs/2.0/language-java/ for more details
 #
 version: 2
 jobs:
+  style-check:
+    docker:
+      - image: circleci/golang:1.13.0
+
+    working_directory: ~/cassandra-operator
+    steps:
+      - checkout
+      - restore_cache: # restores saved cache if no changes are detected since last run
+          keys:
+            - go-mod-v4-{{ checksum "go.sum" }}
+      - run:
+          name: Update go stuff
+          command: go get golang.org/x/tools/cmd/goimports && go mod download
+
+      - save_cache:
+          key: go-mod-v4-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+      - run:
+          name: Check go formatting
+          command: |
+            files=$(goimports -l .)
+            if [ -n "$files" ]; then
+              echo "The following file(s) are not properly formatted or their imports are misaligned. Run go fmt/go imports on your code:"
+              echo "$files"
+              exit 1
+            fi
   build:
     docker:
       # specify the version you desire here
@@ -11,19 +37,29 @@ jobs:
         auth:
           username: _json_key
           password: $GOOGLE_AUTH
-    
+
     working_directory: ~/cassandra-operator
 
     environment:
       # Customize the JVM maximum heap limit
       MAVEN_OPTS: -Xmx3200m
-    
+
     steps:
       - checkout
 
-      - setup_remote_docker
+      - restore_cache: # restores saved cache if no changes are detected since last run
+          keys:
+            - m2
+
+      - setup_remote_docker:
+          docker_layer_caching: true
 
       - run: make
+
+      - save_cache:
+          key: m2
+          paths:
+            - ~/.m2
 
   release-dev:
     docker:
@@ -109,7 +145,10 @@ workflows:
   version: 2
   build_and_test:
     jobs:
+      - style-check
       - build:
+          requires:
+            - style-check
           filters:
             branches:
               ignore:
@@ -117,8 +156,14 @@ workflows:
                 - superdupertopsecretrewrite
       - test-gcp:
           requires:
+            - style-check
             - release-dev
+          filters:
+            branches:
+                only: /!^pull\/.*/
       - release-dev:
+          requires:
+            - style-check
           filters:
             branches:
               only:
