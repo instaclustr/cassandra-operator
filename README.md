@@ -1,5 +1,5 @@
 ## Cassandra operator
-Build [![CircleCI](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master.svg?style=svg)](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master)
+This project is being rewritten in Go to leverage the operator framework and leverage a better kubernetes client. See this [branch](https://github.com/instaclustr/cassandra-operator/tree/superdupertopsecretrewrite). 
 
 ### Project status: alpha
 
