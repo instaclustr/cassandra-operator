@@ -14,6 +14,10 @@ git_revision = $(shell git describe --tags --always --dirty)
 operator:
 	cd cmd/manager && go build -ldflags "-X main.version=$(git_revision)"
 
+.PHONY: helm
+helm:
+	cp deploy/crds/*_crd.yaml helm/cassandra-operator/templates && ./buildenv/create-helm-repo
+
 # Build Docker images
 .PHONY: docker
 docker: java

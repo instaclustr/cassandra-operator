@@ -1,5 +1,17 @@
 apiVersion: v1
 appVersion: "0.1"
 description: A Helm chart for creating Cassandra clusters using the Cassandra operator
+home: https://www.instaclustr.com
+sources:
+  - https://github.com/instaclustr/cassandra-operator
+keywords:
+  - operator
+  - cassandra-operator
+  - instaclustr
+maintainers:
+  - name: Stefan Miklosovic
+  - name: Alex Lourie
+  - name: Ben Bromhead
+  - name: Adam Zegelin
 name: cassandra
 version: 0.1.0

@@ -19,18 +19,24 @@ spec:
   cassandraImage: "{{ .Values.image.cassandraRepository }}:{{ .Values.image.cassandraTag }}"
   sidecarImage: "{{ .Values.image.sidecarRepository }}:{{ .Values.image.sidecarTag }}"
   imagePullPolicy: {{ .Values.imagePullPolicy }}
-  {{- if  .Values.imagePullSecret }}
-  imagePullSecret: {{ .Values.imagePullSecret }}
-  {{- else }}
-  imagePullSecret: ""
+  {{- if  .Values.imagePullSecrets }}
+  imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 4}}
+  {{- end }}
+
+  {{- if .Values.cassandraEnv }}
+  cassandraEnv:
+{{ toYaml .Values.cassandraEnv | indent 4 }}
   {{- end }}
 
   {{- if .Values.sidecarEnv }}
-  sidecarEnv:
+sidecarEnv:
+{{ toYaml .Values.sidecarEnv | indent 4 }}
   {{- end }}
 
   {{- if .Values.backupSecretVolumeSource }}
   backupSecretVolumeSource:
+{{ toYaml .Values.backupSecretVolumeSource | indent 4 }}
   {{- end }}
 
   resources:
@@ -49,4 +55,7 @@ spec:
   {{ toYaml .Values.userConfigMapVolumeSource | indent 4 }}
 {{- end }}
   prometheusSupport: {{ .Values.prometheusEnabled }}
-  privilegedSupported: {{ .Values.privilegedSupported }}
+  optimizeKernelParams: {{ .Values.optimizeKernelParams }}
+{{- if .Values.serviceAccountName }}
+  serviceAccountName: {{ .Values.serviceAccountName }}
+{{- end }}

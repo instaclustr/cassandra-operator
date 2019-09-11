@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+cd $(dirname "$BASH_SOURCE")/../helm
+
+HELM_OPERATOR_CRDS="cassandra-operator/templates"
+OPERATOR_CRDS="../deploy/crds"
+
+function md5SumFile() {
+  md5sum ${1} | cut -d" " -f1
+}
+
+function isSameFile() {
+  originalSum=$(md5SumFile $1)
+  currentSum=$(md5SumFile $2)
+
+  if [ "${originalSum}" != "${currentSum}" ]; then
+    echo "files $1 and $2 are not same"
+    return "1"
+  fi
+
+  return 0
+}
+
+isSameFile "${HELM_OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandrabackup_crd.yaml" "${OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandrabackup_crd.yaml"
+
+if [ "$?" == "1" ]; then
+  return 1
+fi
+
+isSameFile "${HELM_OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandracluster_crd.yaml" "${OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandracluster_crd.yaml"
+
+if [ "$?" == "1" ]; then
+  return 1
+fi
+
+isSameFile "${HELM_OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandradatacenter_crd.yaml" "${OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandradatacenter_crd.yaml"
+
+if [ "$?" == "1" ]; then
+  return 1
+fi
+
+helm package cassandra-operator
+helm package cassandra
+helm repo index .

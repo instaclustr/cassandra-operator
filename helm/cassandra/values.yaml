@@ -4,6 +4,8 @@
 
 replicaCount: 3
 
+fullnameOverride: test-dc-cassandra
+
 image:
 # Dev images
 #  cassandraRepository: cassandra
@@ -16,87 +18,82 @@ image:
   sidecarTag: latest
 
 imagePullPolicy: IfNotPresent
-imagePullSecret: ""
+imagePullSecrets:
+  - name: "regcred"
 
-privilegedSupported: true
+#optimizeKernelParams: true
 
 # Note these resource limits are not appropriate for production scenarios
 # Generally require 8GB for JVM heap + more see https://github.com/apache/cassandra/blob/a145a485206f6a32b07979dfb1b983addf49dd10/conf/cassandra-env.sh#L17-L176
 
 resources:
   limits:
-    memory: 512Mi
+    memory: 1Gi
   requests:
-    memory: 512Mi
+    memory: 1Gi
 dataVolumeClaim:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 100Mi
+      storage: 1Gi
 
 #sidecarEnv:
 #  - name: GOOGLE_APPLICATION_CREDENTIALS
-#    value: "/tmp/backup-creds/my-service-key.json"
-
-
-#backupSecretVolumeSource:
-#  # example from doc/backup_restore.md
-#  secretName: gcp-auth-reference
-#  #     type is a workaround for https://github.com/kubernetes/kubernetes/issues/68466
-#  type: array
-#  items:
-#    - key: my-service-key.json
-#      path: my-service-key.json
-
-#  racks:
-#    - name: "west1-b"
-#      labels:
-#        failure-domain.beta.kubernetes.io/zone: europe-west1-b
-#    - name: "west1-c"
-#      labels:
-#        failure-domain.beta.kubernetes.io/zone: europe-west1-c
-#    - name: "west1-a"
-#      labels:
-#        failure-domain.beta.kubernetes.io/zone: europe-west1-a#
-
-#Example authentication for AWS S3 based backups
-#env:
+#    value: "/tmp/backup-creds/gcp.json"
 #  - name: AWS_ACCESS_KEY_ID
 #    valueFrom:
 #      secretKeyRef:
-#        name: awsbackuptest
-#        key: access
+#        name: backup-secrets
+#        key: awsaccesskeyid
 #  - name: AWS_SECRET_ACCESS_KEY
 #    valueFrom:
 #      secretKeyRef:
-#        name: awsbackuptest
-#        key: secret
+#        name: backup-secrets
+#        key: awssecretaccesskey
 #  - name: AWS_REGION
-#    value: "us-west-2"
+#    valueFrom:
+#      secretKeyRef:
+#        name: backup-secrets
+#        key: awsregion
+#  - name: AZURE_STORAGE_ACCOUNT
+#    valueFrom:
+#      secretKeyRef:
+#        name: backup-secrets
+#        key: azurestorageaccount
+#  - name: AZURE_STORAGE_KEY
+#    valueFrom:
+#      secretKeyRef:
+#        name: backup-secrets
+#        key: azurestoragekey
 
-#Example authentication for AWS GCP based backups
-#env:
-#  - name: GOOGLE_APPLICATION_CREDENTIALS
-#    value: "/tmp/user-config/service_key.json"
-#  - name: GOOGLE_CLOUD_PROJECT
-#    value: "cassandra-operator"
-#  - name: BUCKET_NAME
-#    value: "my-bucket"
-#
+# env properties for Cassandra container, similar to sidecarEnv
+# cassandraEnv:
+
+#backupSecretVolumeSource:
+#  secretName: gcp-auth-reference
+#  #   type is a workaround for https://github.com/kubernetes/kubernetes/issues/68466
+#  type: array
+#  items:
+#    - key: gcp.json
+#      path: gcp.json
+
+#racks:
+#  - name: "west1-b"
+#    labels:
+#      failure-domain.beta.kubernetes.io/zone: europe-west1-b
+#  - name: "west1-c"
+#    labels:
+#      failure-domain.beta.kubernetes.io/zone: europe-west1-c
+#  - name: "west1-a"
+#    labels:
+#      failure-domain.beta.kubernetes.io/zone: europe-west1-a
+
 #userConfigMapVolumeSource:
 #  - name: configMapReference
 
-## Example GCP ConfigMap
-#apiVersion: extensions/v1beta1
-#kind: ConfigMap
-#metadata:
-#  name: configMapReference
-#data:
-#  service_key.json: "XXXXXXXXX"
-
-
-
-#restoreFromBackup: backup-hostname
+#restoreFromBackup: backup-name
 
 prometheusEnabled: false
+
+serviceAccountName: cassandra
