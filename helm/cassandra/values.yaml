@@ -96,4 +96,4 @@ dataVolumeClaim:
 
 prometheusEnabled: false
 
-serviceAccountName: cassandra
+#serviceAccountName: cassandra

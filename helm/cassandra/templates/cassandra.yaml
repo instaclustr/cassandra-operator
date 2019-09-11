@@ -55,7 +55,15 @@ sidecarEnv:
   {{ toYaml .Values.userConfigMapVolumeSource | indent 4 }}
 {{- end }}
   prometheusSupport: {{ .Values.prometheusEnabled }}
+{{- if .Values.optimizeKernelParams }}
   optimizeKernelParams: {{ .Values.optimizeKernelParams }}
+{{- end }}
 {{- if .Values.serviceAccountName }}
   serviceAccountName: {{ .Values.serviceAccountName }}
-{{- end }}
+{{- else}}
+{{- if (.Values.optimizeKernelParams) and eq .Values.optimizeKernelParams "true"}}
+  serviceAccountName: "cassandra-performance"
+{{- else}}
+  serviceAccountName: "cassandra"
+{{- end}}
+{{- end}}
