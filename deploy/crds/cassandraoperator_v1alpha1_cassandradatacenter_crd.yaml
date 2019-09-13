@@ -39,6 +39,9 @@ spec:
               type: string
             dataVolumeClaimSpec:
               type: object
+            fsGroup:
+              format: int64
+              type: integer
             imagePullPolicy:
               type: string
             imagePullSecrets:
