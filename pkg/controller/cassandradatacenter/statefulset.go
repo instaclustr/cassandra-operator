@@ -84,6 +84,13 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			sc.FSGroup = &rctx.cdc.Spec.FSGroup
 		}
 
+		if rctx.cdc.Spec.SecureCluster {
+			tlsContainer := newTlsSetupContainer(rctx, dataVolumeClaim, userConfigVolume)
+			if tlsContainer != nil {
+				initContainers = append(initContainers, *tlsContainer)
+			}
+		}
+
 		podSpec := newPodSpec(rctx.cdc, rack,
 			[]corev1.Volume{*podInfoVolume, *configVolume, *rackConfigVolume},
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
@@ -230,6 +237,23 @@ func newSidecarContainer(
 	}
 
 	return container
+}
+
+func newTlsSetupContainer(rctx *reconciliationRequestContext, dataVolumeClaim *corev1.PersistentVolumeClaim, userConfigVolume *corev1.Volume) *corev1.Container {
+	container := &corev1.Container{
+		Name:            "tls-setup",
+		Image:           rctx.cdc.Spec.TLSSetupImage,
+		ImagePullPolicy: rctx.cdc.Spec.ImagePullPolicy,
+		Env:             rctx.cdc.Spec.CassandraEnv,
+		VolumeMounts: []corev1.VolumeMount{
+			{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath},
+		},
+	}
+
+	container.Env = append(container.Env, corev1.EnvVar{Name: "CLUSTER_NAME", Value: rctx.cdc.Name})
+
+	return container
+
 }
 
 func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) *corev1.Container {

@@ -14,6 +14,8 @@ We expect to consider the Cassandra operator stable soon; backwards incompatible
 
 1) [Operations Guide](./doc/op_guide.md) for how to run the operator and deploy, scale and decommission Cassandra clusters.
 
+1) [Securing Cluster](./doc/security.md) operations
+
 1) [RBAC docs](./doc/rbac.md) for how to setup RBAC rules for Cassandra operator and Cassandra containers if RBAC is in place.
 
 1) [Developer Guide](./doc/developers.md) for setting up development environment if you want to contribute.

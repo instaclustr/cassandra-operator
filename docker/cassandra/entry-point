@@ -13,8 +13,26 @@ done
 )
 
 # Set unlimited memory locking only when running with kernel tweaks enabled.
-if [ "${MEMORY_LOCK-unset}" == "true" ]; then
+if [[ "${MEMORY_LOCK-unset}" == "true" ]]; then
     ulimit -l unlimited
+fi
+
+# check if TLS config is also needed
+if [[ -e /var/lib/cassandra/tls/certs/$(hostname)-keystore.p12 ]]; then
+   if [[ ! -e /etc/cassandra/certs ]]; then
+     mkdir -p /etc/cassandra/certs
+   fi
+
+   cassandra_config=/home/cassandra/.cassandra
+   if [[ ! -e ${cassandra_config} ]]; then
+     mkdir -p ${cassandra_config}
+   fi
+
+   cp /var/lib/cassandra/tls/certs/* /etc/cassandra/certs/
+   cp /var/lib/cassandra/tls/config/* /etc/cassandra/cassandra.yaml.d/
+   cp /var/lib/cassandra/tls/env/* /etc/cassandra/cassandra-env.sh.d/
+   cp /var/lib/cassandra/tls/cqlshrc ${cassandra_config}/cqlshrc
+   chown -R 999:999 ${cassandra_config}
 fi
 
 exec /usr/sbin/cassandra

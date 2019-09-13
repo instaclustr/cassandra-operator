@@ -150,6 +150,7 @@ data:
   nodes: "3"
   cassandraImage: gcr.io/cassandra-operator/cassandra:3.11.4
   sidecarImage: gcr.io/cassandra-operator/cassandra-sidecar:latest
+  tlsSetupImage: gcr.io/cassandra-operator/tls-setup:latest
   memory: 1Gi
   disk: 1Gi
 ---

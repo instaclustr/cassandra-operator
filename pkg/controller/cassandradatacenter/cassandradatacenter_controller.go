@@ -205,7 +205,7 @@ func populateUnsetFields(instance *cassandraoperatorv1alpha1.CassandraDataCenter
 				return false, err
 			}
 		} else {
-			return false, errors.New("'nodes' value is not specified in cassandra-operator-default-config configMap!")
+			return false, errors.New("'nodes' value is not specified in cassandra-operator-default-config configMap")
 		}
 	}
 
@@ -224,6 +224,15 @@ func populateUnsetFields(instance *cassandraoperatorv1alpha1.CassandraDataCenter
 			populated = true
 		} else {
 			return false, errors.New("'sidecarImage' value is not specified in cassandra-operator-default-config configMap")
+		}
+	}
+
+	if len(instance.Spec.TLSSetupImage) == 0 {
+		if tlsSetupImage, ok := configMap.Data["tlsSetupImage"]; ok {
+			instance.Spec.TLSSetupImage = tlsSetupImage
+			populated = true
+		} else {
+			return false, errors.New("'tlsSetupImage' value is not specified in cassandra-operator-default-config configMap")
 		}
 	}
 

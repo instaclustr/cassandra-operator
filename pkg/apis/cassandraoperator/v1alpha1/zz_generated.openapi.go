@@ -327,6 +327,12 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 							Format: "",
 						},
 					},
+					"tlsSetupImage": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"racks": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
@@ -440,6 +446,12 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 					"serviceAccountName": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"secureCluster": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
 							Format: "",
 						},
 					},

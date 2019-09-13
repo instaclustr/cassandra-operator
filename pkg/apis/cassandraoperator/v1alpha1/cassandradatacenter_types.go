@@ -11,6 +11,7 @@ type CassandraDataCenterSpec struct {
 	Nodes                          int32                         `json:"nodes,omitempty"`
 	CassandraImage                 string                        `json:"cassandraImage,omitempty"`
 	SidecarImage                   string                        `json:"sidecarImage,omitempty"`
+	TLSSetupImage                  string                        `json:"tlsSetupImage,omitempty"`
 	Racks                          []Rack                        `json:"racks,omitempty"`
 	ImagePullPolicy                v1.PullPolicy                 `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets               []v1.LocalObjectReference     `json:"imagePullSecrets,omitempty"`
@@ -26,6 +27,7 @@ type CassandraDataCenterSpec struct {
 	SidecarEnv                     []v1.EnvVar                   `json:"sidecarEnv,omitempty"`
 	CassandraEnv                   []v1.EnvVar                   `json:"cassandraEnv,omitempty"`
 	ServiceAccountName             string                        `json:"serviceAccountName,omitempty"`
+	SecureCluster                  bool                          `json:"secureCluster,omitempty"`
 	FSGroup                        int64                         `json:"fsGroup,omitempty"`
 }
 

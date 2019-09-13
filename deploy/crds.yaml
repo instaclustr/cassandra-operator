@@ -213,6 +213,8 @@ spec:
               type: object
             restoreFromBackup:
               type: string
+            secureCluster:
+              type: boolean
             serviceAccountName:
               type: string
             sidecarEnv:
@@ -220,6 +222,8 @@ spec:
                 type: object
               type: array
             sidecarImage:
+              type: string
+            tlsSetupImage:
               type: string
             userConfigMapVolumeSource:
               type: object

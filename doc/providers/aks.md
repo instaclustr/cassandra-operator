@@ -24,3 +24,4 @@ kubectl apply -f cluster.yaml
 >NOTE: Setting `fsGroup` to `999` is necessary on AKS. Without it, Azure Disk volumes attached to
 >the Cassandra pods won't be writeable by the Cassandra process.
 
+[aks]: https://azure.microsoft.com/en-in/services/kubernetes-service/
