@@ -78,10 +78,17 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			initContainers = append(initContainers, *newSysctlLimitsContainer(rctx.cdc))
 		}
 
+		sc := &corev1.PodSecurityContext{}
+		// Set the pod's FSGroup if specified by the user.
+		if rctx.cdc.Spec.FSGroup != 0 {
+			sc.FSGroup = &rctx.cdc.Spec.FSGroup
+		}
+
 		podSpec := newPodSpec(rctx.cdc, rack,
 			[]corev1.Volume{*podInfoVolume, *configVolume, *rackConfigVolume},
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
 			initContainers,
+			sc,
 		)
 
 		if backupSecretVolume != nil {
@@ -125,7 +132,7 @@ func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podS
 	}
 }
 
-func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluster.Rack, volumes []corev1.Volume, containers []corev1.Container, initContainers []corev1.Container) *corev1.PodSpec {
+func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluster.Rack, volumes []corev1.Volume, containers []corev1.Container, initContainers []corev1.Container, securityContext *corev1.PodSecurityContext) *corev1.PodSpec {
 	// TODO: should this spec be fully exposed into the CDC.Spec?
 	podSpec := &corev1.PodSpec{
 		Volumes:            volumes,
@@ -134,6 +141,7 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluste
 		ImagePullSecrets:   cdc.Spec.ImagePullSecrets,
 		ServiceAccountName: cdc.Spec.ServiceAccountName,
 		NodeSelector:       rack.NodeLabels,
+		SecurityContext:    securityContext,
 	}
 
 	return podSpec

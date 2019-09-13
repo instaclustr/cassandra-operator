@@ -25,6 +25,7 @@ type CassandraDataCenterSpec struct {
 	SidecarEnv                []v1.EnvVar                   `json:"sidecarEnv,omitempty"`
 	CassandraEnv              []v1.EnvVar                   `json:"cassandraEnv,omitempty"`
 	ServiceAccountName        string                        `json:"serviceAccountName,omitempty"`
+	FSGroup                   int64                         `json:"fsGroup,omitempty"`
 }
 
 // CassandraDataCenterStatus defines the observed state of CassandraDataCenter
