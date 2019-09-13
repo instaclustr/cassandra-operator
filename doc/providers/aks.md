@@ -6,48 +6,13 @@ This guide explains how to deploy and use the Cassandra Operator on [Azure Kuber
 
 - An AKS cluster with at least 3 nodes.
 
-## Deploy the Operator
+### Deploy the Operator
 
-Deploy the [CRDs][crds] used by the operator to manage Cassandra clusters:
+Refer to [Operation Guide](../op_guide.md) to install and launch the Cassandra operator in your k8 environment.
 
-```
-kubectl apply -f deploy/crds/cassandraoperator_v1alpha1_cassandrabackup_crd.yaml
-kubectl apply -f deploy/crds/cassandraoperator_v1alpha1_cassandracluster_crd.yaml
-kubectl apply -f deploy/crds/cassandraoperator_v1alpha1_cassandradatacenter_crd.yaml
-```
+### Custom Cassandra configurations
 
-Set the operator's Docker image in `deploy/operator.yaml`:
-
->TODO: Commit the official image in the manifest so that the user doesn't have to edit files.
-
-```
-sed -i 's|REPLACE_IMAGE|quay.io/<user>/cassandra-operator:latest|' deploy/operator.yaml
-```
-
-Deploy the [RBAC][rbac] resources and [pod security policies][psps] used by the operator to create
-Cassandra pods:
-
->TODO: Remove this? This isn't mandatory on AKS as things work fine with the `default` SA.
-
-```
-kubectl apply -f deploy/cassandra
-```
-
-Deploy the operator itself:
-
-```
-kubectl apply -f deploy
-```
-
-Verify the operator is running:
-
-```
-kubectl get pods | grep cassandra-operator
-```
-
-```
-cassandra-operator-5755f6855f-t9hvm   1/1     Running   0          65s
-```
+Refer to [Custom configurations](custom-configuration.md) for options to configure your cluster
 
 ## Deploy a Cassandra Cluster
 
@@ -122,45 +87,39 @@ kubectl exec cassandra-cassandra-test-rack1-0 -c cassandra -- cqlsh -e "SELECT n
 
 ### Delete the Cassandra Cluster
 
-Delete the Cassandra cluster:
+ 1) Delete the Cassandra cluster:
 
-```
-kubectl delete -f cluster.yaml
-```
+    ```
+    kubectl delete -f examples/example-datacenter.yaml
+    ```
 
-Delete the PVCs created automatically for the pods:
+ 1) Delete the PVCs created automatically for the pods:
 
-```
-kubectl delete pvc data-volume-cassandra-cassandra-test-rack1-{0..2}
-```
-
-Remove the sample manifest:
-
-```
-rm cluster.yaml
-```
+    ```
+    kubectl delete pvc data-volume-cassandra-cassandra-test-{rack name}-{num}
+    ```
 
 ### Delete the Operator
 
-Delete the operator:
+ 1) Delete the operator:
 
-```
-kubectl delete -f deploy
-```
+    ```
+    kubectl delete -f deploy
+    ```
 
-Delete the RBAC and PSP resources:
+ 1) Delete the RBAC and PSP resources:
 
-```
-kubectl delete -f deploy/cassandra
-```
+    ```
+    kubectl delete -f deploy/cassandra
+    ```
 
-Delete the CRDs:
+ 1) Delete the CRDs:
 
-```
-kubectl delete -f deploy/crds/cassandraoperator_v1alpha1_cassandrabackup_crd.yaml
-kubectl delete -f deploy/crds/cassandraoperator_v1alpha1_cassandracluster_crd.yaml
-kubectl delete -f deploy/crds/cassandraoperator_v1alpha1_cassandradatacenter_crd.yaml
-```
+    ```
+    kubectl delete -f deploy/crds/cassandraoperator_v1alpha1_cassandrabackup_crd.yaml
+    kubectl delete -f deploy/crds/cassandraoperator_v1alpha1_cassandracluster_crd.yaml
+    kubectl delete -f deploy/crds/cassandraoperator_v1alpha1_cassandradatacenter_crd.yaml
+    ```
 
 [aks]: https://azure.microsoft.com/en-in/services/kubernetes-service/
 [crds]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions

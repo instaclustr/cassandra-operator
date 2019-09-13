@@ -2,52 +2,43 @@
 Build [![CircleCI](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master.svg?style=svg)](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master)
 
 ### Project status: alpha
+The Cassandra operator manages Cassandra clusters deployed to [Kubernetes](http://kubernetes.io) and automates tasks related to operating a Cassandra cluster.
 
-Major planned features have yet to be completed and API changes are currently planned, we reserve the right to address bugs and API changes in a backwards incompatible way before the project is declared stable. See [upgrade guide](./doc/user/upgrade/upgrade_guide.md) for safe upgrade process.
+Some planned features have yet to be completed and API changes are still possible, meaning that bug fixes, API and version changes may not be backwards compatible.
 
 Currently user facing Cassandra cluster objects are created as [Kubernetes Custom Resources](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/).
 
 We expect to consider the Cassandra operator stable soon; backwards incompatible changes will not be made once the project reaches stability.
 
-## Overview
-
-The Cassandra operator manages Cassandra clusters deployed to [Kubernetes](http://kubernetes.io) and automates tasks related to operating an Cassandra cluster.
-
-- [Install](./doc/op_guide.md)
-- [Create and destroy](#create-and-destroy-an-Cassandra-cluster)
-- [Resize](#resize-an-Cassandra-cluster)
-- [Rolling upgrade](#upgrade-an-Cassandra-cluster) - _TODO_
-- [Limitations](#limitations)
-
 ## Documentation
 
-1) [Operations Guide](./doc/op_guide.md) for how to run the operator and deploy Cassandra clusters.
+1) [Operations Guide](./doc/op_guide.md) for how to run the operator and deploy, scale and decommission Cassandra clusters.
 
-2) [Best Practices](./doc/best_practices.md) for more information on how to better use Cassandra operator.
+1) [RBAC docs](./doc/rbac.md) for how to setup RBAC rules for Cassandra operator and Cassandra containers if RBAC is in place.
 
-3) [RBAC docs](./doc/rbac.md) for how to setup RBAC rules for Cassandra operator if RBAC is in place.
+1) [Developer Guide](./doc/developers.md) for setting up development environment if you want to contribute.
 
-4) [Developer Guide](./doc/developers.md) for setting up development environment if you want to contribute.
+1) [Backup and Restore Guide](./doc/backup_restore.md) for backing up and restoring Cassandra clusters managed by the operator.
 
-5) [Backup and Restore Guide](./doc/backup_restore.md) for backing up and restoring Cassandra clusters managed by the operator.
+1) [Resources and Labels](./doc/resources.md) doc for an overview of the resources created by the Cassandra-operator.
 
-6) [Resources and Labels](./doc/resources.md) doc for an overview of the resources created by the Cassandra-operator.
-
-7) [Specific examples](./doc/spec_examples.md) on setting up clusters with backup, restore, and other configurations.
-
-8) [PKS Setup](./doc/providers/pks.md) for deploying on Pivotal Container service. 
+1) [Azure Setup](./doc/providers/aks.md) for deploying on AKS (Azure) cloud.
+1) [GKE Setup](./doc/providers/gke.md) for deploying on GKE (Google) cloud.
+1) [Local Setup](./doc/providers/local.md) for deploying on local environment.
 
 ## Requirements
 
 - Kubernetes 1.13+
-- Cassandra 3.11+
-
-## Deploy Cassandra operator
-
-See [instructions on how to install/uninstall Cassandra operator](./doc/op_guide.md) .
+- Helm 2 (if you want to use the included helm charts)
 
 ## Limitations
 
-- This operator is currently a work in progress and breaking changes are landing in master all the time until we reach our initial release. Here be dragons!
+- This operator is currently a work in progress and breaking changes are landing in master all the time. Here be dragons!
 - Do not use this in production... yet
 - Please see the [Instaclustr supported projects page](https://www.instaclustr.com/support/documentation/announcements/instaclustr-open-source-project-status/) for the Enterprise support status of the Cassandra Operator.
+
+## Roadmap
+
+ - [] Support node-to-node security via certificates
+ - [] Support cluster-client security via certificates
+ - [] Allow multi-DC clusters via the operator
