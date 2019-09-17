@@ -10,14 +10,6 @@
     kubectl apply -f deploy/crds/cassandraoperator_v1alpha1_cassandradatacenter_crd.yaml
     ```
 
- 1) Set the operator's Docker image in `deploy/operator.yaml`:
-
-    >TODO: Commit the official image in the manifest so that the user doesn't have to edit files.
-
-    ```
-    sed -i 's|REPLACE_IMAGE|quay.io/<user>/cassandra-operator:latest|' deploy/operator.yaml
-    ```
-
  1) Deploy the [RBAC][rbac] resources and [pod security policies][psps] needed for the operator to run:
     ```
     kubectl apply -f deploy/operator_bundle.yaml
