@@ -39,6 +39,6 @@ We expect to consider the Cassandra operator stable soon; backwards incompatible
 
 ## Roadmap
 
- - [] Support node-to-node security via certificates
- - [] Support cluster-client security via certificates
- - [] Allow multi-DC clusters via the operator
+ - [ ] Support node-to-node security via certificates
+ - [ ] Support cluster-client security via certificates
+ - [ ] Allow multi-DC clusters via the operator
