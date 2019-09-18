@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+set -eux pipefail
+
+manifest_dir="$(git rev-parse --show-toplevel)/deploy"
+
+crd_files="
+    crds/cassandraoperator_v1alpha1_cassandrabackup_crd.yaml
+    crds/cassandraoperator_v1alpha1_cassandracluster_crd.yaml
+    crds/cassandraoperator_v1alpha1_cassandradatacenter_crd.yaml
+"
+crd_output="${manifest_dir}"/crds.yaml
+
+operator_files="
+    cassandra/psp.yaml
+    cassandra/psp_performance.yaml
+    configmap.yaml
+    operator.yaml
+    psp.yaml
+    role_binding.yaml
+    role.yaml
+    service_account.yaml
+"
+operator_output="${manifest_dir}"/bundle.yaml
+
+bundle_yaml_files () {
+    directory=${1}
+    files=${2}
+    output_file=${3}
+
+    # Empty output file before writing for idempotency.
+    echo -n > "${output_file}"
+
+    for f in ${files}; do
+        echo '---' >> "${output_file}"
+        cat "${directory}"/"${f}" >> "${output_file}"
+    done
+}
+
+echo "Bundling CRD manifests"
+
+bundle_yaml_files "${manifest_dir}" "${crd_files}" "${crd_output}"
+
+echo "Done bundling CRD manifests"
+
+echo "Bundling operator manifests"
+
+bundle_yaml_files "${manifest_dir}" "${operator_files}" "${operator_output}"
+
+echo "Done bundling operator manifests"

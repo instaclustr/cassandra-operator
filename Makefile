@@ -23,5 +23,10 @@ helm:
 docker: java
 	$(MAKE) -C $@
 
+# Render YAML bundles from official manifests
+.PHONY: bundle
+bundle:
+	buildenv/bundle
+
 
 .DEFAULT_GOAL := all
