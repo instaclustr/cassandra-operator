@@ -50,6 +50,7 @@ jobs:
       - restore_cache: # restores saved cache if no changes are detected since last run
           keys:
             - m2
+            - go-mod-v4-{{ checksum "go.sum" }}
 
       - setup_remote_docker:
           docker_layer_caching: true
@@ -60,8 +61,12 @@ jobs:
           key: m2
           paths:
             - ~/.m2
+      - save_cache:
+          key: go-mod-v4-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
 
-  release-dev:
+  release:
     docker:
       # specify the version you desire here
       - image: gcr.io/cassandra-operator/jdk8-gcloud-sdk:latest
@@ -78,6 +83,24 @@ jobs:
     steps:
       - checkout
 
+      - run:
+          name: Set TAG environment to version
+          command: |
+            TAG=$(git tag --points-at master | tail -n 1)
+            if [[! -z "${TAG}" ]]; then
+                echo "export TAG=${TAG}" >> $BASH_ENV
+                source $BASH_ENV
+            else
+                echo "The last commit on master doesn't seem to be tagged! Not releasing"
+                exit 1
+            fi
+
+      - restore_cache: # restores saved cache if no changes are detected since last run
+          keys:
+            - m2
+            - go-mod-v4-{{ checksum "go.sum" }}
+
+
       # Download and cache dependencies
       - run:
           name: Dump Google Cloud Credentials to file
@@ -86,7 +109,9 @@ jobs:
           name: Setup Google Cloud
           command: gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json && gcloud --quiet config set project ${GOOGLE_PROJECT_ID} && gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
 
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
+
 
       - run:
           name: Create Docker images
@@ -140,7 +165,7 @@ jobs:
           name: Cleanup GCP resources
           command: gcloud --quiet container clusters delete ${K8S_CLUSTER_NAME} --async
           when: always
-# TODO branch names will need changing on flip up to master
+
 workflows:
   version: 2
   build_and_test:
@@ -153,18 +178,19 @@ workflows:
             branches:
               ignore:
                 - master
-                - superdupertopsecretrewrite
       - test-gcp:
           requires:
             - style-check
-            - release-dev
           filters:
             branches:
-                only: /!^pull\/.*/
-      - release-dev:
+                # Don't run the test on PRs
+                ignore:
+                  - /^pull\/.*/
+      - release:
           requires:
             - style-check
           filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+$/
             branches:
-              only:
-                - superdupertopsecretrewrite
+              only: master
