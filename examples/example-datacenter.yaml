@@ -5,7 +5,7 @@ metadata:
   labels:
     app: cassandra
 spec:
-  nodes: 4
+  nodes: 3
   racks:
     - name: "west1-b"
       labels:
@@ -78,3 +78,5 @@ spec:
 
   prometheusSupport: false
   optimizeKernelParams: true
+  # Needed to run on AKS
+  fsGroup: 999
