@@ -5,10 +5,6 @@ OPENJRE_BASE_IMAGE := $(if $(OPENJRE_BASE_IMAGE),$(OPENJRE_BASE_IMAGE),"debian:s
 
 .PHONY: base-openjre
 base-openjre:
-	@echo \"$(OPENJRE_VERSION)\"
-	@echo \"$(OPENJRE_IMAGE_TAG)\"
-	@echo \"$(OPENJRE_IMAGE)\"
-	@echo \"$(OPENJRE_BASE_IMAGE)\"
 	docker build \
 		--build-arg OPENJRE_BASE_IMAGE=$(OPENJRE_BASE_IMAGE) \
 		--build-arg openjre_version=$(OPENJRE_VERSION) \
