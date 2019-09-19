@@ -10,13 +10,13 @@ pkg_dir=$(mktemp -d) && chmod 755 "${pkg_dir}"
 arch="all"
 arch_pkg_dir="${pkg_dir}/${arch}" && mkdir "${arch_pkg_dir}"
 
-APACHE_MIRROR_URL="${APACHE_MIRROR_URL:-https://dl.bintray.com/}"
+C_APACHE_MIRROR_URL="${C_APACHE_MIRROR_URL:-https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra}"
 INSTALL_CASSANDRA_EXPORTER="${INSTALL_CASSANDRA_EXPORTER:-true}"
 
 # download the C* packages
 (cd "${arch_pkg_dir}" &&
-    curl -SLO "${APACHE_MIRROR_URL}/apache/cassandra/debian/pool/main/c/cassandra/cassandra_${cassandra_version}_all.deb" &&
-    curl -SLO "${APACHE_MIRROR_URL}/apache/cassandra/debian/pool/main/c/cassandra/cassandra-tools_${cassandra_version}_all.deb")
+    curl -SLO "${C_APACHE_MIRROR_URL}/cassandra_${cassandra_version}_all.deb" &&
+    curl -SLO "${C_APACHE_MIRROR_URL}/cassandra-tools_${cassandra_version}_all.deb")
 
 dagi dpkg-dev cpio
 
