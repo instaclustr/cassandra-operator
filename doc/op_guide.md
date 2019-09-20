@@ -37,7 +37,7 @@ It is possible to configure Cassandra by providing custom configuration. Refer t
     
 ## Deploy a Cassandra cluster
 
-> NOTE: To deploy the cassandra cluster, one can use an example yaml provided in the `examples` directory. There are 2 examples included in the repo:
+> NOTE: To deploy the Cassandra cluster, one can use an example yaml provided in the `examples` directory. There are 2 examples included in the repo:
 >  - example-datacenter.yaml -> a full example will all the fields showing usage. Use it as a template for your usecase.
 >  - example-datacenter-minimal.yaml -> the minimal example of the yaml. To use this example, you must also create a configMap called "cassandra-operator-default-config" that will have default values used by operator set:
 >     ```yaml
@@ -145,6 +145,8 @@ It is possible to configure Cassandra by providing custom configuration. Refer t
     ```bash
     $ kubectl apply -f example/example-datacenter.yaml
     ```
+    
+    > **Note: scaling up/down is a long operation that performs actions in the background that are not visible to kubernetes tools. It might take long time until some "activity" is seen (like nodes in `LEAVING` state or pods terminating). Please do not rerun this command many times, but just follow the sidecar log (via `kubectl logs <pod name> --container sidecar` and cassandra status via `kubectl exec <pod name> -c cassandra -- bash "nodetool status"`)**
     
 ## Cleanup
 
