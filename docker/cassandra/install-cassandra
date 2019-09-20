@@ -48,7 +48,7 @@ then
     # install cassandra-exporter (Prometheus monitoring support)
     (cd "/usr/share/cassandra/agents" &&
         curl -SLO "https://github.com/instaclustr/cassandra-exporter/releases/download/v${cassandra_exporter_version}/cassandra-exporter-agent-${cassandra_exporter_version}.jar" &&
-        ln -s cassandra-exporter-agent-0.9.6.jar cassandra-exporter-agent.jar)
+        ln -s cassandra-exporter-agent-${cassandra_exporter_version}.jar cassandra-exporter-agent.jar)
 fi
 
 # clean-up
