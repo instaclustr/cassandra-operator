@@ -22,9 +22,6 @@ We expect to consider the Cassandra operator stable soon; backwards incompatible
 
 1) [Resources and Labels](./doc/resources.md) doc for an overview of the resources created by the Cassandra-operator.
 1) Using [Helm](./doc/helm.md) to install and launch the operator and the clusters.
-1) [Azure Setup](./doc/providers/aks.md) for deploying on AKS (Azure) cloud.
-1) [GKE Setup](./doc/providers/gke.md) for deploying on GKE (Google) cloud.
-1) [Local Setup](./doc/providers/local.md) for deploying on local environment.
 
 ## Requirements
 
