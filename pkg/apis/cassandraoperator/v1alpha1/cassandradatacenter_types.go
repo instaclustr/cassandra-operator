@@ -8,24 +8,25 @@ import (
 // CassandraDataCenterSpec defines the desired state of CassandraDataCenter
 // +k8s:openapi-gen=true
 type CassandraDataCenterSpec struct {
-	Nodes                     int32                         `json:"nodes,omitempty"`
-	CassandraImage            string                        `json:"cassandraImage,omitempty"`
-	SidecarImage              string                        `json:"sidecarImage,omitempty"`
-	Racks                     []Rack                        `json:"racks,omitempty"`
-	ImagePullPolicy           v1.PullPolicy                 `json:"imagePullPolicy,omitempty"`
-	ImagePullSecrets          []v1.LocalObjectReference     `json:"imagePullSecrets,omitempty"`
-	BackupSecretVolumeSource  *v1.SecretVolumeSource        `json:"backupSecretVolumeSource,omitempty"`
-	RestoreFromBackup         string                        `json:"restoreFromBackup,omitempty"`
-	UserSecretVolumeSource    *v1.SecretVolumeSource        `json:"userSecretVolumeSource,omitempty"`
-	UserConfigMapVolumeSource *v1.ConfigMapVolumeSource     `json:"userConfigMapVolumeSource,omitempty"`
-	Resources                 *v1.ResourceRequirements      `json:"resources,omitempty"`
-	DataVolumeClaimSpec       *v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec,omitempty"`
-	OptimizeKernelParams      bool                          `json:"optimizeKernelParams,omitempty"`
-	PrometheusSupport         bool                          `json:"prometheusSupport,omitempty"`
-	SidecarEnv                []v1.EnvVar                   `json:"sidecarEnv,omitempty"`
-	CassandraEnv              []v1.EnvVar                   `json:"cassandraEnv,omitempty"`
-	ServiceAccountName        string                        `json:"serviceAccountName,omitempty"`
-	FSGroup                   int64                         `json:"fsGroup,omitempty"`
+	Nodes                          int32                         `json:"nodes,omitempty"`
+	CassandraImage                 string                        `json:"cassandraImage,omitempty"`
+	SidecarImage                   string                        `json:"sidecarImage,omitempty"`
+	Racks                          []Rack                        `json:"racks,omitempty"`
+	ImagePullPolicy                v1.PullPolicy                 `json:"imagePullPolicy,omitempty"`
+	ImagePullSecrets               []v1.LocalObjectReference     `json:"imagePullSecrets,omitempty"`
+	BackupSecretVolumeSource       *v1.SecretVolumeSource        `json:"backupSecretVolumeSource,omitempty"`
+	RestoreFromBackup              string                        `json:"restoreFromBackup,omitempty"`
+	UserSecretVolumeSource         *v1.SecretVolumeSource        `json:"userSecretVolumeSource,omitempty"`
+	UserConfigMapVolumeSource      *v1.ConfigMapVolumeSource     `json:"userConfigMapVolumeSource,omitempty"`
+	Resources                      *v1.ResourceRequirements      `json:"resources,omitempty"`
+	DataVolumeClaimSpec            *v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec,omitempty"`
+	OptimizeKernelParams           bool                          `json:"optimizeKernelParams,omitempty"`
+	PrometheusSupport              bool                          `json:"prometheusSupport,omitempty"`
+	PrometheusServiceMonitorLabels map[string]string             `json:"prometheusServiceMonitorLabels,omitempty"`
+	SidecarEnv                     []v1.EnvVar                   `json:"sidecarEnv,omitempty"`
+	CassandraEnv                   []v1.EnvVar                   `json:"cassandraEnv,omitempty"`
+	ServiceAccountName             string                        `json:"serviceAccountName,omitempty"`
+	FSGroup                        int64                         `json:"fsGroup,omitempty"`
 }
 
 // CassandraDataCenterStatus defines the observed state of CassandraDataCenter

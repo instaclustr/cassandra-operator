@@ -555,7 +555,7 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 	for _, sts := range rctx.sets {
 		rack := racksDistribution.GetRack(sts.Labels[rackKey])
 		if rack == nil {
-			log.Info("couldn't find the rack %v in the distribution\n", sts.Labels[rackKey])
+			log.Info(fmt.Sprintf("couldn't find the rack %v in the distribution\n", sts.Labels[rackKey]))
 			continue
 		}
 		if rack.Replicas != *sts.Spec.Replicas {

@@ -20,6 +20,16 @@ func DataCenterLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[st
 	}
 }
 
+func PrometheusLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+	// Fetch cdc labels
+	labels := DataCenterLabels(cdc)
+	// Add prometheus labels if defined
+	for label, val := range cdc.Spec.PrometheusServiceMonitorLabels {
+		labels[label] = val
+	}
+	return labels
+}
+
 func RackLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluster.Rack) map[string]string {
 	// Fetch cdc labels
 	rackLabels := DataCenterLabels(cdc)

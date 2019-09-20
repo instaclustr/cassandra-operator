@@ -162,6 +162,13 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 		return reconcile.Result{}, err
 	}
 
+	if rctx.cdc.Spec.PrometheusSupport {
+		err := createOrUpdatePrometheusServiceMonitor(rctx)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	statefulSet, err := createOrUpdateStatefulSet(rctx, configVolume)
 	if err != nil {
 		return reconcile.Result{}, err
