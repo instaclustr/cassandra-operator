@@ -163,8 +163,7 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 	}
 
 	if rctx.cdc.Spec.PrometheusSupport {
-		err := createOrUpdatePrometheusServiceMonitor(rctx)
-		if err != nil {
+		if err := createOrUpdatePrometheusServiceMonitor(rctx); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

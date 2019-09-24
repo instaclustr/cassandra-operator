@@ -93,7 +93,7 @@ Cassandra will load the `cassandra.yaml.d/100-concurrent.yaml` file as well as t
 
 ### Prometheus support
 
-The Cassandra image that is included with this project has the [cassandra-exporter](https://github.com/instaclustr/cassandra-exporter) built in, so it is ready to export the metrics to Prometheus instance. In order to use this capability automatically, one must have a running Prometheus operator in the same kubernetes environment and have Prometheus object created bound to a set of ServiceMonitors via a selector (a set of labels); for example:
+The Cassandra image that is included with this project has the [cassandra-exporter](https://github.com/instaclustr/cassandra-exporter) built in, so it is ready to export the metrics to Prometheus instance. In order to use this capability automatically, one must have a running Prometheus operator in the same Kubernetes environment and have Prometheus object following a set of ServiceMonitors via a selector (a set of labels); for example:
 ```yaml
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
