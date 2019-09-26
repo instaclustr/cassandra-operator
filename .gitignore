@@ -20,3 +20,4 @@ vendor/
 /**/classes
 /**/.attach*
 /examples/go/backup-secrets.yaml
+.local_build_env

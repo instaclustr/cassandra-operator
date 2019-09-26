@@ -1,4 +1,6 @@
-FROM golang:1.13 AS builder
+ARG GOLANG_BASE_IMAGE=golang:1.13
+
+FROM ${GOLANG_BASE_IMAGE} AS builder
 
 ARG version
 

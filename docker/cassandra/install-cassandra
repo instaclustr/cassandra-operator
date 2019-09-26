@@ -1,6 +1,7 @@
 #!/bin/bash -xue
 
 cassandra_version=$1
+cassandra_exporter_version=$2
 
 # create 'cassandra' user and group
 groupadd -g 999 cassandra
@@ -10,10 +11,13 @@ pkg_dir=$(mktemp -d) && chmod 755 "${pkg_dir}"
 arch="all"
 arch_pkg_dir="${pkg_dir}/${arch}" && mkdir "${arch_pkg_dir}"
 
+C_APACHE_MIRROR_URL="${C_APACHE_MIRROR_URL:-https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra}"
+INSTALL_CASSANDRA_EXPORTER="${INSTALL_CASSANDRA_EXPORTER:-true}"
+
 # download the C* packages
 (cd "${arch_pkg_dir}" &&
-    curl -SLO "https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra/cassandra_${cassandra_version}_all.deb" &&
-    curl -SLO "https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra/cassandra-tools_${cassandra_version}_all.deb")
+    curl -SLO "${C_APACHE_MIRROR_URL}/cassandra_${cassandra_version}_all.deb" &&
+    curl -SLO "${C_APACHE_MIRROR_URL}/cassandra-tools_${cassandra_version}_all.deb")
 
 dagi dpkg-dev cpio
 
@@ -39,10 +43,13 @@ mkdir /etc/cassandra/cassandra-env.sh.d
 mkdir /etc/cassandra/jvm.options.d
 mkdir /etc/cassandra/logback.xml.d
 
-# install cassandra-exporter (Prometheus monitoring support)
-(cd "/usr/share/cassandra/agents" &&
-    curl -SLO "https://github.com/instaclustr/cassandra-exporter/releases/download/v0.9.6/cassandra-exporter-agent-0.9.6.jar" &&
-    ln -s cassandra-exporter-agent-0.9.6.jar cassandra-exporter-agent.jar)
+if [ "$INSTALL_CASSANDRA_EXPORTER" == "true" ]
+then
+    # install cassandra-exporter (Prometheus monitoring support)
+    (cd "/usr/share/cassandra/agents" &&
+        curl -SLO "https://github.com/instaclustr/cassandra-exporter/releases/download/v${cassandra_exporter_version}/cassandra-exporter-agent-${cassandra_exporter_version}.jar" &&
+        ln -s cassandra-exporter-agent-${cassandra_exporter_version}.jar cassandra-exporter-agent.jar)
+fi
 
 # clean-up
 rm -rf "${pkg_dir}"

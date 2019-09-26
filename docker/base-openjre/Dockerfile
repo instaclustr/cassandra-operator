@@ -1,4 +1,6 @@
-FROM debian:stretch
+ARG OPENJRE_BASE_IMAGE=debian:stretch
+
+FROM ${OPENJRE_BASE_IMAGE}
 
 ARG openjre_version=8u222-b10-1~deb9u1
 

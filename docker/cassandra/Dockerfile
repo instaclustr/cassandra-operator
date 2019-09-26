@@ -3,11 +3,16 @@ ARG openjre_image
 FROM ${openjre_image}
 
 ARG cassandra_version=3.11.4
+ARG cassandra_exporter_version=0.9.6
 ARG cassandra_k8s_addons_jar
+ARG apache_mirror_url=https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra
+ARG install_cassandra_exporter=true
 
 COPY install-cassandra /tmp/install-cassandra
 
-RUN /tmp/install-cassandra ${cassandra_version}
+RUN C_APACHE_MIRROR_URL=${apache_mirror_url} \
+    INSTALL_CASSANDRA_EXPORTER=${install_cassandra_exporter} \
+    /tmp/install-cassandra ${cassandra_version} ${cassandra_exporter_version}
 
 COPY entry-point /usr/bin/entry-point
 COPY wrapper /usr/bin/wrapper
