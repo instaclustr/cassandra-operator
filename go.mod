@@ -1,7 +1,6 @@
 module github.com/instaclustr/cassandra-operator
 
 require (
-	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/coreos/prometheus-operator v0.32.0 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.0
@@ -10,6 +9,8 @@ require (
 	github.com/operator-framework/operator-sdk v0.10.1-0.20190809033248-9d6ffddcd86f
 	github.com/pkg/errors v0.8.1
 	github.com/spf13/pflag v1.0.3
+	golang.org/dl v0.0.0-20190916174333-7d514fe8af3a // indirect
+	golang.org/x/tools v0.0.0-20190924052046-3ac2a5bbd98a // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.0.0-20190612125737-db0771252981
@@ -43,3 +44,5 @@ replace (
 replace git.apache.org/thrift.git => github.com/apache/thrift v0.0.0-20180902110319-2566ecd5d999
 
 replace github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.10.0
+
+go 1.13
