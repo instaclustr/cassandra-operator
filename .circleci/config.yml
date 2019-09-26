@@ -77,12 +77,12 @@ jobs:
           name: Set TAG environment to version
           command: |
             TAG=$(git tag --points-at master | tail -n 1)
-            if [[! -z "${TAG}" ]]; then
+            if [[ ! -z "${TAG}" ]]; then
                 echo "export TAG=${TAG}" >> $BASH_ENV
                 source $BASH_ENV
             else
                 echo "The last commit on master doesn't seem to be tagged! Not releasing"
-                exit 1
+                circleci-agent step halt
             fi
 
       - restore_cache: # restores saved cache if no changes are detected since last run

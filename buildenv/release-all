@@ -5,7 +5,7 @@ set -o pipefail
 
 cd `dirname "$BASH_SOURCE"`/..
 
-source ./repo
+source ./buildenv/repo
 
 function defer {
 	if [[ $REGISTRY == gcr.io/* ]]; then
