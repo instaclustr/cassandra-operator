@@ -91,3 +91,20 @@ spec:
 
 Cassandra will load the `cassandra.yaml.d/100-concurrent.yaml` file as well as the default settings managed by the operator!
 
+### Prometheus support
+
+The Cassandra image that is included with this project has the [cassandra-exporter](https://github.com/instaclustr/cassandra-exporter) built in, so it is ready to expose metrics to be gathered by a Prometheus instance. In order to use this capability automatically, one must have a running Prometheus operator in the same Kubernetes cluster as well as a Prometheus object.
+
+Utilising the labels used in Prometheus selector, add the following configuration to the cluster CRD:
+```yaml
+...
+spec:
+ ...
+  prometheusServiceMonitorLabels:
+    <prometheus selector labels>
+    ...
+  prometheusSupport: true
+
+```
+
+And then create the Cassandra cluster. After starting, the Prometheus will pick up the Cassandra targets and will begin collecting metrics.

@@ -189,6 +189,10 @@ spec:
               type: integer
             optimizeKernelParams:
               type: boolean
+            prometheusServiceMonitorLabels:
+              additionalProperties:
+                type: string
+              type: object
             prometheusSupport:
               type: boolean
             racks:
