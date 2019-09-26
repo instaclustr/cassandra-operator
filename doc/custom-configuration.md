@@ -93,33 +93,15 @@ Cassandra will load the `cassandra.yaml.d/100-concurrent.yaml` file as well as t
 
 ### Prometheus support
 
-The Cassandra image that is included with this project has the [cassandra-exporter](https://github.com/instaclustr/cassandra-exporter) built in, so it is ready to export the metrics to Prometheus instance. In order to use this capability automatically, one must have a running Prometheus operator in the same Kubernetes environment and have Prometheus object following a set of ServiceMonitors via a selector (a set of labels); for example:
-```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: Prometheus
-metadata:
-  name: cassandra
-spec:
-  serviceAccountName: prometheus
-  serviceMonitorSelector:
-    matchLabels:
-      prometheus-server: main
-  replicas: 1
-  version: v1.7.1
-  resources:
-    requests:
-      memory: 400Mi
-```
+The Cassandra image that is included with this project has the [cassandra-exporter](https://github.com/instaclustr/cassandra-exporter) built in, so it is ready to expose metrics to be gathered by a Prometheus instance. In order to use this capability automatically, one must have a running Prometheus operator in the same Kubernetes cluster as well as a Prometheus object.
 
-`prometheus` service account used above is taken literally from the Prometheus' [user guide](https://github.com/coreos/prometheus-operator/blob/master/Documentation/user-guides/getting-started.md#enable-rbac-rules-for-prometheus-pods). Use the example above to create Prometheus object that uses a specified set of ServiceMonitor labels.
-
-  When Prometheus object is created, and the labels are at hand, add the following configuration to the cluster CRD:
+Utilising the labels used in Prometheus selector, add the following configuration to the cluster CRD:
 ```yaml
 ...
 spec:
  ...
   prometheusServiceMonitorLabels:
-    prometheus-server: main
+    <prometheus selector labels>
     ...
   prometheusSupport: true
 
