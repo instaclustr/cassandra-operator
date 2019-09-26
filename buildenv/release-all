@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-
 set -o errexit
 set -o nounset
 set -o pipefail
 
 cd `dirname "$BASH_SOURCE"`/..
+
+source ./repo
 
 function defer {
 	if [[ $REGISTRY == gcr.io/* ]]; then
@@ -15,28 +16,17 @@ function defer {
 
 trap defer EXIT
 
-# We source this a bunch of times just to make stuff work. TODO: this needs a clean up
-REGISTRY="${REGISTRY:-gcr.io/cassandra-operator}"
-
-
 if [[ $REGISTRY == gcr.io/* ]]; then
 	gcloud docker -a
 fi
 
 export DONT_LOGIN="true"
 
-# TODO: remove when we switch to a go branch as default deployment model
-# only push from CI environment and only push to a go tag for the moment
-if [[ "${CIRCLE_BRANCH}" != "" ]] && [[ "${CIRCLE_BRANCH}" != master ]]; then
-    docker push "${REGISTRY}/cassandra-operator:latest-go"
-    docker push "${REGISTRY}/cassandra-sidecar:latest-go"
-    docker push "${REGISTRY}/cassandra:latest-go"
-    docker push "${REGISTRY}/cassandra:3.11.4-go"
-fi
-
 # only push from CI environment and only push to a go tag for the moment
 if [[ "${CIRCLE_BRANCH}" == master ]]; then
+    docker push "${REGISTRY}/cassandra-operator:${TAG}"
     docker push "${REGISTRY}/cassandra-operator:latest"
+    docker push "${REGISTRY}/cassandra-sidecar:${TAG}"
     docker push "${REGISTRY}/cassandra-sidecar:latest"
     docker push "${REGISTRY}/cassandra:latest"
     docker push "${REGISTRY}/cassandra:3.11.4"

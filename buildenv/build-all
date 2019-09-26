@@ -1,29 +1,19 @@
 #!/usr/bin/env bash
 # at the point a makefile is probably the sensible choice
-set -x
+set -o errexit
+set -o nounset
+set -o pipefail
 
 cd `dirname "$BASH_SOURCE"`/..
 
-REGISTRY="${REGISTRY:-gcr.io/cassandra-operator}"
-CIRCLE_TAG="${CIRCLE_TAG:-}"
-NO_DEV="${NO_DEV:-}"
-CIRCLE_BRANCH="${CIRCLE_BRANCH:-}"
-
-SHA1=`git rev-parse --short HEAD`
-export TAG="${TAG:-${SHA1}}"
+source ./buildenv/repo
 
 make
 
-# TODO: remove when we switch to a go branch as default deployment model
-if [[ "${CIRCLE_BRANCH}" != "" ]] && [[ "${CIRCLE_BRANCH}" != master ]]; then
-    docker tag cassandra-operator:latest "${REGISTRY}/cassandra-operator:latest-go"
-    docker tag cassandra-sidecar:latest "${REGISTRY}/cassandra-sidecar:latest-go"
-    docker tag cassandra:latest "${REGISTRY}/cassandra:latest-go"
-    docker tag cassandra:3.11.4 "${REGISTRY}/cassandra:3.11.4-go"
-fi
-
 if [[ "${CIRCLE_BRANCH}" == master ]]; then
+    docker tag cassandra-operator:latest "${REGISTRY}/cassandra-operator:${TAG}"
     docker tag cassandra-operator:latest "${REGISTRY}/cassandra-operator:latest"
+    docker tag cassandra-sidecar:latest "${REGISTRY}/cassandra-sidecar:${TAG}"
     docker tag cassandra-sidecar:latest "${REGISTRY}/cassandra-sidecar:latest"
     docker tag cassandra:latest "${REGISTRY}/cassandra:latest"
     docker tag cassandra:3.11.4 "${REGISTRY}/cassandra:3.11.4"
