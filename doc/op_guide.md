@@ -4,7 +4,7 @@
  - A running kubernetes cluster setup with [Persistent Volumes][storage]. We advise running 1 Cassandra pod per k8 node, and hence please plan your environment accordingly.
   > Note: See [AKS](./providers/aks.md) notes to properly define parameters for clusters running on AKS.
  
-  > Note: See [GKE PV](./providers/gke.md) for notes to setup the persistent volumes properly on GKE. 
+  > Note: See [Dynamic provisioning](persistent_volumes.md) for notes to setup the persistent volumes properly for dynamic provisioning. 
   
   > Note: See [Local setup](./providers/local.md) for notes on setting up a local kubernetes cluster
 
