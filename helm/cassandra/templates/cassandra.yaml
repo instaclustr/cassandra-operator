@@ -51,6 +51,9 @@ sidecarEnv:
   {{ toYaml .Values.userConfigMapVolumeSource | indent 4 }}
 {{- end }}
   prometheusSupport: {{ .Values.prometheusEnabled }}
+{{- if .Values.prometheusServiceMonitorLabels}}
+  prometheusServiceMonitorLabels: {{ .Values.prometheusServiceMonitorLabels }}
+{{- end }}
 {{- if .Values.optimizeKernelParams }}
   optimizeKernelParams: {{ .Values.optimizeKernelParams }}
 {{- end }}

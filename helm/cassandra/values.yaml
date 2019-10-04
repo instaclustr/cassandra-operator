@@ -32,6 +32,8 @@ resources:
   requests:
     memory: 1Gi
 dataVolumeClaim:
+  # Refer to doc/persistent_volumes.md for PV setup for dynamic volume provisioning
+  # storageClassName: <topology-aware-standard>
   accessModes:
     - ReadWriteOnce
   resources:
@@ -94,6 +96,9 @@ dataVolumeClaim:
 
 #restoreFromBackup: backup-name
 
+# prometheusServiceMonitorLabels:
+#  key: value
+#  key2: value2
 prometheusEnabled: false
 
 #serviceAccountName: cassandra
