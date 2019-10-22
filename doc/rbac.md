@@ -122,7 +122,8 @@ spec:
 
 Here is an example of Cassandra's psp bundle; it's built with ServiceAccount (which can be provided in CRD),
 role and role binding as well as the psp (pod security policy):
-```
+
+```yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
