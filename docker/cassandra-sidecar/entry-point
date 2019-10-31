@@ -1,14 +1,14 @@
 #!/bin/bash -ue
 
 params=""
+if [[ -e /var/lib/cassandra/tls/jmx-params ]]; then
+    # guess cluster is secure
+    params=$(cat /var/lib/cassandra/tls/jmx-params)
+fi
 
 if [ "${1-unset}" == "backup" ] || [ "${1-unset}" == "restore" ]; then
-    cassandra-backup-restore $@
+    cassandra-backup-restore ${params} $@
     exit $?
 else
-    if [[ -e /var/lib/cassandra/tls/jmx-params ]]; then
-        # guess cluster is secure
-        params=$(cat /var/lib/cassandra/tls/jmx-params)
-    fi
     cassandra-sidecar ${params} $@
 fi
