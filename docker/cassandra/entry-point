@@ -19,14 +19,10 @@ fi
 
 # check if TLS config is also needed
 if [[ -e /var/lib/cassandra/tls/certs/$(hostname)-keystore.p12 ]]; then
-   if [[ ! -e /etc/cassandra/certs ]]; then
-     mkdir -p /etc/cassandra/certs
-   fi
+   mkdir -p /etc/cassandra/certs
 
    cassandra_config=/home/cassandra/.cassandra
-   if [[ ! -e ${cassandra_config} ]]; then
-     mkdir -p ${cassandra_config}
-   fi
+   mkdir -p ${cassandra_config}
 
    cp /var/lib/cassandra/tls/certs/* /etc/cassandra/certs/
    cp /var/lib/cassandra/tls/config/* /etc/cassandra/cassandra.yaml.d/

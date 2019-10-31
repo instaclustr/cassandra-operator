@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-cycles=100
-
 # ======== FUNCTION DEFINITIONS ==========
 
 function generate_keystore {
@@ -15,7 +13,7 @@ function generate_keystore {
     -validity 730 \
     -keysize 2048 \
     -dname "CN=$(hostname), OU=$CLUSTER_NAME, O=Instaclustr, C=CC" \
-    -ext "san=dns:cassandra-test-dc-cassandra-seeds,dns:$(hostname -f),ip:$(hostname -i)"
+    -ext "san=dns:${CLUSTER_NAME}-cassandra-seeds,dns:$(hostname -f),ip:$(hostname -i)"
     echo " [Done]"
 }
 
@@ -28,7 +26,7 @@ function create_csr {
     keytool -keystore certs/${keystore} \
     -alias $(hostname) \
     -certreq -file signing_request.csr \
-    -ext "san=dns:cassandra-test-dc-cassandra-seeds,dns:$(hostname -f),ip:$(hostname -i)" \
+    -ext "san=dns:${CLUSTER_NAME}-cassandra-seeds,dns:$(hostname -f),ip:$(hostname -i)" \
     -keypass ${password} \
     -storepass ${password}
 
@@ -48,15 +46,17 @@ spec:
   - client auth
 EOF
 
-    kubectl apply -f a.yaml > /dev/null && echo " [Done]"
+    kubectl apply -f a.yaml > /dev/null
 
-    echo -n "Waiting for CSR approval ....."
-    for (( c=1; c<=$cycles; c++ ))
+    echo " [Done]"
+    echo
+    echo " ==== Waiting for CSR approval ==== "
+    echo
+    for ((;;))
     do
       kubectl get csr $(hostname) | grep Pending > /dev/null
       if [[ $? != 0 ]]; then
         # Not Pending, break
-        echo " [Done]"
         break
       fi
       sleep 20
@@ -187,14 +187,12 @@ if [[ ! -e /var/lib/cassandra ]]; then
     exit 1
 fi
 
-if [[ ! -e /var/lib/cassandra/tls ]]; then
-    mkdir -p /var/lib/cassandra/tls/{certs,config,env}
-else
-    # certs dir already there, check if the keystore already exists
-    if [[ -e "/var/lib/cassandra/tls/certs/${keystore}" ]]; then
-        # well, just skip it
-        exit 0
-    fi
+mkdir -p /var/lib/cassandra/tls/{certs,config,env}
+
+# certs dir already there, check if the keystore already exists
+if [[ -e "/var/lib/cassandra/tls/certs/${keystore}" ]]; then
+    # well, just skip it
+    exit 0
 fi
 
 cd /var/lib/cassandra/tls

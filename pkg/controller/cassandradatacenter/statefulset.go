@@ -85,8 +85,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		}
 
 		if rctx.cdc.Spec.SecureCluster {
-			tlsContainer := newTlsSetupContainer(rctx, dataVolumeClaim, userConfigVolume)
-			if tlsContainer != nil {
+			if tlsContainer := newTlsSetupContainer(rctx, dataVolumeClaim, userConfigVolume); tlsContainer != nil {
 				initContainers = append(initContainers, *tlsContainer)
 			}
 		}
