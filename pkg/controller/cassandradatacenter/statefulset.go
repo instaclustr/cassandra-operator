@@ -293,10 +293,13 @@ func newRestoreContainer(
 		},
 	}
 
-	if backupSecretVolume != nil {
-		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: backupSecretVolume.Name, MountPath: BackupSecretVolumeMountPath})
-	} else {
-		return nil, errors.New(fmt.Sprintf("Restoring backup from %s is not possible because backupSecretVolumeSource field in CDC %s was not set!", cdc.Spec.RestoreFromBackup, cdc.Name))
+	// check backupSecretVolume only if backup type is GCP
+	if backup.Spec.IsGcpBackup() {
+		if backupSecretVolume != nil {
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: backupSecretVolume.Name, MountPath: BackupSecretVolumeMountPath})
+		} else {
+			return nil, errors.New(fmt.Sprintf("Restoring backup from %s is not possible because backupSecretVolumeSource field in CDC %s was not set!", cdc.Spec.RestoreFromBackup, cdc.Name))
+		}
 	}
 
 	return container, nil
