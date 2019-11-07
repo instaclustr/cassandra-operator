@@ -3,6 +3,7 @@ package com.instaclustr.cassandra.backup.aws;
 import static com.instaclustr.cassandra.backup.guice.BackupRestoreBindings.installBindings;
 
 import com.amazonaws.SdkClientException;
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
@@ -46,8 +47,18 @@ public class S3Module extends AbstractModule {
     AmazonS3 provideAmazonS3() {
         final AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
         final String envAWSRegion = System.getenv("AWS_REGION");
+        final String envAWSEndpoint = System.getenv("AWS_ENDPOINT");
 
-        if (envAWSRegion != null) {
+        if (envAWSEndpoint != null) {
+            // AWS_REGION must be set if AWS_ENDPOINT is set
+            if (envAWSRegion == null) {
+                throw new IllegalArgumentException("AWS_REGION must be set if AWS_ENDPOINT is set.");
+            }
+
+            return builder.withEndpointConfiguration(
+                new EndpointConfiguration(envAWSEndpoint, envAWSRegion.toLowerCase())).build();
+        }
+        else if (envAWSRegion != null) {
             return builder.withRegion(Regions.fromName(envAWSRegion.toLowerCase())).build();
         } else {
             return builder.build();

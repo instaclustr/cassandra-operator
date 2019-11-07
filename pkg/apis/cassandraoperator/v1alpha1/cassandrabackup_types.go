@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"strings"
+
 	"github.com/instaclustr/cassandra-operator/pkg/common/operations"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -60,4 +62,19 @@ type CassandraBackupList struct {
 
 func init() {
 	SchemeBuilder.Register(&CassandraBackup{}, &CassandraBackupList{})
+}
+
+// IsS3Backup returns true if the backup type is Amazon S3, otherwise returns false
+func (backupSpec *CassandraBackupSpec) IsS3Backup() bool {
+	return strings.HasPrefix(backupSpec.StorageLocation, "s3://")
+}
+
+// IsAzureBackup returns true if the backup type is Azure, otherwise returns false
+func (backupSpec *CassandraBackupSpec) IsAzureBackup() bool {
+	return strings.HasPrefix(backupSpec.StorageLocation, "azure://")
+}
+
+// IsGcpBackup returns true if the backup type is GCP, otherwise returns false
+func (backupSpec *CassandraBackupSpec) IsGcpBackup() bool {
+	return strings.HasPrefix(backupSpec.StorageLocation, "gcp://")
 }
