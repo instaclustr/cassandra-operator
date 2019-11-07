@@ -234,8 +234,14 @@ func newSidecarContainer(
 
 func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) *corev1.Container {
 	return &corev1.Container{
+<<<<<<< HEAD
 		Name:            "sysctl-limits",
 		Image:           "busybox:latest",
+=======
+		Name: "sysctl-limits",
+		// TODO @mnassar12: make this configerable
+		Image:           "artprod.dev.bloomberg.com/ds/ext/registry-1.docker.io/library/busybox:1.28.0-glibc",
+>>>>>>> 6a7b61f... Fix rack naming
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		SecurityContext: &corev1.SecurityContext{
 			Privileged: boolPointer(true),
@@ -538,7 +544,7 @@ func checkClusterHealth(rctx *reconciliationRequestContext) (bool, error) {
 func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, error) {
 
 	// 1. Build the racks distribution numbers.
-	racksDistribution := cluster.BuildRacksDistribution(rctx.cdc.Spec)
+	racksDistribution := cluster.BuildRacksDistribution(rctx.cdc)
 
 	// 2. check if all required racks are built. If not, create a missing one.
 	for _, rack := range racksDistribution {
@@ -573,7 +579,8 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 		}
 	}
 
-	// if we're here, no rack needs to be reconciled
+	// if we're here, no rack needs to be reconciled\
+	log.Info("No racks needs to be reconciled", "CassandraDatacenter", rctx.cdc.Name)
 	return nil, nil
 
 }
