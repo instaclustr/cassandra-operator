@@ -234,14 +234,9 @@ func newSidecarContainer(
 
 func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) *corev1.Container {
 	return &corev1.Container{
-<<<<<<< HEAD
-		Name:            "sysctl-limits",
-		Image:           "busybox:latest",
-=======
-		Name: "sysctl-limits",
-		// TODO @mnassar12: make this configerable
-		Image:           "artprod.dev.bloomberg.com/ds/ext/registry-1.docker.io/library/busybox:1.28.0-glibc",
->>>>>>> 6a7b61f... Fix rack naming
+		Name:  "sysctl-limits",
+		Image: "busybox:latest",
+
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		SecurityContext: &corev1.SecurityContext{
 			Privileged: boolPointer(true),
