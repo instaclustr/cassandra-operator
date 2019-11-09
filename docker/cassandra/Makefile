@@ -11,7 +11,7 @@ $(info SNAPSHOT version specified. Marking JAR target as .PHONY)
 endif
 
 $(CASSANDRA_K8S_ADDONS_JAR):
-	mvn dependency:copy -Dartifact=com.instaclustr.cassandra-operator:cassandra-k8s-addons:$(CASSANDRA_K8S_ADDONS_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true
+	mvn dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-addons:$(CASSANDRA_K8S_ADDONS_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true
 
 C_APACHE_MIRROR_URL := $(if $(C_APACHE_MIRROR_URL),$(C_APACHE_MIRROR_URL),"https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra")
 INSTALL_CASSANDRA_EXPORTER := $(if $(INSTALL_CASSANDRA_EXPORTER),$(INSTALL_CASSANDRA_EXPORTER),"true")
