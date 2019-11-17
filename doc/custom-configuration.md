@@ -52,8 +52,6 @@ ConfigMapVolumeSource) and the values are the configuration files or file fragme
 Then set/update the CRD attribute `userConfigMapVolumeSource` to a ConfigMapVolumeSource object that
 defines the ConfigMap key -> path mappings.
 
-####Example:
-
 Let's say you want to modify the number of threads available for certain operations in Cassandra.
 Create a YAML file `100-concurrent.yaml` that just defines those properties:
 
