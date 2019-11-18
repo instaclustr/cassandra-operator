@@ -51,7 +51,7 @@ public class GCPRestorer extends Restorer {
     @Override
     public void downloadFile(final Path localFile, final RemoteObjectReference objectReference) throws Exception {
         final BlobId blobId = ((GCPRemoteObjectReference) objectReference).blobId;
-        Files.createDirectories(localFile);
+        Files.createDirectories(localFile.getParent());
 
         try (final ReadChannel inputChannel = storage.reader(blobId)) {
             Files.copy(Channels.newInputStream(inputChannel), localFile);

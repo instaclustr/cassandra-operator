@@ -35,7 +35,7 @@ public class AzureRestorer extends Restorer {
                          final ExecutorServiceSupplier executorServiceSupplier,
                          @Assisted final RestoreOperationRequest request) throws Exception {
         super(request, executorServiceSupplier);
-        this.blobContainer = cloudBlobClientProvider.get().getContainerReference(request.storageLocation.clusterId);
+        this.blobContainer = cloudBlobClientProvider.get().getContainerReference(request.storageLocation.bucket);
     }
 
     @AssistedInject
@@ -43,7 +43,7 @@ public class AzureRestorer extends Restorer {
                          final ExecutorServiceSupplier executorServiceSupplier,
                          @Assisted final RestoreCommitLogsOperationRequest request) throws Exception {
         super(request, executorServiceSupplier);
-        this.blobContainer = cloudBlobClientProvider.get().getContainerReference(request.storageLocation.clusterId);
+        this.blobContainer = cloudBlobClientProvider.get().getContainerReference(request.storageLocation.bucket);
     }
 
     @Override
@@ -55,7 +55,7 @@ public class AzureRestorer extends Restorer {
     @Override
     public void downloadFile(final Path localPath, final RemoteObjectReference objectReference) throws Exception {
         final CloudBlockBlob blob = ((AzureRemoteObjectReference) objectReference).blob;
-        Files.createDirectories(localPath);
+        Files.createDirectories(localPath.getParent());
         blob.downloadToFile(localPath.toAbsolutePath().toString());
     }
 

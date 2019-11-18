@@ -14,6 +14,8 @@ We expect to consider the Cassandra operator stable soon; backwards incompatible
 
 1) [Operations Guide](./doc/op_guide.md) for how to run the operator and deploy, scale and decommission Cassandra clusters.
 
+1) [Custom configuration](./doc/custom-configuration.md) how to configure Cassandra itself
+
 1) [RBAC docs](./doc/rbac.md) for how to setup RBAC rules for Cassandra operator and Cassandra containers if RBAC is in place.
 
 1) [Developer Guide](./doc/developers.md) for setting up development environment if you want to contribute.
@@ -21,6 +23,7 @@ We expect to consider the Cassandra operator stable soon; backwards incompatible
 1) [Backup and Restore Guide](./doc/backup_restore.md) for backing up and restoring Cassandra clusters managed by the operator.
 
 1) [Resources and Labels](./doc/resources.md) doc for an overview of the resources created by the Cassandra-operator.
+
 1) Using [Helm](./doc/helm.md) to install and launch the operator and the clusters.
 
 ## Requirements
