@@ -49,6 +49,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			return err
 		}
 
+		emptyDirVolume := newEmptyDirVolume(rctx.cdc.Spec.DummyVolume)
 		dataVolumeClaim := newDataVolumeClaim(rctx.cdc.Spec.DataVolumeClaimSpec)
 		podInfoVolume := newPodInfoVolume()
 		backupSecretVolume := newBackupSecretVolume(rctx)
@@ -59,10 +60,10 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			return err
 		}
 
-		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, configVolume, rackConfigVolume, userSecretVolume, userConfigVolume)
-		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, podInfoVolume, backupSecretVolume)
+		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, emptyDirVolume, configVolume, rackConfigVolume, userSecretVolume, userConfigVolume)
+		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, emptyDirVolume, podInfoVolume, backupSecretVolume)
 
-		restoreContainer, err := newRestoreContainer(rctx.cdc, rctx.client, dataVolumeClaim, backupSecretVolume)
+		restoreContainer, err := newRestoreContainer(rctx.cdc, rctx.client, dataVolumeClaim, emptyDirVolume, backupSecretVolume)
 		if err != nil {
 			return err
 		}
@@ -84,8 +85,14 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			sc.FSGroup = &rctx.cdc.Spec.FSGroup
 		}
 
+		podVolumes := []corev1.Volume{*podInfoVolume, *configVolume, *rackConfigVolume}
+
+		if dataVolumeClaim == nil {
+			podVolumes = append(podVolumes, *emptyDirVolume)
+		}
+
 		podSpec := newPodSpec(rctx.cdc, rack,
-			[]corev1.Volume{*podInfoVolume, *configVolume, *rackConfigVolume},
+			podVolumes,
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
 			initContainers,
 			sc,
@@ -117,9 +124,13 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 	return statefulSet, err
 }
 
-func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podSpec *corev1.PodSpec, dataVolumeClaim *corev1.PersistentVolumeClaim, rack *cluster.Rack) *v1beta2.StatefulSetSpec {
+func newStatefulSetSpec(
+	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
+	podSpec *corev1.PodSpec,
+	dataVolumeClaim *corev1.PersistentVolumeClaim,
+	rack *cluster.Rack) *v1beta2.StatefulSetSpec {
 	podLabels := RackLabels(cdc, rack)
-	return &v1beta2.StatefulSetSpec{
+	statefulSetSpec := &v1beta2.StatefulSetSpec{
 		ServiceName: "cassandra", // TODO: correct service name? this service should already exist (apparently)
 		Replicas:    &rack.Replicas,
 		Selector:    &metav1.LabelSelector{MatchLabels: podLabels},
@@ -127,12 +138,23 @@ func newStatefulSetSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, podS
 			ObjectMeta: metav1.ObjectMeta{Labels: podLabels},
 			Spec:       *podSpec,
 		},
-		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{*dataVolumeClaim},
-		PodManagementPolicy:  v1beta2.OrderedReadyPodManagement,
+		PodManagementPolicy: v1beta2.OrderedReadyPodManagement,
 	}
+
+	if dataVolumeClaim != nil {
+		statefulSetSpec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{*dataVolumeClaim}
+	}
+
+	return statefulSetSpec
 }
 
-func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluster.Rack, volumes []corev1.Volume, containers []corev1.Container, initContainers []corev1.Container, securityContext *corev1.PodSecurityContext) *corev1.PodSpec {
+func newPodSpec(
+	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
+	rack *cluster.Rack,
+	volumes []corev1.Volume,
+	containers []corev1.Container,
+	initContainers []corev1.Container,
+	securityContext *corev1.PodSecurityContext) *corev1.PodSpec {
 	// TODO: should this spec be fully exposed into the CDC.Spec?
 	podSpec := &corev1.PodSpec{
 		Volumes:            volumes,
@@ -150,6 +172,7 @@ func newPodSpec(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluste
 func newCassandraContainer(
 	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
 	dataVolumeClaim *corev1.PersistentVolumeClaim,
+	emptyDirVolume *corev1.Volume,
 	configVolume, rackConfigVolume, userSecretVolume, userConfigVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "cassandra",
@@ -168,12 +191,20 @@ func newCassandraContainer(
 			InitialDelaySeconds: 60,
 			TimeoutSeconds:      5,
 		},
-		VolumeMounts: []corev1.VolumeMount{
-			{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath},
-			{Name: configVolume.Name, MountPath: OperatorConfigVolumeMountPath},
-			{Name: rackConfigVolume.Name, MountPath: RackConfigVolumeMountPath},
-		},
 	}
+
+	var volumeMounts = []corev1.VolumeMount{
+		{Name: configVolume.Name, MountPath: OperatorConfigVolumeMountPath},
+		{Name: rackConfigVolume.Name, MountPath: RackConfigVolumeMountPath},
+	}
+
+	if dataVolumeClaim == nil {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: emptyDirVolume.Name, MountPath: DataVolumeMountPath})
+	} else {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath})
+	}
+
+	container.VolumeMounts = volumeMounts
 
 	// Create C* container with capabilities required for performance tweaks only when user
 	// specifies `optimizeKernelParams: true`.
@@ -211,6 +242,7 @@ func newCassandraContainer(
 func newSidecarContainer(
 	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
 	dataVolumeClaim *corev1.PersistentVolumeClaim,
+	emptyDirVolume *corev1.Volume,
 	podInfoVolume *corev1.Volume,
 	backupSecretVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
@@ -219,11 +251,19 @@ func newSidecarContainer(
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Ports:           sidecarPort.asContainerPorts(),
 		Env:             cdc.Spec.SidecarEnv,
-		VolumeMounts: []corev1.VolumeMount{
-			{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath},
-			{Name: podInfoVolume.Name, MountPath: "/etc/pod-info"},
-		},
 	}
+
+	var volumeMounts = []corev1.VolumeMount{
+		{Name: podInfoVolume.Name, MountPath: "/etc/pod-info"},
+	}
+
+	if dataVolumeClaim == nil {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: emptyDirVolume.Name, MountPath: DataVolumeMountPath})
+	} else {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath})
+	}
+
+	container.VolumeMounts = volumeMounts
 
 	if backupSecretVolume != nil {
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: backupSecretVolume.Name, MountPath: BackupSecretVolumeMountPath})
@@ -251,6 +291,7 @@ func newRestoreContainer(
 	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
 	client client.Client,
 	dataVolumeClaim *corev1.PersistentVolumeClaim,
+	emptyDirVolume *corev1.Volume,
 	backupSecretVolume *corev1.Volume,
 ) (*corev1.Container, error) {
 
@@ -288,10 +329,17 @@ func newRestoreContainer(
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Args:            restoreArgs,
 		Env:             cdc.Spec.SidecarEnv,
-		VolumeMounts: []corev1.VolumeMount{
-			{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath},
-		},
 	}
+
+	var volumeMounts []corev1.VolumeMount
+
+	if dataVolumeClaim == nil {
+		volumeMounts = []corev1.VolumeMount{{Name: emptyDirVolume.Name, MountPath: DataVolumeMountPath}}
+	} else {
+		volumeMounts = []corev1.VolumeMount{{Name: dataVolumeClaim.Name, MountPath: DataVolumeMountPath}}
+	}
+
+	container.VolumeMounts = volumeMounts
 
 	// check backupSecretVolume only if backup type is GCP
 	if backup.Spec.IsGcpBackup() {
@@ -352,7 +400,21 @@ func newPodInfoVolume() *corev1.Volume {
 	}
 }
 
+func newEmptyDirVolume(emptyDir *corev1.EmptyDirVolumeSource) *corev1.Volume {
+	return &corev1.Volume{
+		Name: "cache-volume",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: emptyDir,
+		},
+	}
+}
+
 func newDataVolumeClaim(dataVolumeClaimSpec *corev1.PersistentVolumeClaimSpec) *corev1.PersistentVolumeClaim {
+
+	if dataVolumeClaimSpec == nil {
+		return nil
+	}
+
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{Name: "data-volume"},
 		Spec:       *dataVolumeClaimSpec,

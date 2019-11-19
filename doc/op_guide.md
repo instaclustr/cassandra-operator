@@ -50,7 +50,8 @@ It is possible to configure Cassandra by providing custom configuration. Refer t
 >       cassandraImage: gcr.io/cassandra-operator/cassandra:3.11.4
 >       sidecarImage: gcr.io/cassandra-operator/cassandra-sidecar:latest
 >       memory: 1Gi
->       disk: 1Gi 
+>       disk: 1Gi
+>       diskMedium: Memory
 >    ```
 > This configMap is already loaded into your k8 environment if you've used `deploy/bundle.yaml` to load operator's configuration.
 
@@ -187,6 +188,22 @@ It is possible to configure Cassandra by providing custom configuration. Refer t
     kubectl delete -f deploy/crds.yaml 
     ```
 
+### Using EmptyDir as volume for a pod
+
+If you do not specify `DataVolumeClaimSpec` in your spec, it will automatically use `EmptyDir` volume 
+from Kubernetes. You control that `EmptyDir` via field called `DummyVolume` in your spec.
+
+If `DummyVolume` is not specified either, it will take defauls from config map as described above.
+
+`DummyVolume` is of type `EmptyDirVolumeSource` so you can specify there `medium` and `sizeLimit`.
+`medium` is by default empty string `""` which means it will use a directory on pod. However, you can 
+also use `medium` as `Memory`. This means that your whole Cassandra node basically runs in memory as 
+`/var/lib/cassandra` where data are stored is actually memory mount.
+
+Using this volume type means that your data in Cassandra will live only until that pod is restarted hence it 
+might be handy for cases like performance testing or similar if you do not care about your data persistence.
+
+Use `Memory` medium with care as the `sizeLimit` eats memory from your limits. 
 
 [aks]: https://azure.microsoft.com/en-in/services/kubernetes-service/
 [gke]: https://console.cloud.google.com/kubernetes
@@ -194,3 +211,4 @@ It is possible to configure Cassandra by providing custom configuration. Refer t
 [psps]: https://kubernetes.io/docs/concepts/policy/pod-security-policy/
 [rbac]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [storage]: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+[EmptyDir volume]: https://kubernetes.io/docs/concepts/storage/volumes/#emptydir 

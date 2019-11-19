@@ -306,6 +306,11 @@ func (in *CassandraDataCenterSpec) DeepCopyInto(out *CassandraDataCenterSpec) {
 		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.DummyVolume != nil {
+		in, out := &in.DummyVolume, &out.DummyVolume
+		*out = new(v1.EmptyDirVolumeSource)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.DataVolumeClaimSpec != nil {
 		in, out := &in.DataVolumeClaimSpec, &out.DataVolumeClaimSpec
 		*out = new(v1.PersistentVolumeClaimSpec)

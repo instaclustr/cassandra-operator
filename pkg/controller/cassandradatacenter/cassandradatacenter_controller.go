@@ -254,7 +254,7 @@ func populateUnsetFields(instance *cassandraoperatorv1alpha1.CassandraDataCenter
 		}
 	}
 
-	if instance.Spec.DataVolumeClaimSpec == nil {
+	if instance.Spec.DummyVolume == nil && instance.Spec.DataVolumeClaimSpec == nil {
 		if disk, ok := configMap.Data["disk"]; ok {
 			parsedDisk, err := resource.ParseQuantity(disk)
 
@@ -262,19 +262,20 @@ func populateUnsetFields(instance *cassandraoperatorv1alpha1.CassandraDataCenter
 				return false, err
 			}
 
-			instance.Spec.DataVolumeClaimSpec = &corev1.PersistentVolumeClaimSpec{
-				AccessModes: []corev1.PersistentVolumeAccessMode{
-					"ReadWriteOnce",
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						"storage": parsedDisk,
-					},
-				},
+			instance.Spec.DummyVolume = &corev1.EmptyDirVolumeSource{
+				SizeLimit: &parsedDisk,
 			}
-			populated = true
-		} else {
-			return false, errors.New("'disk' value is not specified in cassandra-operator-default-config configMap")
+
+			if medium, ok := configMap.Data["diskMedium"]; ok {
+
+				if medium != "" && medium != "Memory" {
+					return false, errors.New("'diskMedium' value in cassandra-operator-default-config configMap is not empty string nor 'Memory'")
+				}
+
+				instance.Spec.DummyVolume.Medium = corev1.StorageMedium(medium)
+			} else {
+				instance.Spec.DummyVolume.Medium = ""
+			}
 		}
 	}
 
