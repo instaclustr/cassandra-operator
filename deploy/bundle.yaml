@@ -150,6 +150,7 @@ data:
   sidecarImage: gcr.io/cassandra-operator/cassandra-sidecar:latest
   memory: 1Gi
   disk: 1Gi
+  diskMedium: ""
 ---
 apiVersion: apps/v1
 kind: Deployment

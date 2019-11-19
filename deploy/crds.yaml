@@ -175,6 +175,8 @@ spec:
               type: string
             dataVolumeClaimSpec:
               type: object
+            dummyVolume:
+              type: object
             fsGroup:
               format: int64
               type: integer
