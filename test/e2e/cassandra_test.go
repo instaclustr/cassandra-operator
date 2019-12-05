@@ -69,7 +69,7 @@ func MinimalCassandraSpec(t *testing.T) {
 			},
 			Data: map[string]string{
 				"nodes":          "1",
-				"cassandraImage": "gcr.io/cassandra-operator/cassandra:3.11.4",
+				"cassandraImage": "gcr.io/cassandra-operator/cassandra:3.11.5",
 				"sidecarImage":   "gcr.io/cassandra-operator/cassandra-sidecar:latest",
 				"memory":         "1Gi",
 				"disk":           "1Gi",
