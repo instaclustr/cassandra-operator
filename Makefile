@@ -16,7 +16,11 @@ operator:
 
 .PHONY: helm
 helm:
-	cp deploy/crds/*_crd.yaml helm/cassandra-operator/templates && ./buildenv/create-helm-repo
+	cp deploy/crds/*_crd.yaml helm/cassandra-operator/crds \
+	    && cp deploy/{configmap.yaml,role.yaml,role_binding.yaml} helm/cassandra-operator/templates \
+	    && cp deploy/cassandra/{psp.yaml,psp_performance.yaml} helm/cassandra/templates \
+	    && ./buildenv/create-helm-repo
+
 
 # Build Docker images
 .PHONY: docker

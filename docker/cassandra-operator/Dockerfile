@@ -25,9 +25,10 @@ RUN cd cmd/manager \
         -o /tmp/cassandra-operator
 
 # Build final image
-FROM scratch
+FROM alpine:3.11.2
 
 COPY --from=builder /tmp/cassandra-operator .
 COPY --from=builder /etc/passwd /etc/passwd
 USER 999
+RUN mkdir -p /tmp
 CMD ["./cassandra-operator"]
