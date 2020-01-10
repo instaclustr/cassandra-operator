@@ -7,10 +7,11 @@ replicaCount: 1
 apiVersion: stable.instaclustr.com/v1
 
 image:
-  repository: cassandra-operator
-#  repository: gcr.io/cassandra-operator/cassandra-operator
+  repository: gcr.io/cassandra-operator/cassandra-operator
   tag: latest
   pullPolicy: IfNotPresent
+
+#imagePullSecret: regcred
 
 resources: {}
   # Suggested resource limits for the operator itself (not cassandra), works with a reasonable sized minikube.
@@ -25,7 +26,7 @@ nodeSelector: {}
 
 rbacEnable: true
 
-pspEnable: false
+pspEnable: true
 
 tolerations: []
 

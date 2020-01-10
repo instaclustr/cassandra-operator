@@ -38,5 +38,5 @@ spec:
     ranges:
       - min: 1
         max: 65535
-  readOnlyRootFilesystem: true
+  readOnlyRootFilesystem: false
 {{- end }}

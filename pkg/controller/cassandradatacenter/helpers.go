@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func sortAscending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
+func sortStatefulSetsAscending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
 	// Sort sets from lowest to highest numerically by the number of the nodes in the set
 	sort.SliceStable(sets, func(i, j int) bool {
 		return sets[i].Status.Replicas < sets[j].Status.Replicas
@@ -20,7 +20,7 @@ func sortAscending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
 	return sets
 }
 
-func sortDescending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
+func sortStatefulSetsDescending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
 	// Sort sets from highest to lowest numerically by the number of the nodes in the set
 	sort.SliceStable(sets, func(i, j int) bool {
 		return sets[i].Status.Replicas > sets[j].Status.Replicas
@@ -30,6 +30,21 @@ func sortDescending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
 
 func AllPodsInCDC(c client.Client, cdc *v1alpha1.CassandraDataCenter) ([]corev1.Pod, error) {
 	return getPods(c, cdc.Namespace, DataCenterLabels(cdc))
+}
+
+func AllDeletedPods(c client.Client, cdc *v1alpha1.CassandraDataCenter) ([]corev1.Pod, error) {
+	if pods, err := AllPodsInCDC(c, cdc); err != nil {
+		return nil, err
+	} else {
+		var deletedPods []corev1.Pod
+		for _, pod := range pods {
+			if pod.GetDeletionTimestamp() != nil {
+				deletedPods = append(deletedPods, pod)
+			}
+		}
+
+		return deletedPods, nil
+	}
 }
 
 func AllPodsInRack(c client.Client, namespace string, rackLabels map[string]string) ([]corev1.Pod, error) {
@@ -85,4 +100,22 @@ func rackExist(name string, sets []v1.StatefulSet) bool {
 // boolPointer returns a pointer to bool b.
 func boolPointer(b bool) *bool {
 	return &b
+}
+
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func remove(list []string, s string) []string {
+	for i, v := range list {
+		if v == s {
+			list = append(list[:i], list[i+1:]...)
+		}
+	}
+	return list
 }

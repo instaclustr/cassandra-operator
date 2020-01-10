@@ -205,6 +205,25 @@ might be handy for cases like performance testing or similar if you do not care 
 
 Use `Memory` medium with care as the `sizeLimit` eats memory from your limits. 
 
+### Deletion of persistence volume claims
+
+Lets see how a common scenario with scaling works. If you want to scale from 
+1 node to e.g. 2 nodes (just for the sake of the argument), there will 
+be another PVC for the second pod which will be bound to respective PV. Upon scaling down, 
+the latest pod is deleted but the persistence volume is not. It stays behind. Now if you 
+want to scale back to 2 nodes again, it would reuse the same PVC but the data 
+there would not make sense anymore. The second node was _decommissioned_ and it is 
+not meant to be the part of the cluster anymore. On such bootstrapping, Cassandra would 
+complain that that node was decommissioned and it tries to re-join a cluster, which is illegal to do 
+(under normal circumstances).
+
+To overcome this situation, there is the possibility to delete PVCs after a pod 
+is deleted automatically. By default, this is turned off and one can turn it on by 
+flag `deletePVCs`. If this flag is set to `true`, upon pod's deletion, its PVC will be 
+automatically deleted and PV will be recycled (or retained, but does it make sense?). 
+Similarly, if the whole data center is deleted, all pods are terminated and all PVCs would be deleted too 
+if this option is active. This functionality is done via _finalizers_.
+
 [aks]: https://azure.microsoft.com/en-in/services/kubernetes-service/
 [gke]: https://console.cloud.google.com/kubernetes
 [crds]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions

@@ -13,7 +13,7 @@ To install via helm follow the steps below:
 
  1) Install the operator
     ```
-    $ helm install helm/cassandra-operator -n cassandra-operator 
+    $ helm install helm/cassandra-operator --namespace cassandra-operator 
     ```
 
  1) Create a Cassandra cluster (remember to check the `helm/cassandra/values.yaml` for correct values)
@@ -23,7 +23,7 @@ To install via helm follow the steps below:
 
 The Helm templates are relatively independent and can also be used to generate the deployments yaml files:
 ```
-$ helm template helm/cassandra-operator -n cassandra-operator
+$ helm template helm/cassandra-operator
 ```
 
 ### Custom Namespace support via helm templates

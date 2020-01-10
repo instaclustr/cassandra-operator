@@ -40,7 +40,11 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileCassandraBackup{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileCassandraBackup{
+		client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
+		recorder: mgr.GetRecorder("cassandrabackup-controller"),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -104,9 +108,9 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
+			// if the resource is not found, that means all of
+			// the finalizers have been removed, and the resource has been deleted,
+			// so there is nothing left to do.
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -125,6 +129,13 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
 	if err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CDC, Namespace: instance.Namespace}, cdc); err != nil {
 		if errors.IsNotFound(err) {
+
+			r.recorder.Event(
+				instance,
+				corev1.EventTypeWarning,
+				"FailureEvent",
+				fmt.Sprintf("cdc %s to backup not found", instance.Spec.CDC))
+
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -146,7 +157,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	syncedInstance := &syncedInstance{backup: instance, client: r.client}
 
 	for _, sc := range sidecarClients {
-		go backup(wg, sc, syncedInstance, podIpHostnameMap[sc.Host], reqLogger)
+		go backup(wg, sc, syncedInstance, podIpHostnameMap[sc.Host], reqLogger, r.recorder)
 	}
 
 	wg.Wait()
@@ -166,7 +177,7 @@ func backup(
 	instance *syncedInstance,
 	podHostname string,
 	logging logr.Logger,
-) {
+	recorder record.EventRecorder) {
 
 	defer wg.Done()
 
@@ -191,12 +202,22 @@ func backup(
 				instance.updateStatus(podHostname, r)
 
 				if r.State == operations.FAILED {
-					logging.Info(fmt.Sprintf("Backup operation %v on node %s has failed", operationID, podHostname))
+
+					recorder.Event(instance.backup,
+						corev1.EventTypeWarning,
+						"FailureEvent",
+						fmt.Sprintf("Backup operation %v on node %s has failed", operationID, podHostname))
+
 					break
 				}
 
 				if r.State == operations.COMPLETED {
-					logging.Info(fmt.Sprintf("Backup operation %v on node %s was completed successfully", operationID, podHostname))
+
+					recorder.Event(instance.backup,
+						corev1.EventTypeNormal,
+						"SuccessEvent",
+						fmt.Sprintf("Backup operation %v on node %s was completed.", operationID, podHostname))
+
 					break
 				}
 			}

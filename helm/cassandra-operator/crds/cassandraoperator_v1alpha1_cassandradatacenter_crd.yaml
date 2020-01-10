@@ -39,6 +39,10 @@ spec:
               type: string
             dataVolumeClaimSpec:
               type: object
+            deletePVCs:
+              type: boolean
+            dummyVolume:
+              type: object
             fsGroup:
               format: int64
               type: integer

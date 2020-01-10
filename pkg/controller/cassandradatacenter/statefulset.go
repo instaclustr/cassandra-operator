@@ -50,7 +50,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		}
 
 		emptyDirVolume := newEmptyDirVolume(rctx.cdc.Spec.DummyVolume)
-		dataVolumeClaim := newDataVolumeClaim(rctx.cdc.Spec.DataVolumeClaimSpec)
+		dataVolumeClaim := newPersistenceVolumeClaim(rctx.cdc.Spec.DataVolumeClaimSpec)
 		podInfoVolume := newPodInfoVolume()
 		backupSecretVolume := newBackupSecretVolume(rctx)
 		userSecretVolume := newUserSecretVolume(rctx)
@@ -409,19 +409,23 @@ func newEmptyDirVolume(emptyDir *corev1.EmptyDirVolumeSource) *corev1.Volume {
 	}
 }
 
-func newDataVolumeClaim(dataVolumeClaimSpec *corev1.PersistentVolumeClaimSpec) *corev1.PersistentVolumeClaim {
+func newPersistenceVolumeClaim(persistentVolumeClaimSpec *corev1.PersistentVolumeClaimSpec) *corev1.PersistentVolumeClaim {
 
-	if dataVolumeClaimSpec == nil {
+	if persistentVolumeClaimSpec == nil {
 		return nil
 	}
 
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{Name: "data-volume"},
-		Spec:       *dataVolumeClaimSpec,
+		Spec:       *persistentVolumeClaimSpec,
 	}
 }
 
-func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v1beta2.StatefulSet, newStatefulSetSpec *v1beta2.StatefulSetSpec, rack *cluster.Rack) error {
+func scaleStatefulSet(
+	rctx *reconciliationRequestContext,
+	existingStatefulSet *v1beta2.StatefulSet,
+	newStatefulSetSpec *v1beta2.StatefulSetSpec,
+	rack *cluster.Rack) error {
 
 	var (
 		currentSpecReplicas, // number of replicas set in the current spec
@@ -452,17 +456,42 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 	// Scale
 	if desiredSpecReplicas > currentSpecReplicas {
 		// Scale up
+
+		rctx.recorder.Event(
+			rctx.cdc,
+			corev1.EventTypeNormal,
+			"SuccessEvent",
+			fmt.Sprintf("Scaling up %s from %d to %d nodes.", rctx.cdc.Name, currentSpecReplicas, desiredSpecReplicas))
+
 		existingStatefulSet.Spec = *newStatefulSetSpec
 		return controllerutil.SetControllerReference(rctx.cdc, existingStatefulSet, rctx.scheme)
 	} else if desiredSpecReplicas < currentSpecReplicas {
+
+		rctx.recorder.Event(
+			rctx.cdc,
+			corev1.EventTypeNormal,
+			"SuccessEvent",
+			fmt.Sprintf("Scaling down %s from %d to %d nodes.", rctx.cdc.Name, currentSpecReplicas, desiredSpecReplicas))
+
 		// Scale down
 		newestPod := podsInRack[len(podsInRack)-1]
 		if len(decommissionedNodes) == 0 {
 			log.Info("No Cassandra nodes have been decommissioned. Decommissioning the newest one " + newestPod.Name)
 			if clientForNewestPod := sidecar.ClientFromPods(rctx.sidecarClients, newestPod); clientForNewestPod != nil {
 				if _, err := clientForNewestPod.StartOperation(&sidecar.DecommissionRequest{}); err != nil {
-					return fmt.Errorf("unable to decommission node %s: %v", newestPod.Name, err)
+
+					rctx.recorder.Event(
+						rctx.cdc,
+						corev1.EventTypeWarning,
+						"FailureEvent",
+						fmt.Sprintf("Node %s was unable to be decommissioned: %v", newestPod.Name, err))
 				}
+
+				rctx.recorder.Event(
+					rctx.cdc,
+					corev1.EventTypeNormal,
+					"SuccessEvent",
+					fmt.Sprintf("Decommissioning of node %s was started.", newestPod.Name))
 			} else {
 				return fmt.Errorf("client for pod %s to decommission does not exist", newestPod.Name)
 			}
@@ -476,7 +505,11 @@ func scaleStatefulSet(rctx *reconciliationRequestContext, existingStatefulSet *v
 
 			existingStatefulSet.Spec = *newStatefulSetSpec
 		} else {
-			return fmt.Errorf("skipping StatefulSet reconciliation as the DataCenter contains more than one decommissioned Cassandra node: %s", podsToString(decommissionedNodes))
+			rctx.recorder.Event(
+				rctx.cdc,
+				corev1.EventTypeWarning,
+				"FailureEvent",
+				fmt.Sprintf("Unable to decommission a node as than one Cassandra node is already decommissioned."))
 		}
 	}
 
@@ -620,7 +653,6 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 	for _, sts := range rctx.sets {
 		rack := racksDistribution.GetRack(sts.Labels[rackKey])
 		if rack == nil {
-			log.Info(fmt.Sprintf("couldn't find the rack %v in the distribution\n", sts.Labels[rackKey]))
 			continue
 		}
 		if rack.Replicas != *sts.Spec.Replicas {
@@ -650,9 +682,9 @@ func getStatefulSets(rctx *reconciliationRequestContext) ([]v1.StatefulSet, erro
 	}
 
 	if rctx.operation == scalingUp {
-		return sortAscending(sts.Items), nil
+		return sortStatefulSetsAscending(sts.Items), nil
 	} else if rctx.operation == scalingDown {
-		return sortDescending(sts.Items), nil
+		return sortStatefulSetsDescending(sts.Items), nil
 	}
 
 	// if all nodes present or not scaling, no need to sort

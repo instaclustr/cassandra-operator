@@ -36,11 +36,21 @@ func createOrUpdatePrometheusService(rctx *reconciliationRequestContext) (*corev
 	})
 
 	if err != nil {
+		rctx.recorder.Event(
+			prometheusService,
+			corev1.EventTypeWarning,
+			"FailureEvent",
+			fmt.Sprintf("Prometheus service %s failed to be created / updated ", prometheusService.Name))
 		return nil, err
 	}
 
 	// Only log if something has changed
 	if opresult != controllerutil.OperationResultNone {
+		rctx.recorder.Event(
+			prometheusService,
+			corev1.EventTypeNormal,
+			"SuccessEvent",
+			fmt.Sprintf("Service %s %s.", prometheusService.Name, opresult))
 		logger.Info(fmt.Sprintf("Service %s %s.", prometheusService.Name, opresult))
 	}
 
@@ -49,8 +59,6 @@ func createOrUpdatePrometheusService(rctx *reconciliationRequestContext) (*corev
 
 func createOrUpdateNodesService(rctx *reconciliationRequestContext) (*corev1.Service, error) {
 	nodesService := &corev1.Service{ObjectMeta: DataCenterResourceMetadata(rctx.cdc, "nodes")}
-
-	logger := rctx.logger.WithValues("Service.Name", nodesService.Name)
 
 	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, nodesService, func(_ runtime.Object) error {
 		nodesService.Spec = corev1.ServiceSpec{
@@ -67,12 +75,21 @@ func createOrUpdateNodesService(rctx *reconciliationRequestContext) (*corev1.Ser
 	})
 
 	if err != nil {
+		rctx.recorder.Event(
+			nodesService,
+			corev1.EventTypeWarning,
+			"FailureEvent",
+			fmt.Sprintf("Service %s failed to be created / updated ", nodesService.Name))
 		return nil, err
 	}
 
 	// Only log if something has changed
 	if opresult != controllerutil.OperationResultNone {
-		logger.Info(fmt.Sprintf("Service %s %s.", nodesService.Name, opresult))
+		rctx.recorder.Event(
+			nodesService,
+			corev1.EventTypeNormal,
+			"SuccessEvent",
+			fmt.Sprintf("Service %s %s.", nodesService.Name, opresult))
 	}
 
 	return nodesService, err
@@ -80,8 +97,6 @@ func createOrUpdateNodesService(rctx *reconciliationRequestContext) (*corev1.Ser
 
 func createOrUpdateSeedNodesService(rctx *reconciliationRequestContext) (*corev1.Service, error) {
 	seedNodesService := &corev1.Service{ObjectMeta: DataCenterResourceMetadata(rctx.cdc, "seeds")}
-
-	logger := rctx.logger.WithValues("Service.Name", seedNodesService.Name)
 
 	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, seedNodesService, func(_ runtime.Object) error {
 		seedNodesService.Spec = corev1.ServiceSpec{
@@ -103,12 +118,21 @@ func createOrUpdateSeedNodesService(rctx *reconciliationRequestContext) (*corev1
 	})
 
 	if err != nil {
+		rctx.recorder.Event(
+			seedNodesService,
+			corev1.EventTypeWarning,
+			"FailureEvent",
+			fmt.Sprintf("Seed nodes service %s failed to be created / updated ", seedNodesService.Name))
 		return nil, err
 	}
 
 	// Only log if something has changed
 	if opresult != controllerutil.OperationResultNone {
-		logger.Info(fmt.Sprintf("Service %s %s.", seedNodesService.Name, opresult))
+		rctx.recorder.Event(
+			seedNodesService,
+			corev1.EventTypeNormal,
+			"SuccessEvent",
+			fmt.Sprintf("Seed nodes sevice %s %s.", seedNodesService.Name, opresult))
 	}
 
 	return seedNodesService, err

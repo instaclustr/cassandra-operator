@@ -3,8 +3,11 @@ package cassandradatacenter
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
+
+	"k8s.io/client-go/tools/record"
 
 	"github.com/go-logr/logr"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
@@ -34,7 +37,11 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileCassandraDataCenter{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileCassandraDataCenter{
+		client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
+		recorder: mgr.GetRecorder("cassandradatacenter-controller"),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -52,7 +59,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to secondary resource Pods and requeue the owner CassandraDataCenter
-	for _, t := range []runtime.Object{&corev1.Service{}, &v1beta2.StatefulSet{}, &corev1.ConfigMap{}} {
+	for _, t := range []runtime.Object{&corev1.Service{}, &v1beta2.StatefulSet{}} {
 		requestForOwnerHandler := &handler.EnqueueRequestForOwner{
 			IsController: true,
 			OwnerType:    &cassandraoperatorv1alpha1.CassandraDataCenter{},
@@ -73,8 +80,9 @@ var _ reconcile.Reconciler = &ReconcileCassandraDataCenter{}
 type ReconcileCassandraDataCenter struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client   client.Client
+	scheme   *runtime.Scheme
+	recorder record.EventRecorder
 }
 
 type reconciliationRequestContext struct {
@@ -85,6 +93,7 @@ type reconciliationRequestContext struct {
 	operation      scalingOperation
 	allPods        []corev1.Pod
 	sidecarClients map[*corev1.Pod]*sidecar.Client
+	recorder       record.EventRecorder
 }
 
 type scalingOperation string
@@ -108,12 +117,26 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
+			// if the resource is not found, that means all of
+			// the finalizers have been removed, and the resource has been deleted,
+			// so there is nothing left to do.
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		return reconcile.Result{}, fmt.Errorf("could not fetch CassandraDataCenter instance: %s", err)
+	}
+
+	if finalized, err := r.finalizeIfNecessary(reqLogger, instance); err != nil {
+		return reconcile.Result{}, err
+	} else if finalized {
+		return reconcile.Result{}, nil
+	}
+
+	if err := r.addFinalizer(reqLogger, instance); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.finalizeDeletedPods(reqLogger, instance); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -305,6 +328,7 @@ func newReconciliationContext(r *ReconcileCassandraDataCenter, reqLogger logr.Lo
 		allPods:                      allPods,
 		sidecarClients:               sidecar.SidecarClients(allPods, &sidecar.DefaultSidecarClientOptions),
 		logger:                       reqLogger,
+		recorder:                     r.recorder,
 	}
 
 	// update the stateful sets

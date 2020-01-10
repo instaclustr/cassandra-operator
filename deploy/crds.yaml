@@ -175,6 +175,8 @@ spec:
               type: string
             dataVolumeClaimSpec:
               type: object
+            deletePVCs:
+              type: boolean
             dummyVolume:
               type: object
             fsGroup:

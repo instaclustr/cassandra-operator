@@ -2,7 +2,7 @@
 
 cd $(dirname "$BASH_SOURCE")/../helm
 
-HELM_OPERATOR_CRDS="cassandra-operator/templates"
+HELM_OPERATOR_CRDS="cassandra-operator/crds"
 OPERATOR_CRDS="../deploy/crds"
 
 function md5SumFile() {
