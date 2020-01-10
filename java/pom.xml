@@ -26,7 +26,7 @@
         <guava.version>28.1-jre</guava.version>
         <javax.inject.version>1</javax.inject.version>
         <validation-api.version>2.0.1.Final</validation-api.version>
-        <hibernate-validator.version>6.0.11.Final</hibernate-validator.version>
+        <hibernate-validator.version>6.1.0.Final</hibernate-validator.version>
         <jackson.bom.version>2.9.9</jackson.bom.version>
         <commons-lang3.version>3.4</commons-lang3.version>
         <commons-io.version>2.6</commons-io.version>
