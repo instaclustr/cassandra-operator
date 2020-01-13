@@ -19,6 +19,7 @@ type CassandraDataCenterSpec struct {
 	UserSecretVolumeSource         *v1.SecretVolumeSource        `json:"userSecretVolumeSource,omitempty"`
 	UserConfigMapVolumeSource      *v1.ConfigMapVolumeSource     `json:"userConfigMapVolumeSource,omitempty"`
 	Resources                      *v1.ResourceRequirements      `json:"resources,omitempty"`
+	SidecarResources               *v1.ResourceRequirements      `json:"sidecarResources,omitempty"`
 	DummyVolume                    *v1.EmptyDirVolumeSource      `json:"dummyVolume,omitempty"`
 	DeletePVCs                     bool                          `json:"deletePVCs,omitempty"`
 	DataVolumeClaimSpec            *v1.PersistentVolumeClaimSpec `json:"dataVolumeClaimSpec,omitempty"`

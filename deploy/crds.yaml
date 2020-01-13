@@ -225,6 +225,8 @@ spec:
               type: array
             sidecarImage:
               type: string
+            sidecarResources:
+              type: object
             userConfigMapVolumeSource:
               type: object
             userSecretVolumeSource:
