@@ -106,3 +106,22 @@ spec:
 ```
 
 And then create the Cassandra cluster. After starting, the Prometheus will pick up the Cassandra targets and will begin collecting metrics.
+
+### Custom labels for created objects
+
+You can attach custom labels to your objects by specifying a field in CDC spec like this:
+
+```yaml
+  operatorLabels:
+    nodesService:
+      mynodesservicelabel: labelvalue1
+    seedNodesService:
+      myseedlabel: somevalue
+    statefulSet:
+      mystatefullabel: labelvalue2
+    podTemplate:
+      mypodlabel: label1
+      myanotherpod: label2
+    prometheusService:
+      customPrometheusLabel: value
+```

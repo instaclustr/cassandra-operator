@@ -41,6 +41,8 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 
 	// Init rack-relevant info
 	statefulSet := &v1beta2.StatefulSet{ObjectMeta: RackMetadata(rctx, rack)}
+	statefulSet.Labels = StatefulsetLabels(rctx.cdc)
+
 	logger := rctx.logger.WithValues("StatefulSet.Name", statefulSet.Name)
 
 	result, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, statefulSet, func(obj runtime.Object) error {
@@ -129,13 +131,14 @@ func newStatefulSetSpec(
 	podSpec *corev1.PodSpec,
 	dataVolumeClaim *corev1.PersistentVolumeClaim,
 	rack *cluster.Rack) *v1beta2.StatefulSetSpec {
-	podLabels := RackLabels(cdc, rack)
+	podRackLabels := RackLabels(cdc, rack)
+	podLabels := PodTemplateSpecLabels(cdc)
 	statefulSetSpec := &v1beta2.StatefulSetSpec{
 		ServiceName: "cassandra", // TODO: correct service name? this service should already exist (apparently)
 		Replicas:    &rack.Replicas,
-		Selector:    &metav1.LabelSelector{MatchLabels: podLabels},
+		Selector:    &metav1.LabelSelector{MatchLabels: podRackLabels},
 		Template: corev1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{Labels: podLabels},
+			ObjectMeta: metav1.ObjectMeta{Labels: mergeLabelMaps(podLabels, podRackLabels)},
 			Spec:       *podSpec,
 		},
 		PodManagementPolicy: v1beta2.OrderedReadyPodManagement,
@@ -251,6 +254,7 @@ func newSidecarContainer(
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Ports:           sidecarPort.asContainerPorts(),
 		Env:             cdc.Spec.SidecarEnv,
+		Resources:       *cdc.Spec.SidecarResources,
 	}
 
 	var volumeMounts = []corev1.VolumeMount{

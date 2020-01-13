@@ -3,10 +3,10 @@ entries:
   cassandra:
   - apiVersion: v1
     appVersion: "1.0"
-    created: "2020-01-10T16:07:11.500824266+01:00"
+    created: "2020-01-13T22:53:04.625389053+01:00"
     description: A Helm chart for creating Cassandra clusters using the Cassandra
       operator
-    digest: 575af9f1990159be9e973717c41c73201d82353054f7da169661c495c290b6e7
+    digest: 7fd1596b20cb233fc06217e7ee89f08a8db4eaabd444eda9d1776c62dba877c2
     home: https://www.instaclustr.com
     keywords:
     - operator
@@ -21,14 +21,14 @@ entries:
     sources:
     - https://github.com/instaclustr/cassandra-operator
     urls:
-    - cassandra-0.1.0.tgz
-    version: 0.1.0
+    - cassandra-1.0.0.tgz
+    version: 1.0.0
   cassandra-operator:
   - apiVersion: v1
     appVersion: "1.0"
-    created: "2020-01-10T16:07:11.501401256+01:00"
+    created: "2020-01-13T22:53:04.625967628+01:00"
     description: A Helm chart for Cassandra Operator for Kubernetes by Instaclustr
-    digest: 5381899a8055413e903b013a105bc6b693866ec464ce6f0a73c59dbc3ce85827
+    digest: ea3a76faed44bafa4a19c6873bbc6daead82c40e37148ce573c871fc4feabc5e
     home: https://www.instaclustr.com
     keywords:
     - operator
@@ -43,6 +43,6 @@ entries:
     sources:
     - https://github.com/instaclustr/cassandra-operator
     urls:
-    - cassandra-operator-0.1.0.tgz
-    version: 0.1.0
-generated: "2020-01-10T16:07:11.500219768+01:00"
+    - cassandra-operator-1.0.0.tgz
+    version: 1.0.0
+generated: "2020-01-13T22:53:04.624754338+01:00"
