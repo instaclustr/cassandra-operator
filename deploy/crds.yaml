@@ -191,12 +191,31 @@ spec:
             nodes:
               format: int32
               type: integer
+            operatorLabels:
+              properties:
+                nodesService:
+                  additionalProperties:
+                    type: string
+                  type: object
+                podTemplate:
+                  additionalProperties:
+                    type: string
+                  type: object
+                prometheusService:
+                  additionalProperties:
+                    type: string
+                  type: object
+                seedNodesService:
+                  additionalProperties:
+                    type: string
+                  type: object
+                statefulSet:
+                  additionalProperties:
+                    type: string
+                  type: object
+              type: object
             optimizeKernelParams:
               type: boolean
-            prometheusServiceMonitorLabels:
-              additionalProperties:
-                type: string
-              type: object
             prometheusSupport:
               type: boolean
             racks:
@@ -225,6 +244,8 @@ spec:
               type: array
             sidecarImage:
               type: string
+            sidecarResources:
+              type: object
             userConfigMapVolumeSource:
               type: object
             userSecretVolumeSource:

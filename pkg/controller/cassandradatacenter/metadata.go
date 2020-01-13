@@ -20,14 +20,81 @@ func DataCenterLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[st
 	}
 }
 
-func PrometheusLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func operatorObjectLabel(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, objectLabels map[string]string) map[string]string {
+
 	// Fetch cdc labels
 	labels := DataCenterLabels(cdc)
-	// Add prometheus labels if defined
-	for label, val := range cdc.Spec.PrometheusServiceMonitorLabels {
+
+	for label, val := range objectLabels {
 		labels[label] = val
 	}
+
 	return labels
+}
+
+func SeedNodesLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+	var objectLabels map[string]string
+
+	if cdc.Spec.OperatorLabels != nil {
+		objectLabels = cdc.Spec.OperatorLabels.SeedNodesService
+	}
+
+	return operatorObjectLabel(cdc, objectLabels)
+}
+
+func NodesServiceLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+	var objectLabels map[string]string
+
+	if cdc.Spec.OperatorLabels != nil {
+		objectLabels = cdc.Spec.OperatorLabels.NodesService
+	}
+
+	return operatorObjectLabel(cdc, objectLabels)
+}
+
+func StatefulsetLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+	var objectLabels map[string]string
+
+	if cdc.Spec.OperatorLabels != nil {
+		objectLabels = cdc.Spec.OperatorLabels.StatefulSet
+	}
+
+	return operatorObjectLabel(cdc, objectLabels)
+}
+
+func PrometheusLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+	var objectLabels map[string]string
+
+	if cdc.Spec.OperatorLabels != nil {
+		objectLabels = cdc.Spec.OperatorLabels.PrometheusService
+	}
+
+	return operatorObjectLabel(cdc, objectLabels)
+}
+
+func mergeLabelMaps(firstLabels, secondLabels map[string]string) map[string]string {
+
+	var mergedLabels = map[string]string{}
+
+	for k, v := range firstLabels {
+		mergedLabels[k] = v
+	}
+
+	for k, v := range secondLabels {
+		mergedLabels[k] = v
+	}
+
+	return mergedLabels
+}
+
+func PodTemplateSpecLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+	var objectLabels map[string]string
+
+	if cdc.Spec.OperatorLabels != nil {
+		objectLabels = cdc.Spec.OperatorLabels.PodTemplate
+	}
+
+	return operatorObjectLabel(cdc, objectLabels)
 }
 
 func RackLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluster.Rack) map[string]string {

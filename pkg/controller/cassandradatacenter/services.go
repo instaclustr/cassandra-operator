@@ -59,6 +59,7 @@ func createOrUpdatePrometheusService(rctx *reconciliationRequestContext) (*corev
 
 func createOrUpdateNodesService(rctx *reconciliationRequestContext) (*corev1.Service, error) {
 	nodesService := &corev1.Service{ObjectMeta: DataCenterResourceMetadata(rctx.cdc, "nodes")}
+	nodesService.Labels = NodesServiceLabels(rctx.cdc)
 
 	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, nodesService, func(_ runtime.Object) error {
 		nodesService.Spec = corev1.ServiceSpec{
@@ -97,6 +98,7 @@ func createOrUpdateNodesService(rctx *reconciliationRequestContext) (*corev1.Ser
 
 func createOrUpdateSeedNodesService(rctx *reconciliationRequestContext) (*corev1.Service, error) {
 	seedNodesService := &corev1.Service{ObjectMeta: DataCenterResourceMetadata(rctx.cdc, "seeds")}
+	seedNodesService.Labels = SeedNodesLabels(rctx.cdc)
 
 	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, seedNodesService, func(_ runtime.Object) error {
 		seedNodesService.Spec = corev1.ServiceSpec{
