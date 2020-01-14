@@ -8,6 +8,7 @@ metadata:
     operator: cassandra
     release: {{ .Release.Name }}
   name: {{ template "cassandra-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
@@ -22,14 +23,13 @@ spec:
         operator: cassandra
         release: {{ .Release.Name }}
     spec:
-      {{- with .Values.imagePullSecret }}
-      imagePullSecrets:
-        - name: {{ . }}
-      {{- end }}
       containers:
         - name: {{ template "cassandra-operator.name" . }}
           env:
             - name: WATCH_NAMESPACE
+# uncomment this "" to have cluster-scoped operator
+# and comment out the "valueFrom" section
+#              value: ""
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
@@ -50,6 +50,10 @@ spec:
               name: http
           resources:
 {{ toYaml .Values.resources | indent 12 }}
+    {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecrets }}
+    {{- end }}
     {{- if .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 8 }}

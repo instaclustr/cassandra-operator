@@ -68,6 +68,11 @@ spec:
       memory: 1Gi
     requests:
       memory: 1Gi
+  sidecarResources:
+    limits:
+      memory: 512Mi
+    requests:
+      memory: 512Mi
 
   dataVolumeClaimSpec:
     accessModes:
