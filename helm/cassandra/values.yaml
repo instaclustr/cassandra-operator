@@ -2,7 +2,7 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 3
+replicaCount: 1
 
 fullnameOverride: test-dc-cassandra
 
@@ -31,6 +31,11 @@ resources:
     memory: 1Gi
   requests:
     memory: 1Gi
+#sidecarResources:
+#  limits:
+#    memory: 512Mi
+#  requests:
+#    memory: 512Mi
 dataVolumeClaim:
   # Refer to doc/persistent_volumes.md for PV setup for dynamic volume provisioning
   # storageClassName: <topology-aware-standard>

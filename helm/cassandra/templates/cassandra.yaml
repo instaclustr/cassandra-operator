@@ -41,6 +41,10 @@ sidecarEnv:
 
   resources:
 {{ toYaml .Values.resources | indent 4 }}
+{{- if .Values.sidecarResources }}
+  sidecarResources:
+{{ toYaml .Values.sidecarResources | indent 4 }}
+{{- end }}
   dataVolumeClaimSpec:
 {{ toYaml .Values.dataVolumeClaim | indent 4 }}
 {{- if .Values.restoreFromBackup }}

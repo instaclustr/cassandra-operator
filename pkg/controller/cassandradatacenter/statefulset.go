@@ -254,7 +254,10 @@ func newSidecarContainer(
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Ports:           sidecarPort.asContainerPorts(),
 		Env:             cdc.Spec.SidecarEnv,
-		Resources:       *cdc.Spec.SidecarResources,
+	}
+
+	if cdc.Spec.SidecarResources != nil {
+		container.Resources = *cdc.Spec.SidecarResources
 	}
 
 	var volumeMounts = []corev1.VolumeMount{
