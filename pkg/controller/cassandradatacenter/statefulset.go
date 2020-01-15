@@ -40,9 +40,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 	}
 
 	// Init rack-relevant info
-	statefulSet := &v1beta2.StatefulSet{ObjectMeta: RackMetadata(rctx, rack)}
-	statefulSet.Labels = StatefulsetLabels(rctx.cdc)
-
+	statefulSet := &v1beta2.StatefulSet{ObjectMeta: StatefulSetMetadata(rctx.cdc, RackMetadata(rctx.cdc, rack))}
 	logger := rctx.logger.WithValues("StatefulSet.Name", statefulSet.Name)
 
 	result, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, statefulSet, func(obj runtime.Object) error {
@@ -464,13 +462,14 @@ func scaleStatefulSet(
 	if desiredSpecReplicas > currentSpecReplicas {
 		// Scale up
 
+		existingStatefulSet.Spec = *newStatefulSetSpec
+
 		rctx.recorder.Event(
 			rctx.cdc,
 			corev1.EventTypeNormal,
 			"SuccessEvent",
-			fmt.Sprintf("Scaling up %s from %d to %d nodes.", rctx.cdc.Name, currentSpecReplicas, desiredSpecReplicas))
+			fmt.Sprintf("Scaling up %s from %d to %d nodes.", existingStatefulSet.Name, currentSpecReplicas, desiredSpecReplicas))
 
-		existingStatefulSet.Spec = *newStatefulSetSpec
 		return controllerutil.SetControllerReference(rctx.cdc, existingStatefulSet, rctx.scheme)
 	} else if desiredSpecReplicas < currentSpecReplicas {
 
@@ -478,7 +477,7 @@ func scaleStatefulSet(
 			rctx.cdc,
 			corev1.EventTypeNormal,
 			"SuccessEvent",
-			fmt.Sprintf("Scaling down %s from %d to %d nodes.", rctx.cdc.Name, currentSpecReplicas, desiredSpecReplicas))
+			fmt.Sprintf("Scaling down %s from %d to %d nodes.", existingStatefulSet.Name, currentSpecReplicas, desiredSpecReplicas))
 
 		// Scale down
 		newestPod := podsInRack[len(podsInRack)-1]

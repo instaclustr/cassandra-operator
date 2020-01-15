@@ -68,7 +68,7 @@ func createOrUpdateOperatorConfigMap(rctx *reconciliationRequestContext, seedNod
 
 func createOrUpdateCassandraRackConfig(rctx *reconciliationRequestContext, rack *cluster.Rack) (*corev1.Volume, error) {
 
-	configMap := &corev1.ConfigMap{ObjectMeta: RackMetadata(rctx, rack, "rack-config")}
+	configMap := &corev1.ConfigMap{ObjectMeta: RackMetadata(rctx.cdc, rack, "rack-config")}
 
 	logger := rctx.logger.WithValues("ConfigMap.Name", configMap.Name)
 

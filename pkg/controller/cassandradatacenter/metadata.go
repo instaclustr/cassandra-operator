@@ -33,68 +33,43 @@ func operatorObjectLabel(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, obj
 }
 
 func SeedNodesLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
-	var objectLabels map[string]string
+	var objectLabels = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
 		objectLabels = cdc.Spec.OperatorLabels.SeedNodesService
 	}
 
-	return operatorObjectLabel(cdc, objectLabels)
+	return objectLabels
 }
 
 func NodesServiceLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
-	var objectLabels map[string]string
+	var objectLabels = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
 		objectLabels = cdc.Spec.OperatorLabels.NodesService
 	}
 
-	return operatorObjectLabel(cdc, objectLabels)
-}
-
-func StatefulsetLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
-	var objectLabels map[string]string
-
-	if cdc.Spec.OperatorLabels != nil {
-		objectLabels = cdc.Spec.OperatorLabels.StatefulSet
-	}
-
-	return operatorObjectLabel(cdc, objectLabels)
-}
-
-func PrometheusLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
-	var objectLabels map[string]string
-
-	if cdc.Spec.OperatorLabels != nil {
-		objectLabels = cdc.Spec.OperatorLabels.PrometheusService
-	}
-
-	return operatorObjectLabel(cdc, objectLabels)
-}
-
-func mergeLabelMaps(firstLabels, secondLabels map[string]string) map[string]string {
-
-	var mergedLabels = map[string]string{}
-
-	for k, v := range firstLabels {
-		mergedLabels[k] = v
-	}
-
-	for k, v := range secondLabels {
-		mergedLabels[k] = v
-	}
-
-	return mergedLabels
+	return objectLabels
 }
 
 func PodTemplateSpecLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
-	var objectLabels map[string]string
+	var objectLabels = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
 		objectLabels = cdc.Spec.OperatorLabels.PodTemplate
 	}
 
-	return operatorObjectLabel(cdc, objectLabels)
+	return objectLabels
+}
+
+func PrometheusLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+	// Fetch cdc labels
+	labels := DataCenterLabels(cdc)
+	// Add prometheus labels if defined
+	for label, val := range cdc.Spec.OperatorLabels.PrometheusService {
+		labels[label] = val
+	}
+	return labels
 }
 
 func RackLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluster.Rack) map[string]string {
@@ -122,13 +97,28 @@ func DataCenterResourceMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCent
 	}
 }
 
-func RackMetadata(rctx *reconciliationRequestContext, rack *cluster.Rack, suffixes ...string) metav1.ObjectMeta {
+func CustomStatefulSetLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+	var objectLabels = map[string]string{}
+
+	if cdc.Spec.OperatorLabels != nil {
+		objectLabels = cdc.Spec.OperatorLabels.StatefulSet
+	}
+
+	return objectLabels
+}
+
+func RackMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluster.Rack, suffixes ...string) metav1.ObjectMeta {
 	suffix := strings.Join(append([]string{""}, suffixes...), "-")
 	return metav1.ObjectMeta{
-		Namespace: rctx.cdc.Namespace,
-		Name:      "cassandra-" + rctx.cdc.Name + suffix + "-" + rack.Name,
-		Labels:    RackLabels(rctx.cdc, rack),
+		Namespace: cdc.Namespace,
+		Name:      "cassandra-" + cdc.Name + suffix + "-" + rack.Name,
+		Labels:    RackLabels(cdc, rack),
 	}
+}
+
+func StatefulSetMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, objectMetaData metav1.ObjectMeta) metav1.ObjectMeta {
+	objectMetaData.Labels = mergeLabelMaps(objectMetaData.Labels, CustomStatefulSetLabels(cdc))
+	return objectMetaData
 }
 
 func applyDataCenterResourceMetadata(obj metav1.Object, cdc *cassandraoperatorv1alpha1.CassandraDataCenter, suffixes ...string) {
@@ -140,4 +130,19 @@ func applyDataCenterResourceMetadata(obj metav1.Object, cdc *cassandraoperatorv1
 	labels := obj.GetLabels()
 	applyDataCenterLabels(&labels, cdc)
 	obj.SetLabels(labels)
+}
+
+func mergeLabelMaps(firstLabels, secondLabels map[string]string) map[string]string {
+
+	var mergedLabels = map[string]string{}
+
+	for k, v := range firstLabels {
+		mergedLabels[k] = v
+	}
+
+	for k, v := range secondLabels {
+		mergedLabels[k] = v
+	}
+
+	return mergedLabels
 }
