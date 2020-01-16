@@ -125,6 +125,10 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		instance.Status = []*cassandraoperatorv1alpha1.CassandraBackupStatus{}
 	}
 
+	if instance.JustCreate {
+		return reconcile.Result{}, nil
+	}
+
 	// Get CDC.
 	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
 	if err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CDC, Namespace: instance.Namespace}, cdc); err != nil {

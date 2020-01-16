@@ -49,6 +49,7 @@ type CassandraBackup struct {
 	Status         []*CassandraBackupStatus  `json:"status,omitempty"`
 	GlobalStatus   operations.OperationState `json:"globalStatus,omitempty"`
 	GlobalProgress string                    `json:"globalProgress,omitempty"`
+	JustCreate     bool                      `json:"justCreate,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

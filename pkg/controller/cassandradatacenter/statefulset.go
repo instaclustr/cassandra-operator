@@ -15,6 +15,7 @@ import (
 	"k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -63,7 +64,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, emptyDirVolume, configVolume, rackConfigVolume, userSecretVolume, userConfigVolume)
 		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, emptyDirVolume, podInfoVolume, backupSecretVolume)
 
-		restoreContainer, err := newRestoreContainer(rctx.cdc, rctx.client, dataVolumeClaim, emptyDirVolume, backupSecretVolume)
+		restoreContainer, err := newRestoreContainer(rctx.cdc, rctx.client, dataVolumeClaim, emptyDirVolume, backupSecretVolume, rack)
 		if err != nil {
 			return err
 		}
@@ -298,28 +299,32 @@ func newRestoreContainer(
 	dataVolumeClaim *corev1.PersistentVolumeClaim,
 	emptyDirVolume *corev1.Volume,
 	backupSecretVolume *corev1.Volume,
+	rack *cluster.Rack,
 ) (*corev1.Container, error) {
 
 	// no restores
-	if len(cdc.Spec.RestoreFromBackup) == 0 {
+	if !cdc.Spec.Backup.Restore {
 		return nil, nil
 	}
 
 	backup := &cassandraoperatorv1alpha1.CassandraBackup{}
-	if err := client.Get(context.TODO(), types.NamespacedName{Name: cdc.Spec.RestoreFromBackup, Namespace: cdc.Namespace}, backup); err != nil {
+	if err := client.Get(context.TODO(), types.NamespacedName{Name: cdc.Spec.Backup.BackupName, Namespace: cdc.Namespace}, backup); err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return nil, errors.New(fmt.Sprintf("could not fetch CassandraBackup instance %s because it does not exist.", cdc.Spec.Backup.BackupName))
+		}
 		return nil, err
 	}
 
 	if len(backup.Spec.CDC) == 0 {
-		return nil, errors.New(fmt.Sprintf("cdc field in backup CRD %s was not set!", cdc.Spec.RestoreFromBackup))
+		return nil, errors.New(fmt.Sprintf("cdc field in backup CRD %s was not set!", cdc.Spec.Backup.BackupName))
 	}
 
 	if len(backup.Spec.SnapshotTag) == 0 {
-		return nil, errors.New(fmt.Sprintf("snapshotTag field in backup CRD %s was not set!", cdc.Spec.RestoreFromBackup))
+		return nil, errors.New(fmt.Sprintf("snapshotTag field in backup CRD %s was not set!", cdc.Spec.Backup.BackupName))
 	}
 
 	if len(backup.Spec.StorageLocation) == 0 {
-		return nil, errors.New(fmt.Sprintf("storageLocation field in backup CRD %s was not set!", cdc.Spec.RestoreFromBackup))
+		return nil, errors.New(fmt.Sprintf("storageLocation field in backup CRD %s was not set!", cdc.Spec.Backup.BackupName))
 	}
 
 	restoreArgs := []string{
@@ -328,12 +333,20 @@ func newRestoreContainer(
 		"--storage-location=" + backup.Spec.StorageLocation + "/" + backup.Spec.CDC,
 	}
 
+	sidecarEnv := cdc.Spec.SidecarEnv
+
+	// append information about rack
+	sidecarEnv = append(sidecarEnv, corev1.EnvVar{
+		Name:  "CASSANDRA_RACK",
+		Value: rack.Name,
+	})
+
 	container := &corev1.Container{
 		Name:            "restore",
 		Image:           cdc.Spec.SidecarImage,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		Args:            restoreArgs,
-		Env:             cdc.Spec.SidecarEnv,
+		Env:             sidecarEnv,
 	}
 
 	var volumeMounts []corev1.VolumeMount
@@ -351,7 +364,7 @@ func newRestoreContainer(
 		if backupSecretVolume != nil {
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: backupSecretVolume.Name, MountPath: BackupSecretVolumeMountPath})
 		} else {
-			return nil, errors.New(fmt.Sprintf("Restoring backup from %s is not possible because backupSecretVolumeSource field in CDC %s was not set!", cdc.Spec.RestoreFromBackup, cdc.Name))
+			return nil, errors.New(fmt.Sprintf("Restoring backup from %s is not possible because backupSecretVolumeSource field in CDC %s was not set!", cdc.Spec.Backup.BackupName, cdc.Name))
 		}
 	}
 
@@ -380,12 +393,12 @@ func newUserSecretVolume(rctx *reconciliationRequestContext) *corev1.Volume {
 }
 
 func newBackupSecretVolume(rctx *reconciliationRequestContext) *corev1.Volume {
-	if rctx.cdc.Spec.BackupSecretVolumeSource == nil {
+	if rctx.cdc.Spec.Backup.BackupSecretVolumeSource == nil {
 		return nil
 	}
 	return &corev1.Volume{
-		Name:         rctx.cdc.Spec.BackupSecretVolumeSource.SecretName,
-		VolumeSource: corev1.VolumeSource{Secret: rctx.cdc.Spec.BackupSecretVolumeSource},
+		Name:         rctx.cdc.Spec.Backup.BackupSecretVolumeSource.SecretName,
+		VolumeSource: corev1.VolumeSource{Secret: rctx.cdc.Spec.Backup.BackupSecretVolumeSource},
 	}
 }
 
