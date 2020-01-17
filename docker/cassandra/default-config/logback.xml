@@ -12,5 +12,6 @@
     </root>
 
     <logger name="org.apache.cassandra" level="INFO"/>
+    <logger name="com.instaclustr.cassandra.k8s" level="INFO"/>
     <logger name="com.thinkaurelius.thrift" level="ERROR"/>
 </configuration>

@@ -6,5 +6,5 @@ ARG openjre_version=8u232-b09-1~deb9u1
 
 COPY dagi /usr/local/bin/
 
-RUN dagi locales gnupg2 dirmngr curl \
+RUN dagi locales gnupg2 dirmngr curl uuid-runtime \
     openjdk-8-jre-headless=${openjre_version} libjna-java libjna-jni procps

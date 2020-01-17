@@ -1,17 +1,27 @@
 package com.instaclustr.cassandra.k8s;
 
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -21,9 +31,11 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.cassandra.config.Config;
 import org.apache.cassandra.config.ConfigurationLoader;
+import org.apache.cassandra.config.TransparentDataEncryptionOptions;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.error.YAMLException;
 
@@ -141,10 +153,6 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
 
                 final Config config = yaml.loadAs(reader, Config.class);
 
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Active configuration: {}", yaml.dump(config));
-                }
-
                 return config == null ? new Config() : config;
 
             } catch (final IOException | YAMLException e) {
@@ -157,6 +165,84 @@ public class ConcatenatedYamlConfigurationLoader implements ConfigurationLoader 
 
     @Override
     public Config loadConfig() throws ConfigurationException {
-        return CONFIG_SUPPLIER.get();
+        Config config = CONFIG_SUPPLIER.get();
+
+        try {
+            Files.write(Paths.get("/var/lib/cassandra/cassandra-config.yaml"), log(config).getBytes(), CREATE, TRUNCATE_EXISTING);
+        } catch (IOException ex) {
+            logger.error("Unable to write cassandra configuration to /var/lib/cassandra-config.yaml", ex);
+        }
+
+        return config;
+    }
+
+    private static final List<String> SENSITIVE_KEYS = new ArrayList<String>() {{
+        add("client_encryption_options");
+        add("server_encryption_options");
+    }};
+
+    // taken and tweaked from Config in Cassandra
+    public String log(Config config)
+    {
+        Map<String, String> configMap = new TreeMap<>();
+
+        for (Field field : Config.class.getFields())  {
+            // ignore the constants
+            if (Modifier.isFinal(field.getModifiers()))
+                continue;
+
+            String name = field.getName();
+
+            if (SENSITIVE_KEYS.contains(name)) {
+                configMap.put(name, "<REDACTED>");
+                continue;
+            }
+
+            String value;
+
+            try {
+                // Field.get() can throw NPE if the value of the field is null
+
+                Object fieldValue = field.get(config);
+
+                if (name.equals("data_file_directories")) {
+                    if (fieldValue == null) {
+                        value = new ArrayList<String>().toString();
+                    } else {
+                        value = Arrays.toString((String[])fieldValue);
+                    }
+                } else {
+                    if (fieldValue == null) {
+                        value = "null";
+                    } else if (fieldValue instanceof TransparentDataEncryptionOptions) {
+                        value = buildTransparentDataEncryptionOptions((TransparentDataEncryptionOptions) fieldValue);
+                    } else {
+                        value = fieldValue.toString();
+                    }
+                }
+            } catch (NullPointerException | IllegalAccessException npe) {
+                value = "null";
+            }
+
+            configMap.put(name, value);
+        }
+
+        DumperOptions options = new DumperOptions();
+        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        options.setPrettyFlow(true);
+
+        Yaml yaml = new Yaml(options);
+
+        return yaml.dump(configMap);
+    }
+
+    private String buildTransparentDataEncryptionOptions(TransparentDataEncryptionOptions options) {
+        return new HashMap<String, Object>(){{
+            put("cipher", options.cipher);
+            put("key_alias", options.key_alias);
+            put("chunk_length_kb", options.chunk_length_kb);
+            put("enabled", options.enabled);
+            put("iv_length", options.iv_length);
+        }}.toString();
     }
 }

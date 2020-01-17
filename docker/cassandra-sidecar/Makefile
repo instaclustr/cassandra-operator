@@ -1,6 +1,6 @@
 include ../base-openjre/Makefile
 
-CASSANDRA_SIDECAR_VERSION := 1.0.0
+CASSANDRA_SIDECAR_VERSION := 1.0.1
 CASSANDRA_SIDECAR_JAR := cassandra-k8s-sidecar-$(CASSANDRA_SIDECAR_VERSION).jar
 CASSANDRA_BACKUP_RESTORE_VERSION := 1.0.0
 INSTACLUSTR_BACKUP_RESTORE_JAR := instaclustr-backup-restore-$(CASSANDRA_BACKUP_RESTORE_VERSION).jar
@@ -16,10 +16,12 @@ $(info SNAPSHOT version specified. Marking backup-restore JAR target as .PHONY)
 endif
 
 $(CASSANDRA_SIDECAR_JAR):
-	mvn dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-sidecar:$(CASSANDRA_SIDECAR_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true
+	rm -rf $(CASSANDRA_SIDECAR_JAR)
+	mvn dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-sidecar:$(CASSANDRA_SIDECAR_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 
 $(INSTACLUSTR_BACKUP_RESTORE_JAR):
-	mvn dependency:copy -Dartifact=com.instaclustr:instaclustr-backup-restore:$(CASSANDRA_BACKUP_RESTORE_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true
+	rm -rf $(INSTACLUSTR_BACKUP_RESTORE_JAR)
+	mvn dependency:copy -Dartifact=com.instaclustr:instaclustr-backup-restore:$(CASSANDRA_BACKUP_RESTORE_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 
 .PHONY: cassandra-sidecar
 cassandra-sidecar: $(CASSANDRA_SIDECAR_JAR) $(INSTACLUSTR_BACKUP_RESTORE_JAR)

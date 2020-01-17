@@ -6,10 +6,10 @@
 
     <groupId>com.instaclustr</groupId>
     <artifactId>cassandra-k8s-addons</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <properties>
-        <cassandra.version>3.11.4</cassandra.version>
+        <cassandra.version>3.11.5</cassandra.version>
 
         <git.command.plugin.version>2.2.4</git.command.plugin.version>
         <maven.jar.plugin.version>3.1.1</maven.jar.plugin.version>
