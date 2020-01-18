@@ -50,6 +50,7 @@ public class RebuildOperation extends Operation<RebuildOperationRequest> {
 
         final String specificSources = prepareSpecificSources(request.specificSources);
 
+        assert storageServiceMBean != null;
         storageServiceMBean.rebuild(request.sourceDC,
                                     request.keyspace,
                                     specificTokens,

@@ -27,12 +27,7 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.instaclustr.cassandra.backup.guice.BackupRestoreModule;
-import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupsModule;
-import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissioningModule;
-import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildModule;
-import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubModule;
-import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesModule;
+import com.instaclustr.cassandra.sidecar.Sidecar;
 import com.instaclustr.operations.SidecarClient.OperationResult;
 import com.instaclustr.sidecar.http.JerseyHttpServerModule;
 import com.instaclustr.sidecar.http.JerseyHttpServerService;
@@ -103,13 +98,8 @@ public abstract class AbstractSidecarTest {
                 }
             });
             add(new JerseyHttpServerModule());
-            add(new DecommissioningModule());
-            add(new CleanupsModule());
-            add(new UpgradeSSTablesModule());
-            add(new RebuildModule());
-            add(new ScrubModule());
-            add(new BackupRestoreModule());
             add(new ExecutorsModule());
+            addAll(Sidecar.operationModules());
         }};
 
         modules.addAll(getModules());

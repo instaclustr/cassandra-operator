@@ -24,6 +24,8 @@ import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupOperation;
 import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissionOperation;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissionOperationRequest;
+import com.instaclustr.cassandra.sidecar.operations.drain.DrainOperation;
+import com.instaclustr.cassandra.sidecar.operations.drain.DrainOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildOperation;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubOperation;
@@ -90,6 +92,10 @@ public class SidecarClient implements Closeable {
 
     public OperationResult<BackupOperation> backup(final BackupOperationRequest operationRequest) {
         return performOperationSubmission(operationRequest, BackupOperation.class);
+    }
+
+    public OperationResult<DrainOperation> drain(final DrainOperationRequest operationRequest) {
+        return performOperationSubmission(operationRequest, DrainOperation.class);
     }
 
     public Collection<Operation> getOperations() {
