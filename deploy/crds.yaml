@@ -32,6 +32,8 @@ spec:
           type: string
         globalStatus:
           type: string
+        justCreate:
+          type: boolean
         kind:
           description: 'Kind is a string value representing the REST resource this
             object represents. Servers may infer this from the endpoint the client
@@ -165,7 +167,14 @@ spec:
           type: object
         spec:
           properties:
-            backupSecretVolumeSource:
+            backup:
+              properties:
+                backupName:
+                  type: string
+                backupSecretVolumeSource:
+                  type: object
+                restore:
+                  type: boolean
               type: object
             cassandraEnv:
               items:
@@ -234,8 +243,6 @@ spec:
               type: array
             resources:
               type: object
-            restoreFromBackup:
-              type: string
             serviceAccountName:
               type: string
             sidecarEnv:
