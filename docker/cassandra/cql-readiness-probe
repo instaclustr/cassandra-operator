@@ -1,13 +1,17 @@
 #!/bin/bash
 
-RANDOM_PASSWORD=$(uuidgen)
+TEMP_FILE=/tmp/probe-command-result
 
-echo $RANDOM_PASSWORD > /etc/cassandra/.cql-probe-secret
+cqlsh -u probe -p probe -e "SELECT * FROM system.local" "$(hostname)" 2> ${TEMP_FILE}
 
-cqlsh -u probe -p $RANDOM_PASSWORD -e "SELECT * FROM system.local" $(hostname)
+probe_result=$?
 
-exit_code=$?
+if [ "$(grep -c "Role .* does not exist" ${TEMP_FILE})" = "1" ] || [ "$(grep -c "Provided username probe and/or password are incorrect" ${TEMP_FILE})" = "1" ]; then
+  # this happens on the beginning of cluster creation and it does not matter
+  # password is 'cassandra' here as it might be changed afterwards
+  cqlsh -u cassandra -p cassandra -e "CREATE ROLE IF NOT EXISTS probe WITH PASSWORD = 'probe' AND LOGIN = true and SUPERUSER = false" "$(hostname)"
+fi
 
-rm -rf /etc/cassandra/.cql-probe-secret 2> /dev/null
+rm -rf ${TEMP_FILE}
 
-exit $exit_code
+exit $probe_result

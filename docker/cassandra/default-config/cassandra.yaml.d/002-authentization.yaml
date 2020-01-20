@@ -1,3 +1,3 @@
-authenticator: KubernetesAuthenticator
+authenticator: PasswordAuthenticator
 authorizer: CassandraAuthorizer
-role_manager: KubernetesRoleManager
+role_manager: CassandraRoleManager
