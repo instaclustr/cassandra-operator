@@ -41,6 +41,7 @@ public class CleanupOperation extends Operation<CleanupOperationRequest> {
 
     @Override
     protected void run0() throws Exception {
+        assert storageServiceMBean != null;
         int result = storageServiceMBean.forceKeyspaceCleanup(request.jobs, request.keyspace, request.tables == null ? new String[]{} : request.tables.toArray(new String[]{}));
 
         switch (result) {

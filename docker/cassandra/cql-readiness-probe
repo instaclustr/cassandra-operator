@@ -1,3 +1,13 @@
 #!/bin/bash
 
-exec cqlsh -e "SELECT * FROM system.local" $(hostname)
+RANDOM_PASSWORD=$(uuidgen)
+
+echo $RANDOM_PASSWORD > /etc/cassandra/.cql-probe-secret
+
+cqlsh -u probe -p $RANDOM_PASSWORD -e "SELECT * FROM system.local" $(hostname)
+
+exit_code=$?
+
+rm -rf /etc/cassandra/.cql-probe-secret 2> /dev/null
+
+exit $exit_code

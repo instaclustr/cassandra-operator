@@ -77,6 +77,12 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackup(ref common.Refer
 							Format: "",
 						},
 					},
+					"justCreate": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
 				},
 			},
 		},
@@ -357,17 +363,6 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 							},
 						},
 					},
-					"backupSecretVolumeSource": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/api/core/v1.SecretVolumeSource"),
-						},
-					},
-					"restoreFromBackup": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
 					"userSecretVolumeSource": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/api/core/v1.SecretVolumeSource"),
@@ -457,11 +452,16 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 							Format: "int64",
 						},
 					},
+					"backup": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.Backup"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.OperatorLabels", "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.Rack", "k8s.io/api/core/v1.ConfigMapVolumeSource", "k8s.io/api/core/v1.EmptyDirVolumeSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.PersistentVolumeClaimSpec", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.SecretVolumeSource"},
+			"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.Backup", "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.OperatorLabels", "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.Rack", "k8s.io/api/core/v1.ConfigMapVolumeSource", "k8s.io/api/core/v1.EmptyDirVolumeSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.PersistentVolumeClaimSpec", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.SecretVolumeSource"},
 	}
 }
 

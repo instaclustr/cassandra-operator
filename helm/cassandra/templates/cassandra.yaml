@@ -30,13 +30,13 @@ spec:
   {{- end }}
 
   {{- if .Values.sidecarEnv }}
-sidecarEnv:
+  sidecarEnv:
 {{ toYaml .Values.sidecarEnv | indent 4 }}
   {{- end }}
 
-  {{- if .Values.backupSecretVolumeSource }}
-  backupSecretVolumeSource:
-{{ toYaml .Values.backupSecretVolumeSource | indent 4 }}
+  {{- if .Values.backup }}
+  backup:
+{{ toYaml .Values.backup | indent 4 }}
   {{- end }}
 
   resources:
@@ -45,6 +45,9 @@ sidecarEnv:
   sidecarResources:
 {{ toYaml .Values.sidecarResources | indent 4 }}
 {{- end }}
+
+  deletePVCs: {{ .Values.deletePVCs }}
+
   dataVolumeClaimSpec:
 {{ toYaml .Values.dataVolumeClaim | indent 4 }}
 {{- if .Values.restoreFromBackup }}

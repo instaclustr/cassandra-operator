@@ -22,7 +22,9 @@ We expect to consider the Cassandra operator stable soon; backwards incompatible
 
 1) [Backup and Restore Guide](./doc/backup_restore.md) for backing up and restoring Cassandra clusters managed by the operator.
 
-1) [Resources and Labels](./doc/resources.md) doc for an overview of the resources created by the Cassandra-operator.
+1) [Resources and Labels](./doc/resources.md) documentation for an overview of the resources created by the Cassandra-operator.
+
+1) [Service accounts and login](./doc/auth.md) documentation for authentication and how you can log in to cluster
 
 1) Using [Helm](./doc/helm.md) to install and launch the operator and the clusters.
 

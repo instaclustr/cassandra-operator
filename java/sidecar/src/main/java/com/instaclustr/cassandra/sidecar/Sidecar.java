@@ -1,10 +1,14 @@
 package com.instaclustr.cassandra.sidecar;
 
+import static com.google.inject.Guice.createInjector;
+import static com.google.inject.Stage.PRODUCTION;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
-import com.google.inject.Guice;
+import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
-import com.google.inject.Stage;
 import com.instaclustr.cassandra.backup.aws.S3Module;
 import com.instaclustr.cassandra.backup.azure.AzureModule;
 import com.instaclustr.cassandra.backup.gcp.GCPModule;
@@ -12,15 +16,16 @@ import com.instaclustr.cassandra.backup.impl.backup.BackupModule;
 import com.instaclustr.cassandra.backup.local.LocalFileModule;
 import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupsModule;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissioningModule;
+import com.instaclustr.cassandra.sidecar.operations.drain.DrainModule;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildModule;
 import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubModule;
 import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesModule;
 import com.instaclustr.guice.Application;
 import com.instaclustr.guice.ServiceManagerModule;
+import com.instaclustr.operations.OperationsModule;
 import com.instaclustr.picocli.CLIApplication;
 import com.instaclustr.picocli.CassandraJMXSpec;
 import com.instaclustr.sidecar.http.JerseyHttpServerModule;
-import com.instaclustr.operations.OperationsModule;
 import com.instaclustr.sidecar.picocli.SidecarSpec;
 import com.instaclustr.threading.ExecutorsModule;
 import com.instaclustr.version.VersionModule;
@@ -61,33 +66,8 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
 
         logCommandVersionInformation(commandSpec);
 
-        final Injector injector = Guice.createInjector(
-                Stage.PRODUCTION, // production binds singletons as eager by default
-
-                new VersionModule(getVersion()),
-                new ServiceManagerModule(),
-
-                new CassandraModule(new JMXConnectionInfo(jmxSpec.jmxPassword,
-                                                          jmxSpec.jmxUser,
-                                                          jmxSpec.jmxServiceURL,
-                                                          jmxSpec.trustStore,
-                                                          jmxSpec.trustStorePassword)),
-                new JerseyHttpServerModule(sidecarSpec.httpServerAddress),
-
-                new OperationsModule(sidecarSpec.operationsExpirationPeriod),
-                new DecommissioningModule(),
-                new CleanupsModule(),
-                new UpgradeSSTablesModule(),
-                new RebuildModule(),
-                new ScrubModule(),
-                // backups modules
-                new S3Module(),
-                new AzureModule(),
-                new GCPModule(),
-                new LocalFileModule(),
-                new BackupModule(),
-                new ExecutorsModule()
-        );
+        // production binds singletons as eager by default
+        final Injector injector = createInjector(PRODUCTION, getModules());
 
         return injector.getInstance(Application.class).call();
     }
@@ -95,5 +75,51 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
     @Override
     public String getImplementationTitle() {
         return "cassandra-sidecar";
+    }
+
+    public List<AbstractModule> getModules() throws Exception {
+        List<AbstractModule> modules = new ArrayList<>();
+
+        modules.addAll(backupModules());
+        modules.addAll(operationModules());
+        modules.addAll(sidecarModules());
+
+        return modules;
+    }
+
+    public List<AbstractModule> sidecarModules() throws Exception {
+        return new ArrayList<AbstractModule>() {{
+            add(new VersionModule(getVersion()));
+            add(new ServiceManagerModule());
+            add(new CassandraModule(new JMXConnectionInfo(jmxSpec.jmxPassword,
+                                                          jmxSpec.jmxUser,
+                                                          jmxSpec.jmxServiceURL,
+                                                          jmxSpec.trustStore,
+                                                          jmxSpec.trustStorePassword)));
+            add(new JerseyHttpServerModule(sidecarSpec.httpServerAddress));
+            add(new OperationsModule(sidecarSpec.operationsExpirationPeriod));
+            add(new ExecutorsModule());
+        }};
+    }
+
+    public static List<AbstractModule> backupModules() {
+        return new ArrayList<AbstractModule>() {{
+            add(new S3Module());
+            add(new AzureModule());
+            add(new GCPModule());
+            add(new LocalFileModule());
+            add(new BackupModule());
+        }};
+    }
+
+    public static List<AbstractModule> operationModules() {
+        return new ArrayList<AbstractModule>() {{
+            add(new DecommissioningModule());
+            add(new CleanupsModule());
+            add(new UpgradeSSTablesModule());
+            add(new RebuildModule());
+            add(new ScrubModule());
+            add(new DrainModule());
+        }};
     }
 }

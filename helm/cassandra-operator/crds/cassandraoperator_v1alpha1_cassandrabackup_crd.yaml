@@ -31,6 +31,8 @@ spec:
           type: string
         globalStatus:
           type: string
+        justCreate:
+          type: boolean
         kind:
           description: 'Kind is a string value representing the REST resource this
             object represents. Servers may infer this from the endpoint the client

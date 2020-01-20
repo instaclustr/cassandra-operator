@@ -21,12 +21,17 @@ spec:
   imagePullPolicy: IfNotPresent
   imagePullSecrets:
     - name: regcred
-  backupSecretVolumeSource:
-    secretName: gcp-auth-reference
-    type: array
-    items:
-      - key: gcp.json
-        path: gcp.json
+
+#  backup:
+#    restore: false
+#    backupName: test-cassandra-backup-restore-s3
+#    backupSecretVolumeSource:
+#      secretName: gcp-auth-reference
+#      type: array
+#      items:
+#        - key: gcp.json
+#          path: gcp.json
+
   sidecarEnv:
     - name: GOOGLE_APPLICATION_CREDENTIALS
       value: "/tmp/backup-creds/gcp.json"

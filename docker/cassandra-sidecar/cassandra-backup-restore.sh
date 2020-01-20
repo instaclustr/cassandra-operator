@@ -2,16 +2,30 @@
 
 RESTORE_MARKING_FILE="/var/lib/cassandra/restore_done"
 
+function podName() {
+    local restoration_cdc
+    local rack
+    local replica_in_rack
+
+    restoration_cdc=$1
+    rack=$2
+    replica_in_rack=$(echo $3 | rev | cut -d "-" -f1 | rev)
+
+    echo cassandra-${restoration_cdc}-${rack}-${replica_in_rack}
+}
+
 declare -a args
 
-for arg in $@; do
+for arg in "$@"; do
     case ${arg} in
         --storage-location=*)
-            args+=("$arg/$(hostname)")
+            RESTORATION_CDC=$(echo "${arg#*=}" | rev | cut -d "/" -f1 | rev)
+            RESTORATION_POD=$(podName "${RESTORATION_CDC}" "${CASSANDRA_RACK}" "$(hostname)")
+            args+=("${arg}/${RESTORATION_POD}")
         shift
         ;;
         *)
-            args+=(${arg})
+            args+=("${arg}")
         shift
         ;;
     esac

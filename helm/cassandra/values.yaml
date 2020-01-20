@@ -77,13 +77,15 @@ dataVolumeClaim:
 # env properties for Cassandra container, similar to sidecarEnv
 # cassandraEnv:
 
-#backupSecretVolumeSource:
-#  secretName: gcp-auth-reference
-#  #   type is a workaround for https://github.com/kubernetes/kubernetes/issues/68466
-#  type: array
-#  items:
-#    - key: gcp.json
-#      path: gcp.json
+#backup:
+#  restore: false
+#  backupName: test-cassandra-backup-restore-s3
+#  backupSecretVolumeSource:
+#    secretName: gcp-auth-reference
+#    type: array
+#      items:
+#        - key: gcp.json
+#          path: gcp.json
 
 #racks:
 #  - name: "west1-b"
@@ -105,5 +107,7 @@ dataVolumeClaim:
 #  key: value
 #  key2: value2
 prometheusEnabled: false
+
+deletePVCs: false
 
 #serviceAccountName: cassandra

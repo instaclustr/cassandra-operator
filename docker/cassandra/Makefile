@@ -2,7 +2,7 @@ include ../base-openjre/Makefile
 
 CASSANDRA_VERSION := $(if $(CASSANDRA_VERSION),$(CASSANDRA_VERSION),"3.11.5")
 CASSANDRA_EXPORTER_VERSION := $(if $(CASSANDRA_EXPORTER_VERSION),$(CASSANDRA_EXPORTER_VERSION),"0.9.9")
-CASSANDRA_K8S_ADDONS_VERSION := 1.0.0
+CASSANDRA_K8S_ADDONS_VERSION := 1.0.1
 CASSANDRA_K8S_ADDONS_JAR := cassandra-k8s-addons-$(CASSANDRA_K8S_ADDONS_VERSION).jar
 
 ifeq ($(CASSANDRA_K8S_ADDONS_VERSION:%-SNAPSHOT=SNAPSHOT),SNAPSHOT)
@@ -11,7 +11,8 @@ $(info SNAPSHOT version specified. Marking JAR target as .PHONY)
 endif
 
 $(CASSANDRA_K8S_ADDONS_JAR):
-	mvn dependency:copy -Dartifact=com.instaclustr.cassandra-operator:cassandra-k8s-addons:$(CASSANDRA_K8S_ADDONS_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true
+	rm -rf $(CASSANDRA_K8S_ADDONS_JAR)
+	mvn dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-addons:$(CASSANDRA_K8S_ADDONS_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 
 C_APACHE_MIRROR_URL := $(if $(C_APACHE_MIRROR_URL),$(C_APACHE_MIRROR_URL),"https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra")
 INSTALL_CASSANDRA_EXPORTER := $(if $(INSTALL_CASSANDRA_EXPORTER),$(INSTALL_CASSANDRA_EXPORTER),"true")

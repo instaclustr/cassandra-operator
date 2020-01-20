@@ -52,6 +52,7 @@ public class ScrubOperation extends Operation<ScrubOperationRequest> {
     @Override
     protected void run0() throws Exception {
 
+        assert storageServiceMBean != null;
         final int concurrentCompactors = storageServiceMBean.getConcurrentCompactors();
 
         if (request.jobs > concurrentCompactors) {
