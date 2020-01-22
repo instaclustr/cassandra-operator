@@ -1,15 +1,28 @@
 # Auth
 
 Cassandra operator is by default set up with the following 
-configuration properties.
+configuration properties in CDC spec.
 
 ```
-authenticator: PasswordAuthenticator
-authorizer: CassandraAuthorizer
-role_manager: CassandraRoleManager
+cassandraAuth:
+  authenticator: AllowAllAuthenticator
+  authorizer: AllowAllAuthorizer
+  roleManager: CassandraRoleManager
 ```
 
-This configuration is necessary in order to be able to use password-based authentication etc.
+By default, Cassandra will not ask you for any password and it will behave as if the authentication 
+is completely turned off.
+
+You can change it to classic password-based auth like following:
+
+```
+  cassandraAuth:
+    authenticator: PasswordAuthenticator
+    authorizer: CassandraAuthorizer
+    roleManager: CassandraRoleManager
+```
+
+**As of now, you can not change your auth method after you create and scale cluster.**
 
 When you are starting your cluster from scratch, e.g. from 1 to 3 nodes, Cassandra 
 sets up `system_auth` keyspace which has the replication strategy of `SimpleStrategy` and replication factor of 1.

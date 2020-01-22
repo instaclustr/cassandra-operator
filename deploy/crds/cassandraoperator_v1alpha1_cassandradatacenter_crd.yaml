@@ -38,6 +38,19 @@ spec:
                 restore:
                   type: boolean
               type: object
+            cassandraAuth:
+              properties:
+                authenticator:
+                  type: string
+                authorizer:
+                  type: string
+                roleManager:
+                  type: string
+              required:
+              - authenticator
+              - authorizer
+              - roleManager
+              type: object
             cassandraEnv:
               items:
                 type: object
