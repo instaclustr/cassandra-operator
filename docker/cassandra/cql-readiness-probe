@@ -1,17 +1,33 @@
 #!/bin/bash
 
-TEMP_FILE=/tmp/probe-command-result
+if [ -f "/var/lib/cassandra/cassandra-config.yaml" ]; then
+  if [ "$(grep -c "authenticator: PasswordAuthenticator" /var/lib/cassandra/cassandra-config.yaml)" = "1" ]; then
+    TEMP_FILE=/tmp/probe-command-result
 
-cqlsh -u probe -p probe -e "SELECT * FROM system.local" "$(hostname)" 2> ${TEMP_FILE}
+    cqlsh -u probe -p probe -e "SELECT * FROM system.local" "$(hostname)" 2> ${TEMP_FILE}
 
-probe_result=$?
+    probe_result=$?
 
-if [ "$(grep -c "Role .* does not exist" ${TEMP_FILE})" = "1" ] || [ "$(grep -c "Provided username probe and/or password are incorrect" ${TEMP_FILE})" = "1" ]; then
-  # this happens on the beginning of cluster creation and it does not matter
-  # password is 'cassandra' here as it might be changed afterwards
-  cqlsh -u cassandra -p cassandra -e "CREATE ROLE IF NOT EXISTS probe WITH PASSWORD = 'probe' AND LOGIN = true and SUPERUSER = false" "$(hostname)"
+    if [ "$(grep -c "Role .* does not exist" ${TEMP_FILE})" = "1" ] || [ "$(grep -c "Provided username probe and/or password are incorrect" ${TEMP_FILE})" = "1" ]; then
+      # this happens on the beginning of cluster creation and it does not matter
+      # password is 'cassandra' here as it might be changed afterwards
+      cqlsh -u cassandra -p cassandra -e "CREATE ROLE IF NOT EXISTS probe WITH PASSWORD = 'probe' AND LOGIN = true and SUPERUSER = false" "$(hostname)"
+    fi
+
+    rm -rf ${TEMP_FILE}
+
+    exit $probe_result
+  else
+    cqlsh -e "SELECT * FROM system.local" "$(hostname)"
+
+    probe_result=$?
+
+    exit $probe_result
+  fi
+else
+    cqlsh -e "SELECT * FROM system.local" "$(hostname)"
+
+    probe_result=$?
+
+    exit $probe_result
 fi
-
-rm -rf ${TEMP_FILE}
-
-exit $probe_result

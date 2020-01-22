@@ -149,6 +149,9 @@ func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCente
 		SeedProvider   []SeedProvider `yaml:"seed_provider"`
 		EndpointSnitch string         `yaml:"endpoint_snitch"`
 		DiskAccessMode string         `yaml:"disk_access_mode,omitempty"`
+		Authenticator  string         `yaml:"authenticator,omitempty"`
+		Authorizer     string         `yaml:"authorizer,omitempty"`
+		RoleManager    string         `yaml:"role_manager"`
 	}
 
 	cc := &CassandraConfig{
@@ -164,6 +167,16 @@ func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCente
 			},
 		},
 		EndpointSnitch: "org.apache.cassandra.locator.GossipingPropertyFileSnitch", // TODO: custom snitch implementation?
+	}
+
+	if cdc.Spec.CassandraAuth == nil {
+		cc.Authenticator = "AllowAllAuthenticator"
+		cc.Authorizer = "AllowAllAuthorizer"
+		cc.RoleManager = "CassandraRoleManager"
+	} else {
+		cc.Authenticator = cdc.Spec.CassandraAuth.Authenticator
+		cc.Authorizer = cdc.Spec.CassandraAuth.Authorizer
+		cc.RoleManager = cdc.Spec.CassandraAuth.RoleManager
 	}
 
 	// Set disk_access_mode to 'mmap' only when user specifies `optimizeKernelParams: true`.

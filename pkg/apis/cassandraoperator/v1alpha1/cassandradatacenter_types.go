@@ -25,6 +25,7 @@ type CassandraDataCenterSpec struct {
 	PrometheusSupport         bool                          `json:"prometheusSupport,omitempty"`
 	OperatorLabels            *OperatorLabels               `json:"operatorLabels,omitempty"`
 	SidecarEnv                []v1.EnvVar                   `json:"sidecarEnv,omitempty"`
+	CassandraAuth             *CassandraAuth                `json:"cassandraAuth,omitempty"`
 	CassandraEnv              []v1.EnvVar                   `json:"cassandraEnv,omitempty"`
 	ServiceAccountName        string                        `json:"serviceAccountName,omitempty"`
 	FSGroup                   int64                         `json:"fsGroup,omitempty"`
@@ -79,4 +80,10 @@ type Backup struct {
 	BackupName               string                 `json:"backupName,omitempty"`
 	Restore                  bool                   `json:"restore,omitempty"`
 	BackupSecretVolumeSource *v1.SecretVolumeSource `json:"backupSecretVolumeSource,omitempty"`
+}
+
+type CassandraAuth struct {
+	Authenticator string `json:"authenticator"`
+	Authorizer    string `json:"authorizer"`
+	RoleManager   string `json:"roleManager"`
 }
