@@ -24,7 +24,7 @@ We expect to consider the Cassandra operator stable soon; backwards incompatible
 
 1) [Resources and Labels](./doc/resources.md) documentation for an overview of the resources created by the Cassandra-operator.
 
-1) [Service accounts and login](./doc/auth.md) documentation for authentication and how you can log in to cluster
+1) [Service accounts, login and SSL](./doc/auth.md) documentation for authentication and how you can log in to cluster
 
 1) Using [Helm](./doc/helm.md) to install and launch the operator and the clusters.
 
@@ -38,9 +38,3 @@ We expect to consider the Cassandra operator stable soon; backwards incompatible
 - This operator is currently a work in progress and breaking changes are landing in master all the time. Here be dragons!
 - Do not use this in production... yet
 - Please see the [Instaclustr supported projects page](https://www.instaclustr.com/support/documentation/announcements/instaclustr-open-source-project-status/) for the Enterprise support status of the Cassandra Operator.
-
-## Roadmap
-
- - [ ] Support node-to-node security via certificates
- - [ ] Support cluster-client security via certificates
- - [ ] Allow multi-DC clusters via the operator

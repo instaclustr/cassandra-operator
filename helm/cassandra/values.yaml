@@ -12,9 +12,9 @@ image:
 #  sidecarRepository: cassandra-sidecar
 
 # Published images
-  cassandraRepository: gcr.io/cassandra-operator/cassandra
+  cassandraRepository: gcr.io/cassandra-operator/cassandra-3.11.5
   sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar
-  cassandraTag: 3.11.5
+  cassandraTag: latest
   sidecarTag: latest
 
 imagePullPolicy: IfNotPresent

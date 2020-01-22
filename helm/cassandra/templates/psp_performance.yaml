@@ -8,11 +8,12 @@ kind: Role
 metadata:
   name: cassandra-performance
 rules:
-- apiGroups: ['policy']
-  resources: ['podsecuritypolicies']
-  verbs:     ['use']
-  resourceNames:
-  - cassandra-performance
+  - apiGroups: ['policy']
+    resources: ['podsecuritypolicies']
+    verbs:     ['use']
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

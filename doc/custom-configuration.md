@@ -98,12 +98,12 @@ Utilising the labels used in Prometheus selector, add the following configuratio
 ...
 spec:
  ...
-  prometheusServiceMonitorLabels:
-    <prometheus selector labels>
-    ...
   prometheusSupport: true
 
 ```
+
+You need to as well specify labels on `prometheusService` as it is specified below so the integration 
+works correctly.
 
 And then create the Cassandra cluster. After starting, the Prometheus will pick up the Cassandra targets and will begin collecting metrics.
 
@@ -112,6 +112,7 @@ And then create the Cassandra cluster. After starting, the Prometheus will pick 
 You can attach custom labels to your objects by specifying a field in CDC spec like this:
 
 ```yaml
+spec:
   operatorLabels:
     nodesService:
       mynodesservicelabel: labelvalue1

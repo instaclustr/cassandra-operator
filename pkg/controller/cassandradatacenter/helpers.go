@@ -8,7 +8,6 @@ import (
 	"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -51,14 +50,15 @@ func AllPodsInRack(c client.Client, namespace string, rackLabels map[string]stri
 	return getPods(c, namespace, rackLabels)
 }
 
-func getPods(c client.Client, namespace string, l map[string]string) ([]corev1.Pod, error) {
+func getPods(c client.Client, namespace string, labels client.MatchingLabels) ([]corev1.Pod, error) {
 	podList := corev1.PodList{}
-	listOps := &client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(l),
+
+	listOps := []client.ListOption{
+		client.InNamespace(namespace),
+		labels,
 	}
 
-	if err := c.List(context.TODO(), listOps, &podList); err != nil {
+	if err := c.List(context.TODO(), &podList, listOps...); err != nil {
 		return nil, err
 	}
 

@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-dc-cassandra-user-config
+data:
+  cassandra_ssl: |
+    server_encryption_options:
+        internode_encryption: all
+        keystore: /tmp/user-secret/keystore.p12
+        keystore_password: cassandra
+        truststore: /tmp/user-secret/truststore.jks
+        truststore_password: cassandra
+        protocol: TLS
+        algorithm: SunX509
+        store_type: JKS
+        cipher_suites: [TLS_RSA_WITH_AES_256_CBC_SHA]
+        require_client_auth: true
+    client_encryption_options:
+        enabled: true
+        keystore: /tmp/user-secret/keystore.p12
+        keystore_password: cassandra
+        truststore: /tmp/user-secret/truststore.jks
+        truststore_password: cassandra
+        protocol: TLS
+        store_type: JKS
+        algorithm: SunX509
+        require_client_auth: true
+        cipher_suites: [TLS_RSA_WITH_AES_256_CBC_SHA]
+  cqlshrc: |
+    [connection]
+    port = 9042
+    factory = cqlshlib.ssl.ssl_transport_factory
+    ssl = true
+    [ssl]
+    certfile = /tmp/user-secret/ca-cert
+    validate = true
+    usercert = /tmp/user-secret/client.cer.pem
+    userkey = /tmp/user-secret/client.key.pem
+  install_cqlshrc: |
+    mkdir -p ~/.cassandra
+    cp /etc/cassandra/cqlshrc ~/.cassandra/cqlshrc
+    sed -i s/{HOSTNAME}/$(hostname)/g ~/.cassandra/cqlshrc

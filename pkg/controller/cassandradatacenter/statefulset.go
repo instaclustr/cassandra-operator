@@ -17,7 +17,6 @@ import (
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -44,7 +43,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 	statefulSet := &v1beta2.StatefulSet{ObjectMeta: StatefulSetMetadata(rctx.cdc, RackMetadata(rctx.cdc, rack))}
 	logger := rctx.logger.WithValues("StatefulSet.Name", statefulSet.Name)
 
-	result, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, statefulSet, func(obj runtime.Object) error {
+	result, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, statefulSet, func() error {
 
 		if err := controllerutil.SetControllerReference(rctx.cdc, statefulSet, rctx.scheme); err != nil {
 			return err
@@ -692,8 +691,17 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 }
 
 func getStatefulSets(rctx *reconciliationRequestContext) ([]v1.StatefulSet, error) {
+
 	sts := &v1.StatefulSetList{}
-	if err := rctx.client.List(context.TODO(), &client.ListOptions{Namespace: rctx.cdc.Namespace}, sts); err != nil {
+
+	listOptions := []client.ListOption{
+		client.InNamespace(rctx.cdc.Namespace),
+		client.MatchingLabels{
+			"cassandra-operator.instaclustr.com/datacenter": rctx.cdc.Name,
+		},
+	}
+
+	if err := rctx.client.List(context.TODO(), sts, listOptions...); err != nil {
 		if errors2.IsNotFound(err) {
 			return []v1.StatefulSet{}, nil
 		}

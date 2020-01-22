@@ -20,7 +20,7 @@ type CassandraBackupSpec struct {
 	Bandwidth             string `json:"bandwidth,omitempty"`
 	ConcurrentConnections int    `json:"concurrentConnections,omitempty"`
 	Table                 string `json:"table,omitempty"`
-	// The list of keyspaces to back up
+	// +listType
 	Keyspaces []string `json:"keyspaces,omitempty"`
 }
 
@@ -45,7 +45,8 @@ type CassandraBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec           CassandraBackupSpec       `json:"spec,omitempty"`
+	Spec CassandraBackupSpec `json:"spec,omitempty"`
+	// +listType
 	Status         []*CassandraBackupStatus  `json:"status,omitempty"`
 	GlobalStatus   operations.OperationState `json:"globalStatus,omitempty"`
 	GlobalProgress string                    `json:"globalProgress,omitempty"`

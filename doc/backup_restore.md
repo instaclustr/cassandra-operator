@@ -112,7 +112,7 @@ metadata:
     app: cassandra
 spec:
   nodes: 3
-  cassandraImage: "gcr.io/cassandra-operator/cassandra:3.11.5"
+  cassandraImage: "gcr.io/cassandra-operator/cassandra-3.11.5:latest"
   sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
   imagePullPolicy: IfNotPresent
   racks:
