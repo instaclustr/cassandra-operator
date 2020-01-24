@@ -28,6 +28,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackup(ref common.Refer
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackup is the Schema for the cassandrabackups API",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -54,6 +55,11 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackup(ref common.Refer
 						},
 					},
 					"status": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -96,6 +102,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackupSpec defines the desired state of CassandraBackup",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"cdc": {
 						SchemaProps: spec.SchemaProps{
@@ -143,9 +150,13 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 						},
 					},
 					"keyspaces": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
-							Description: "The list of keyspaces to back up",
-							Type:        []string{"array"},
+							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
@@ -160,7 +171,6 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 				Required: []string{"cdc", "storageLocation", "snapshotTag"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -169,6 +179,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupStatus(ref common
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraBackupStatus defines the observed state of CassandraBackup",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"node": {
 						SchemaProps: spec.SchemaProps{
@@ -195,7 +206,6 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupStatus(ref common
 				Required: []string{"node", "state", "progress"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -204,6 +214,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraCluster(ref common.Refe
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraCluster is the Schema for the cassandraclusters API",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -247,10 +258,9 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraClusterSpec(ref common.
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraClusterSpec defines the desired state of CassandraCluster",
-				Properties:  map[string]spec.Schema{},
+				Type:        []string{"object"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -259,10 +269,9 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraClusterStatus(ref commo
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraClusterStatus defines the observed state of CassandraCluster",
-				Properties:  map[string]spec.Schema{},
+				Type:        []string{"object"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -271,6 +280,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenter(ref common.R
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraDataCenter is the Schema for the cassandradatacenters API",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -314,6 +324,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraDataCenterSpec defines the desired state of CassandraDataCenter",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"nodes": {
 						SchemaProps: spec.SchemaProps{
@@ -334,6 +345,11 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 						},
 					},
 					"racks": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -352,6 +368,11 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 						},
 					},
 					"imagePullSecrets": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -417,6 +438,11 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 						},
 					},
 					"sidecarEnv": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -434,6 +460,11 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 						},
 					},
 					"cassandraEnv": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -475,9 +506,8 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterStatus(ref co
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CassandraDataCenterStatus defines the observed state of CassandraDataCenter",
-				Properties:  map[string]spec.Schema{},
+				Type:        []string{"object"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }

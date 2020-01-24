@@ -15,6 +15,6 @@ if [[ "${CIRCLE_BRANCH}" == master ]]; then
     docker tag cassandra-operator:latest "${REGISTRY}/cassandra-operator:latest"
     docker tag cassandra-sidecar:latest "${REGISTRY}/cassandra-sidecar:${TAG}"
     docker tag cassandra-sidecar:latest "${REGISTRY}/cassandra-sidecar:latest"
-    docker tag cassandra:latest "${REGISTRY}/cassandra:latest"
-    docker tag cassandra:3.11.5 "${REGISTRY}/cassandra:3.11.5"
+    docker tag cassandra-3.11.5:latest "${REGISTRY}/cassandra-3.11.5:${TAG}"
+    docker tag cassandra-3.11.5:latest "${REGISTRY}/cassandra-3.11.5:latest"
 fi

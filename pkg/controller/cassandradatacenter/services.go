@@ -11,7 +11,6 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -21,7 +20,7 @@ func createOrUpdatePrometheusService(rctx *reconciliationRequestContext) (*corev
 
 	logger := rctx.logger.WithValues("Service.Name", prometheusService.Name)
 
-	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, prometheusService, func(_ runtime.Object) error {
+	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, prometheusService, func() error {
 		prometheusService.Spec = corev1.ServiceSpec{
 			ClusterIP: "None",
 			Ports:     prometheusPort.asServicePorts(),
@@ -61,7 +60,7 @@ func createOrUpdateNodesService(rctx *reconciliationRequestContext) (*corev1.Ser
 	nodesService := &corev1.Service{ObjectMeta: DataCenterResourceMetadata(rctx.cdc, "nodes")}
 	nodesService.Labels = NodesServiceLabels(rctx.cdc)
 
-	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, nodesService, func(_ runtime.Object) error {
+	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, nodesService, func() error {
 		nodesService.Spec = corev1.ServiceSpec{
 			ClusterIP: "None",
 			Ports:     ports{cqlPort, jmxPort}.asServicePorts(),
@@ -100,7 +99,7 @@ func createOrUpdateSeedNodesService(rctx *reconciliationRequestContext) (*corev1
 	seedNodesService := &corev1.Service{ObjectMeta: DataCenterResourceMetadata(rctx.cdc, "seeds")}
 	seedNodesService.Labels = SeedNodesLabels(rctx.cdc)
 
-	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, seedNodesService, func(_ runtime.Object) error {
+	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, seedNodesService, func() error {
 		seedNodesService.Spec = corev1.ServiceSpec{
 			ClusterIP:                "None",
 			Ports:                    internodePort.asServicePorts(),

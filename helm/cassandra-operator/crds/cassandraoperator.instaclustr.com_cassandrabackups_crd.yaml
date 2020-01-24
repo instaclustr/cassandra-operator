@@ -18,9 +18,11 @@ spec:
     listKind: CassandraBackupList
     plural: cassandrabackups
     singular: cassandrabackup
-  scope: Namespaced
+  scope: ""
+  subresources: {}
   validation:
     openAPIV3Schema:
+      description: CassandraBackup is the Schema for the cassandrabackups API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -41,6 +43,7 @@ spec:
         metadata:
           type: object
         spec:
+          description: CassandraBackupSpec defines the desired state of CassandraBackup
           properties:
             bandwidth:
               type: string
@@ -49,12 +52,10 @@ spec:
                 the CDC
               type: string
             concurrentConnections:
-              format: int64
               type: integer
             duration:
               type: string
             keyspaces:
-              description: The list of keyspaces to back up
               items:
                 type: string
               type: array
@@ -69,11 +70,12 @@ spec:
               type: string
           required:
           - cdc
-          - storageLocation
           - snapshotTag
+          - storageLocation
           type: object
         status:
           items:
+            description: CassandraBackupStatus defines the observed state of CassandraBackup
             properties:
               node:
                 description: name of pod / node
@@ -86,10 +88,11 @@ spec:
                 type: string
             required:
             - node
-            - state
             - progress
+            - state
             type: object
           type: array
+      type: object
   version: v1alpha1
   versions:
   - name: v1alpha1

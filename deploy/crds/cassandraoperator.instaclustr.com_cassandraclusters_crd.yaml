@@ -9,11 +9,12 @@ spec:
     listKind: CassandraClusterList
     plural: cassandraclusters
     singular: cassandracluster
-  scope: Namespaced
+  scope: ""
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
+      description: CassandraCluster is the Schema for the cassandraclusters API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -28,9 +29,12 @@ spec:
         metadata:
           type: object
         spec:
+          description: CassandraClusterSpec defines the desired state of CassandraCluster
           type: object
         status:
+          description: CassandraClusterStatus defines the observed state of CassandraCluster
           type: object
+      type: object
   version: v1alpha1
   versions:
   - name: v1alpha1

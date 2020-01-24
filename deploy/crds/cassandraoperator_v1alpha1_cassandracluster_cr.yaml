@@ -1,7 +1,0 @@
-apiVersion: cassandraoperator.instaclustr.com/v1alpha1
-kind: CassandraCluster
-metadata:
-  name: example-cassandracluster
-spec:
-  # Add fields here
-  size: 3

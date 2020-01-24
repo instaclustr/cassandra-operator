@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+cp deploy/crds/*_crd.yaml helm/cassandra-operator/crds \
+  && cp deploy/{configmap.yaml,role.yaml,role_binding.yaml} helm/cassandra-operator/templates \
+  && cp deploy/cassandra/{psp.yaml,psp_performance.yaml} helm/cassandra/templates \
+
 cd $(dirname "$BASH_SOURCE")/../helm
 
 HELM_OPERATOR_CRDS="cassandra-operator/crds"
@@ -21,19 +25,19 @@ function isSameFile() {
   return 0
 }
 
-isSameFile "${HELM_OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandrabackup_crd.yaml" "${OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandrabackup_crd.yaml"
+isSameFile "${HELM_OPERATOR_CRDS}/cassandraoperator.instaclustr.com_cassandrabackups_crd.yaml" "${OPERATOR_CRDS}/cassandraoperator.instaclustr.com_cassandrabackups_crd.yaml"
 
 if [ "$?" == "1" ]; then
   return 1
 fi
 
-isSameFile "${HELM_OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandracluster_crd.yaml" "${OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandracluster_crd.yaml"
+isSameFile "${HELM_OPERATOR_CRDS}/cassandraoperator.instaclustr.com_cassandraclusters_crd.yaml" "${OPERATOR_CRDS}/cassandraoperator.instaclustr.com_cassandraclusters_crd.yaml"
 
 if [ "$?" == "1" ]; then
   return 1
 fi
 
-isSameFile "${HELM_OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandradatacenter_crd.yaml" "${OPERATOR_CRDS}/cassandraoperator_v1alpha1_cassandradatacenter_crd.yaml"
+isSameFile "${HELM_OPERATOR_CRDS}/cassandraoperator.instaclustr.com_cassandradatacenters_crd.yaml" "${OPERATOR_CRDS}/cassandraoperator.instaclustr.com_cassandradatacenters_crd.yaml"
 
 if [ "$?" == "1" ]; then
   return 1

@@ -1,5 +1,6 @@
 include ../base-openjre/Makefile
 
+CASSANDRA_IMAGE_VERSION := $(if $(CASSANDRA_IMAGE_VERSION),$(CASSANDRA_IMAGE_VERSION),"1.0.0")
 CASSANDRA_VERSION := $(if $(CASSANDRA_VERSION),$(CASSANDRA_VERSION),"3.11.5")
 CASSANDRA_EXPORTER_VERSION := $(if $(CASSANDRA_EXPORTER_VERSION),$(CASSANDRA_EXPORTER_VERSION),"0.9.9")
 CASSANDRA_K8S_ADDONS_VERSION := 1.1.0
@@ -27,8 +28,8 @@ cassandra: $(CASSANDRA_K8S_ADDONS_JAR)
 		--build-arg openjre_image="$(OPENJRE_IMAGE)" \
 		--build-arg apache_mirror_url="$(C_APACHE_MIRROR_URL)" \
 		--build-arg install_cassandra_exporter="$(INSTALL_CASSANDRA_EXPORTER)" \
-		-t $(DOCKER_REGISTRY)cassandra \
-		-t $(DOCKER_REGISTRY)cassandra:$(CASSANDRA_VERSION) \
+		-t $(DOCKER_REGISTRY)cassandra-$(CASSANDRA_VERSION) \
+		-t $(DOCKER_REGISTRY)cassandra-$(CASSANDRA_VERSION):$(CASSANDRA_IMAGE_VERSION) \
 		.
 
 .PHONY: clean

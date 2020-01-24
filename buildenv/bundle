@@ -5,9 +5,9 @@ set -eux pipefail
 manifest_dir="$(git rev-parse --show-toplevel)/deploy"
 
 crd_files="
-    crds/cassandraoperator_v1alpha1_cassandrabackup_crd.yaml
-    crds/cassandraoperator_v1alpha1_cassandracluster_crd.yaml
-    crds/cassandraoperator_v1alpha1_cassandradatacenter_crd.yaml
+    crds/cassandraoperator.instaclustr.com_cassandrabackups_crd.yaml
+    crds/cassandraoperator.instaclustr.com_cassandraclusters_crd.yaml
+    crds/cassandraoperator.instaclustr.com_cassandradatacenters_crd.yaml
 "
 crd_output="${manifest_dir}"/crds.yaml
 

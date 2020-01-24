@@ -8,7 +8,6 @@ import (
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,12 +32,14 @@ func (r *ReconcileCassandraDataCenter) getPVCs(
 ) ([]corev1.PersistentVolumeClaim, error) {
 	pvcList := &corev1.PersistentVolumeClaimList{}
 
-	if err := r.client.List(context.TODO(), &client.ListOptions{
-		Namespace: instance.Namespace,
-		LabelSelector: labels.SelectorFromSet(map[string]string{
+	listOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels{
 			"cassandra-operator.instaclustr.com/datacenter": instance.Name,
-		}),
-	}, pvcList); err != nil {
+		},
+	}
+
+	if err := r.client.List(context.TODO(), pvcList, listOpts...); err != nil {
 		return nil, err
 	} else {
 
@@ -62,12 +63,14 @@ func (r *ReconcileCassandraDataCenter) finalizePVCs(reqLogger logr.Logger, insta
 
 	pvcList := corev1.PersistentVolumeClaimList{}
 
-	if err := r.client.List(context.TODO(), &client.ListOptions{
-		Namespace: instance.Namespace,
-		LabelSelector: labels.SelectorFromSet(map[string]string{
+	listOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels{
 			"cassandra-operator.instaclustr.com/datacenter": instance.Name,
-		}),
-	}, &pvcList); err != nil {
+		},
+	}
+
+	if err := r.client.List(context.TODO(), &pvcList, listOpts...); err != nil {
 		return err
 	}
 

@@ -28,6 +28,6 @@ if [[ "${CIRCLE_BRANCH}" == master ]]; then
     docker push "${REGISTRY}/cassandra-operator:latest"
     docker push "${REGISTRY}/cassandra-sidecar:${TAG}"
     docker push "${REGISTRY}/cassandra-sidecar:latest"
-    docker push "${REGISTRY}/cassandra:latest"
-    docker push "${REGISTRY}/cassandra:3.11.5"
+    docker push "${REGISTRY}/cassandra-3.11.5:latest"
+    docker push "${REGISTRY}/cassandra-3.11.5:${TAG}"
 fi

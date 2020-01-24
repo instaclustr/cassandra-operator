@@ -1,7 +1,7 @@
 ### To build and install the operator locally using minikube (or other setup) follow the below steps:
 
  1) In the project root directory e.g. cd ~/git/cassandra-operator/
-    Start a minikube cluster with enough resources, cassandra is hungry!
+    Start a minikube cluster with enough resources, Cassandra is hungry!
     ```
     $ minikube start --cpus 4 --memory 4096 --kubernetes-version v1.14
     ```

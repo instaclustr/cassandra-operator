@@ -12,7 +12,6 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -28,7 +27,7 @@ func createOrUpdateOperatorConfigMap(rctx *reconciliationRequestContext, seedNod
 
 	volumeSource := &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name}}
 
-	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, configMap, func(_ runtime.Object) error {
+	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, configMap, func() error {
 		addFileFn := func(path string, data string) {
 			configMapVolumeAddTextFile(configMap, volumeSource, path, data)
 		}
@@ -74,7 +73,7 @@ func createOrUpdateCassandraRackConfig(rctx *reconciliationRequestContext, rack 
 
 	volumeSource := &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name}}
 
-	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, configMap, func(_ runtime.Object) error {
+	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, configMap, func() error {
 		addFileFn := func(path string, data string) {
 			configMapVolumeAddTextFile(configMap, volumeSource, path, data)
 		}

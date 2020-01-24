@@ -8,11 +8,13 @@ import (
 // CassandraDataCenterSpec defines the desired state of CassandraDataCenter
 // +k8s:openapi-gen=true
 type CassandraDataCenterSpec struct {
-	Nodes                     int32                         `json:"nodes,omitempty"`
-	CassandraImage            string                        `json:"cassandraImage,omitempty"`
-	SidecarImage              string                        `json:"sidecarImage,omitempty"`
-	Racks                     []Rack                        `json:"racks,omitempty"`
-	ImagePullPolicy           v1.PullPolicy                 `json:"imagePullPolicy,omitempty"`
+	Nodes          int32  `json:"nodes,omitempty"`
+	CassandraImage string `json:"cassandraImage,omitempty"`
+	SidecarImage   string `json:"sidecarImage,omitempty"`
+	// +listType
+	Racks           []Rack        `json:"racks,omitempty"`
+	ImagePullPolicy v1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// +listType
 	ImagePullSecrets          []v1.LocalObjectReference     `json:"imagePullSecrets,omitempty"`
 	UserSecretVolumeSource    *v1.SecretVolumeSource        `json:"userSecretVolumeSource,omitempty"`
 	UserConfigMapVolumeSource *v1.ConfigMapVolumeSource     `json:"userConfigMapVolumeSource,omitempty"`
@@ -24,12 +26,14 @@ type CassandraDataCenterSpec struct {
 	OptimizeKernelParams      bool                          `json:"optimizeKernelParams,omitempty"`
 	PrometheusSupport         bool                          `json:"prometheusSupport,omitempty"`
 	OperatorLabels            *OperatorLabels               `json:"operatorLabels,omitempty"`
-	SidecarEnv                []v1.EnvVar                   `json:"sidecarEnv,omitempty"`
-	CassandraAuth             *CassandraAuth                `json:"cassandraAuth,omitempty"`
-	CassandraEnv              []v1.EnvVar                   `json:"cassandraEnv,omitempty"`
-	ServiceAccountName        string                        `json:"serviceAccountName,omitempty"`
-	FSGroup                   int64                         `json:"fsGroup,omitempty"`
-	Backup                    Backup                        `json:"backup,omitempty"`
+	// +listType
+	SidecarEnv    []v1.EnvVar    `json:"sidecarEnv,omitempty"`
+	CassandraAuth *CassandraAuth `json:"cassandraAuth,omitempty"`
+	// +listType
+	CassandraEnv       []v1.EnvVar `json:"cassandraEnv,omitempty"`
+	ServiceAccountName string      `json:"serviceAccountName,omitempty"`
+	FSGroup            int64       `json:"fsGroup,omitempty"`
+	Backup             Backup      `json:"backup,omitempty"`
 }
 
 // CassandraDataCenterStatus defines the observed state of CassandraDataCenter
