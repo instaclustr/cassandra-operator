@@ -102,7 +102,7 @@ func createOrUpdateSeedNodesService(rctx *reconciliationRequestContext) (*corev1
 	opresult, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, seedNodesService, func() error {
 		seedNodesService.Spec = corev1.ServiceSpec{
 			ClusterIP:                "None",
-			Ports:                    internodePort.asServicePorts(),
+			Ports:                    ports{internodePort}.asServicePorts(),
 			Selector:                 DataCenterLabels(rctx.cdc),
 			PublishNotReadyAddresses: true,
 		}

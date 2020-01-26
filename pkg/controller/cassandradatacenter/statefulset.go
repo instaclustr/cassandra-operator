@@ -132,7 +132,7 @@ func newStatefulSetSpec(
 	podRackLabels := RackLabels(cdc, rack)
 	podLabels := PodTemplateSpecLabels(cdc)
 	statefulSetSpec := &v1beta2.StatefulSetSpec{
-		ServiceName: "cassandra", // TODO: correct service name? this service should already exist (apparently)
+		ServiceName: "cassandra-" + cdc.Name + "-nodes",
 		Replicas:    &rack.Replicas,
 		Selector:    &metav1.LabelSelector{MatchLabels: podRackLabels},
 		Template: corev1.PodTemplateSpec{
