@@ -70,7 +70,7 @@ $ kubectl create configmap concurrent-data --from-file=100-concurrent.yaml
 Modify the CassandraDataCenter CRD to reference the newly created ConfigMap:
 
 ```yaml
-apiVersion: stable.instaclustr.com/v1
+apiVersion: apiVersion: cassandraoperator.instaclustr.com/v1alpha1
 kind: CassandraDataCenter
 metadata:
   name: example-cdc
