@@ -13,7 +13,6 @@ import (
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
 	v1 "k8s.io/api/apps/v1"
-	"k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -59,7 +58,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to secondary resource Pods and requeue the owner CassandraDataCenter
-	for _, t := range []runtime.Object{&corev1.Service{}, &v1beta2.StatefulSet{}} {
+	for _, t := range []runtime.Object{&corev1.Service{}, &v1.StatefulSet{}} {
 		requestForOwnerHandler := &handler.EnqueueRequestForOwner{
 			IsController: true,
 			OwnerType:    &cassandraoperatorv1alpha1.CassandraDataCenter{},

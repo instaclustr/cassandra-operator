@@ -12,7 +12,6 @@ import (
 	"github.com/instaclustr/cassandra-operator/pkg/common/nodestate"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
 	v1 "k8s.io/api/apps/v1"
-	"k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,7 +30,7 @@ const (
 	BackupSecretVolumeMountPath   = "/tmp/backup-secret"
 )
 
-func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume *corev1.Volume) (*v1beta2.StatefulSet, error) {
+func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume *corev1.Volume) (*v1.StatefulSet, error) {
 
 	// Find a rack to reconcile
 	rack, err := findRackToReconcile(rctx)
@@ -40,7 +39,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 	}
 
 	// Init rack-relevant info
-	statefulSet := &v1beta2.StatefulSet{ObjectMeta: StatefulSetMetadata(rctx.cdc, RackMetadata(rctx.cdc, rack))}
+	statefulSet := &v1.StatefulSet{ObjectMeta: StatefulSetMetadata(rctx.cdc, RackMetadata(rctx.cdc, rack))}
 	logger := rctx.logger.WithValues("StatefulSet.Name", statefulSet.Name)
 
 	result, err := controllerutil.CreateOrUpdate(context.TODO(), rctx.client, statefulSet, func() error {
@@ -128,10 +127,10 @@ func newStatefulSetSpec(
 	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
 	podSpec *corev1.PodSpec,
 	dataVolumeClaim *corev1.PersistentVolumeClaim,
-	rack *cluster.Rack) *v1beta2.StatefulSetSpec {
+	rack *cluster.Rack) *v1.StatefulSetSpec {
 	podRackLabels := RackLabels(cdc, rack)
 	podLabels := PodTemplateSpecLabels(cdc)
-	statefulSetSpec := &v1beta2.StatefulSetSpec{
+	statefulSetSpec := &v1.StatefulSetSpec{
 		ServiceName: "cassandra-" + cdc.Name + "-nodes",
 		Replicas:    &rack.Replicas,
 		Selector:    &metav1.LabelSelector{MatchLabels: podRackLabels},
@@ -139,7 +138,7 @@ func newStatefulSetSpec(
 			ObjectMeta: metav1.ObjectMeta{Labels: mergeLabelMaps(podLabels, podRackLabels)},
 			Spec:       *podSpec,
 		},
-		PodManagementPolicy: v1beta2.OrderedReadyPodManagement,
+		PodManagementPolicy: v1.OrderedReadyPodManagement,
 	}
 
 	if dataVolumeClaim != nil {
@@ -440,8 +439,8 @@ func newPersistenceVolumeClaim(persistentVolumeClaimSpec *corev1.PersistentVolum
 
 func scaleStatefulSet(
 	rctx *reconciliationRequestContext,
-	existingStatefulSet *v1beta2.StatefulSet,
-	newStatefulSetSpec *v1beta2.StatefulSetSpec,
+	existingStatefulSet *v1.StatefulSet,
+	newStatefulSetSpec *v1.StatefulSetSpec,
 	rack *cluster.Rack) error {
 
 	var (
