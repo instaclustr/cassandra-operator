@@ -2,11 +2,7 @@ package com.instaclustr.operations;
 
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.anyVararg;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import javax.validation.Validation;
@@ -27,15 +23,18 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.instaclustr.cassandra.service.CassandraWaiter;
+import com.instaclustr.cassandra.service.CqlSessionService;
 import com.instaclustr.cassandra.sidecar.Sidecar;
 import com.instaclustr.operations.SidecarClient.OperationResult;
 import com.instaclustr.sidecar.http.JerseyHttpServerModule;
 import com.instaclustr.sidecar.http.JerseyHttpServerService;
 import com.instaclustr.threading.ExecutorsModule;
-import jmx.org.apache.cassandra.service.StorageServiceMBean;
+import jmx.org.apache.cassandra.service.CassandraJMXService;
 import org.apache.commons.lang3.tuple.Pair;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 
@@ -66,35 +65,25 @@ public abstract class AbstractSidecarTest {
                 @Override
                 protected void configure() {
 
-                    StorageServiceMBean mock = Mockito.mock(StorageServiceMBean.class);
-
-                    doNothing().when(mock).rebuild(any(), any(), any(), any());
-
-                    try {
-                        when(mock.upgradeSSTables(anyString(), anyBoolean(), anyInt(), anyVararg())).thenReturn(0);
-                    } catch (Exception ex) {
-                        // intentionally empty
-                    }
+                    final CassandraJMXService mock = mock(CassandraJMXService.class);
+                    final CqlSessionService cqlSessionServiceMock = mock(CqlSessionService.class);
+                    final CassandraWaiter cassandraWaiterMock = mock(CassandraWaiter.class);
 
                     try {
-                        when(mock.scrub(anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(), anyString(), anyVararg())).thenReturn(0);
-                    } catch (final Exception ex) {
-                        throw new RuntimeException(ex);
+
+                        when(mock.doWithStorageServiceMBean(any())).then(new Answer<Object>() {
+                            @Override
+                            public Object answer(final InvocationOnMock invocation) {
+                                return 0;
+                            }
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
 
-                    try {
-                        doNothing().when(mock).decommission();
-                    } catch (InterruptedException e) {
-                        // intentionally empty
-                    }
-
-                    try {
-                        when(mock.forceKeyspaceCleanup(anyInt(), anyString(), anyVararg())).thenReturn(0);
-                    } catch (Exception ex) {
-                        // intentionally empty
-                    }
-
-                    bind(StorageServiceMBean.class).toInstance(Mockito.mock(StorageServiceMBean.class));
+                    bind(CassandraJMXService.class).toInstance(mock);
+                    bind(CqlSessionService.class).toInstance(cqlSessionServiceMock);
+                    bind(CassandraWaiter.class).toInstance(cassandraWaiterMock);
                 }
             });
             add(new JerseyHttpServerModule());

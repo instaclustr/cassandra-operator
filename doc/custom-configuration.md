@@ -83,7 +83,7 @@ spec:
     name: concurrent-data
     # ConfigMap keys -> file paths (relative to /etc/cassandra)
     items:
-      - key: 100-concurrent-yaml
+      - key: 100-concurrent.yaml
         path: cassandra.yaml.d/100-concurrent.yaml
 ```
 
@@ -125,4 +125,25 @@ spec:
       myanotherpod: label2
     prometheusService:
       customPrometheusLabel: value
+```
+
+### Custom annotations for created objects
+
+Similarly as it is done for custom labels, you can annotate objects by specifying 
+a field in CDC spec like this:
+
+```yaml
+spec:
+  operatorAnnotations:
+    nodesService:
+      mynodesserviceannotation: annotationvalue1
+    seedNodesService:
+      myseedannotation: somevalue
+    statefulSet:
+      mystatefulsetannotation: annotationvalue2
+    podTemplate:
+      mypodannotation: annotation1
+      myanotherpod: annotation2
+    prometheusService:
+      customPrometheusAnnotation: value
 ```

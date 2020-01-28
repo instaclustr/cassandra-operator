@@ -86,13 +86,15 @@ func (c *CleanupRequest) Init() {
 
 type BackupRequest struct {
 	Operation
-	StorageLocation       string   `json:"storageLocation,omitempty"`
+	StorageLocation       string   `json:"storageLocation"`
 	SnapshotTag           string   `json:"snapshotTag,omitempty"`
 	Duration              string   `json:"duration,omitempty"`
 	Bandwidth             string   `json:"bandwidth,omitempty"`
 	ConcurrentConnections int      `json:"concurrentConnections,omitempty"`
 	Table                 string   `json:"table,omitempty"`
 	Keyspaces             []string `json:"keyspaces,omitempty"`
+	Secret                string   `json:"k8sSecretName"`
+	KubernetesNamespace   string   `json:"k8sNamespace"`
 }
 
 func (b *BackupRequest) Init() {

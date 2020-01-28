@@ -8,29 +8,24 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
 
-import jmx.org.apache.cassandra.service.StorageServiceMBean;
+import com.instaclustr.cassandra.sidecar.service.CassandraStatusService;
+import com.instaclustr.cassandra.sidecar.service.CassandraStatusService.Status;
 
 @Path("/status")
 @Produces(APPLICATION_JSON)
 public class StatusResource {
 
-    private final StorageServiceMBean storageServiceMBean;
+    private final CassandraStatusService statusService;
 
     @Inject
-    public StatusResource(final StorageServiceMBean storageServiceMBean) {
-        this.storageServiceMBean = storageServiceMBean;
+    public StatusResource(final CassandraStatusService statusService) {
+        this.statusService = statusService;
     }
 
     @GET
     public Response getStatus() {
 
-        final Status status = new Status();
-
-        try {
-            status.setNodeState(Status.NodeState.valueOf(storageServiceMBean.getOperationMode()));
-        } catch (Exception ex) {
-            status.setException(ex);
-        }
+        final Status status = statusService.getStatus();
 
         if (status.getException() != null) {
             return Response.serverError().entity(status).build();
@@ -39,30 +34,4 @@ public class StatusResource {
         return Response.ok(status).build();
     }
 
-    public static class Status {
-
-        public enum NodeState {
-            STARTING, NORMAL, JOINING, LEAVING, DECOMMISSIONED, MOVING, DRAINING, DRAINED
-        }
-
-        private NodeState nodeState;
-
-        private Exception exception;
-
-        public NodeState getNodeState() {
-            return nodeState;
-        }
-
-        public void setNodeState(NodeState nodeState) {
-            this.nodeState = nodeState;
-        }
-
-        public Exception getException() {
-            return exception;
-        }
-
-        public void setException(Exception exception) {
-            this.exception = exception;
-        }
-    }
 }

@@ -2,6 +2,7 @@ package cassandrabackup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -17,7 +18,7 @@ import (
 	"github.com/instaclustr/cassandra-operator/pkg/controller/cassandradatacenter"
 	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -105,9 +106,9 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 
 	// Fetch the CassandraBackup backup
 	instance := &cassandraoperatorv1alpha1.CassandraBackup{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if errors.IsNotFound(err) {
+
+	if err := r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
+		if k8sErrors.IsNotFound(err) {
 			// if the resource is not found, that means all of
 			// the finalizers have been removed, and the resource has been deleted,
 			// so there is nothing left to do.
@@ -125,15 +126,47 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		instance.Status = []*cassandraoperatorv1alpha1.CassandraBackupStatus{}
 	}
 
+	if exists, err := backupOfSameSnapshotExists(r.client, instance); err != nil {
+		return reconcile.Result{}, err
+	} else if exists {
+		// we can not backup with same snapshot, cdc and storageLocation
+		r.recorder.Event(
+			instance,
+			corev1.EventTypeWarning,
+			"BackupSkipped",
+			fmt.Sprintf("cdc %s was not backed up to %s under snapshot %s because such backup already exists",
+				instance.Spec.CDC, instance.Spec.StorageLocation, instance.Spec.SnapshotTag))
+		return reconcile.Result{}, nil
+	}
+
 	if instance.JustCreate {
 		return reconcile.Result{}, nil
+	}
+
+	// fetch secret and make sure it exists
+
+	secret := &corev1.Secret{}
+	if err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Secret, Namespace: instance.Namespace}, secret); err != nil {
+		if k8sErrors.IsNotFound(err) {
+			// if the resource is not found, that means all of
+			// the finalizers have been removed, and the resource has been deleted,
+			// so there is nothing left to do.
+			reqLogger.Info(fmt.Sprintf("Secret used for backups %s was not found", instance.Secret))
+			return reconcile.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		return reconcile.Result{}, err
+	}
+
+	// based on storage location, be sure that respective secret entry is there so we error out asap
+	if err := validateBackupSecret(secret, instance, reqLogger); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// Get CDC.
 	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
 	if err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CDC, Namespace: instance.Namespace}, cdc); err != nil {
-		if errors.IsNotFound(err) {
-
+		if k8sErrors.IsNotFound(err) {
 			r.recorder.Event(
 				instance,
 				corev1.EventTypeWarning,
@@ -166,7 +199,80 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 
 	wg.Wait()
 
+	r.recorder.Event(
+		instance,
+		corev1.EventTypeNormal,
+		"BackupFinished",
+		fmt.Sprintf("cdc %s was backed up to %s under snapshot %s", instance.Spec.CDC, instance.Spec.StorageLocation, instance.Spec.SnapshotTag))
+
 	return reconcile.Result{}, nil
+}
+
+func backupOfSameSnapshotExists(c client.Client, instance *cassandraoperatorv1alpha1.CassandraBackup) (bool, error) {
+
+	backupsList := &cassandraoperatorv1alpha1.CassandraBackupList{}
+
+	if err := c.List(context.TODO(), backupsList); err != nil {
+		return false, err
+	}
+
+	for _, existingBackup := range backupsList.Items {
+		if existingBackup.Status != nil {
+			if existingBackup.Spec.SnapshotTag == instance.Spec.SnapshotTag {
+				if existingBackup.Spec.StorageLocation == instance.Spec.StorageLocation {
+					if existingBackup.Spec.CDC == instance.Spec.CDC {
+						return true, nil
+					}
+				}
+			}
+		}
+	}
+
+	return false, nil
+}
+
+func validateBackupSecret(secret *corev1.Secret, backup *cassandraoperatorv1alpha1.CassandraBackup, logger logr.Logger) error {
+	if backup.IsGcpBackup() {
+		if len(secret.Data["gcp"]) == 0 {
+			return errors.New(fmt.Sprintf("gcp key for secret %s is not set", secret.Name))
+		}
+	}
+
+	if backup.IsAzureBackup() {
+		if len(secret.Data["azurestorageaccount"]) == 0 {
+			return errors.New(fmt.Sprintf("azurestorageaccount key for secret %s is not set", secret.Name))
+		}
+
+		if len(secret.Data["azurestoragekey"]) == 0 {
+			return errors.New(fmt.Sprintf("azurestoragekey key for secret %s is not set", secret.Name))
+		}
+	}
+
+	if backup.IsS3Backup() {
+		// we are just logging here because node can have its credentials injected from AWS itself
+		if len(secret.Data["awssecretaccesskey"]) == 0 {
+			logger.Info(fmt.Sprintf("awssecretaccesskey key for secret %s is not set, backup "+
+				"will failover to authentication mechanims of node itself against AWS.", secret.Name))
+		}
+
+		if len(secret.Data["awsaccesskeyid"]) == 0 {
+			logger.Info(fmt.Sprintf("awsaccesskeyid key for secret %s is not set, backup "+
+				"will failover to authentication mechanims of node itself against AWS.", secret.Name))
+		}
+
+		if len(secret.Data["awssecretaccesskey"]) != 0 && len(secret.Data["awsaccesskeyid"]) != 0 {
+			if len(secret.Data["awsregion"]) == 0 {
+				return errors.New(fmt.Sprintf("there is not awsregion property "+
+					"while you have set both awssecretaccesskey and awsaccesskeyid in %s secret for backups", secret.Name))
+			}
+		}
+
+		if len(secret.Data["awsendpoint"]) != 0 && len(secret.Data["awsregion"]) == 0 {
+			return errors.New(fmt.Sprintf("awsendpoint is specified but awsregion is not set in %s secret for backups", secret.Name))
+		}
+	}
+
+	return nil
 }
 
 type syncedInstance struct {
@@ -193,6 +299,8 @@ func backup(
 		ConcurrentConnections: instance.backup.Spec.ConcurrentConnections,
 		Table:                 instance.backup.Spec.Table,
 		Keyspaces:             instance.backup.Spec.Keyspaces,
+		Secret:                instance.backup.Secret,
+		KubernetesNamespace:   instance.backup.Namespace,
 	}
 
 	if operationID, err := sidecarClient.StartOperation(backupRequest); err != nil {

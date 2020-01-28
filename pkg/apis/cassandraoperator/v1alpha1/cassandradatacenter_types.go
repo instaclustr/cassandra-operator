@@ -18,6 +18,7 @@ type CassandraDataCenterSpec struct {
 	ImagePullSecrets          []v1.LocalObjectReference     `json:"imagePullSecrets,omitempty"`
 	UserSecretVolumeSource    *v1.SecretVolumeSource        `json:"userSecretVolumeSource,omitempty"`
 	UserConfigMapVolumeSource *v1.ConfigMapVolumeSource     `json:"userConfigMapVolumeSource,omitempty"`
+	SidecarSecretVolumeSource *v1.SecretVolumeSource        `json:"sidecarSecretVolumeSource,omitempty"`
 	Resources                 *v1.ResourceRequirements      `json:"resources,omitempty"`
 	SidecarResources          *v1.ResourceRequirements      `json:"sidecarResources,omitempty"`
 	DummyVolume               *v1.EmptyDirVolumeSource      `json:"dummyVolume,omitempty"`
@@ -26,6 +27,7 @@ type CassandraDataCenterSpec struct {
 	OptimizeKernelParams      bool                          `json:"optimizeKernelParams,omitempty"`
 	PrometheusSupport         bool                          `json:"prometheusSupport,omitempty"`
 	OperatorLabels            *OperatorLabels               `json:"operatorLabels,omitempty"`
+	OperatorAnnotations       *OperatorAnnotations          `json:"operatorAnnotations,omitempty"`
 	// +listType
 	SidecarEnv    []v1.EnvVar    `json:"sidecarEnv,omitempty"`
 	CassandraAuth *CassandraAuth `json:"cassandraAuth,omitempty"`
@@ -33,7 +35,7 @@ type CassandraDataCenterSpec struct {
 	CassandraEnv       []v1.EnvVar `json:"cassandraEnv,omitempty"`
 	ServiceAccountName string      `json:"serviceAccountName,omitempty"`
 	FSGroup            int64       `json:"fsGroup,omitempty"`
-	Backup             Backup      `json:"backup,omitempty"`
+	Restore            *Restore    `json:"restore,omitempty"`
 }
 
 // CassandraDataCenterStatus defines the observed state of CassandraDataCenter
@@ -72,6 +74,14 @@ type Rack struct {
 	Labels map[string]string `json:"labels"`
 }
 
+type OperatorAnnotations struct {
+	PrometheusService map[string]string `json:"prometheusService,omitempty"`
+	NodesService      map[string]string `json:"nodesService,omitempty"`
+	SeedNodesService  map[string]string `json:"seedNodesService,omitempty"`
+	StatefulSet       map[string]string `json:"statefulSet,omitempty"`
+	PodTemplate       map[string]string `json:"podTemplate,omitempty"`
+}
+
 type OperatorLabels struct {
 	PrometheusService map[string]string `json:"prometheusService,omitempty"`
 	NodesService      map[string]string `json:"nodesService,omitempty"`
@@ -80,10 +90,9 @@ type OperatorLabels struct {
 	PodTemplate       map[string]string `json:"podTemplate,omitempty"`
 }
 
-type Backup struct {
-	BackupName               string                 `json:"backupName,omitempty"`
-	Restore                  bool                   `json:"restore,omitempty"`
-	BackupSecretVolumeSource *v1.SecretVolumeSource `json:"backupSecretVolumeSource,omitempty"`
+type Restore struct {
+	BackupName string `json:"backupName"`
+	Secret     string `json:"secret"`
 }
 
 type CassandraAuth struct {

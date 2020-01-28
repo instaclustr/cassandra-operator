@@ -8,16 +8,19 @@
 
     <logger name="org.hibernate.validator.internal" level="WARN"/>
     <logger name="org.glassfish.jersey.internal" level="ERROR"/>
+    <logger name="com.datastax" level="WARN"/>
+
+    <logger name="org.apache.http.wire" level="WARN"/>
 
     <!-- disable / enable as you wish -->
 
-    <!--logger name="com.instaclustr.cassandra.backup.impl.backup.Backuper" level="INFO"/-->
-    <!--logger name="com.instaclustr.cassandra.backup.impl.restore.Restorer" level="INFO"/-->
-    <!--logger name="com.instaclustr.cassandra.backup" level="INFO"/-->
-    <!--logger name="com.instaclustr.cassandra.backup.aws" level="INFO"/-->
-    <!--logger name="com.instaclustr.cassandra.backup.azure" level="INFO"/-->
-    <!--logger name="com.instaclustr.cassandra.backup.gcp" level="INFO"/-->
-    <!--logger name="com.instaclustr.cassandra.backup.local" level="INFO"/-->
+    <logger name="com.instaclustr.cassandra.backup.impl.backup.Backuper" level="INFO"/>
+    <logger name="com.instaclustr.cassandra.backup.impl.restore.Restorer" level="INFO"/>
+    <logger name="com.instaclustr.cassandra.backup" level="INFO"/>
+    <logger name="com.instaclustr.cassandra.backup.aws" level="INFO"/>
+    <logger name="com.instaclustr.cassandra.backup.azure" level="INFO"/>
+    <logger name="com.instaclustr.cassandra.backup.gcp" level="INFO"/>
+    <logger name="com.instaclustr.cassandra.backup.local" level="INFO"/>
 
     <root level="info">
         <appender-ref ref="STDOUT"/>

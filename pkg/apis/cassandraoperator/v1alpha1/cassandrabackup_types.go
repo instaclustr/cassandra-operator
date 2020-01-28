@@ -39,15 +39,16 @@ type CassandraBackupStatus struct {
 
 // CassandraBackup is the Schema for the cassandrabackups API
 // +k8s:openapi-gen=true
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".globalStatus",description="Backup operation status"
-// +kubebuilder:printcolumn:name="Progress",type="string",JSONPath=".globalProgress",description="Backup operation progress"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".globalStatus",description="Restore operation status"
+// +kubebuilder:printcolumn:name="Progress",type="string",JSONPath=".globalProgress",description="Restore operation progress"
 type CassandraBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec CassandraBackupSpec `json:"spec,omitempty"`
+	Spec CassandraBackupSpec `json:"spec"`
 	// +listType
 	Status         []*CassandraBackupStatus  `json:"status,omitempty"`
+	Secret         string                    `json:"secret,omitempty"`
 	GlobalStatus   operations.OperationState `json:"globalStatus,omitempty"`
 	GlobalProgress string                    `json:"globalProgress,omitempty"`
 	JustCreate     bool                      `json:"justCreate,omitempty"`
@@ -67,16 +68,16 @@ func init() {
 }
 
 // IsS3Backup returns true if the backup type is Amazon S3, otherwise returns false
-func (backupSpec *CassandraBackupSpec) IsS3Backup() bool {
-	return strings.HasPrefix(backupSpec.StorageLocation, "s3://")
+func (backupSpec *CassandraBackup) IsS3Backup() bool {
+	return strings.HasPrefix(backupSpec.Spec.StorageLocation, "s3://")
 }
 
 // IsAzureBackup returns true if the backup type is Azure, otherwise returns false
-func (backupSpec *CassandraBackupSpec) IsAzureBackup() bool {
-	return strings.HasPrefix(backupSpec.StorageLocation, "azure://")
+func (backupSpec *CassandraBackup) IsAzureBackup() bool {
+	return strings.HasPrefix(backupSpec.Spec.StorageLocation, "azure://")
 }
 
 // IsGcpBackup returns true if the backup type is GCP, otherwise returns false
-func (backupSpec *CassandraBackupSpec) IsGcpBackup() bool {
-	return strings.HasPrefix(backupSpec.StorageLocation, "gcp://")
+func (backupSpec *CassandraBackup) IsGcpBackup() bool {
+	return strings.HasPrefix(backupSpec.Spec.StorageLocation, "gcp://")
 }

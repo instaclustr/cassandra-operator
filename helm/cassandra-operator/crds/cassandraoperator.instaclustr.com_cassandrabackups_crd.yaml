@@ -5,11 +5,11 @@ metadata:
 spec:
   additionalPrinterColumns:
   - JSONPath: .globalStatus
-    description: Backup operation status
+    description: Restore operation status
     name: Status
     type: string
   - JSONPath: .globalProgress
-    description: Backup operation progress
+    description: Restore operation progress
     name: Progress
     type: string
   group: cassandraoperator.instaclustr.com
@@ -42,6 +42,8 @@ spec:
           type: string
         metadata:
           type: object
+        secret:
+          type: string
         spec:
           description: CassandraBackupSpec defines the desired state of CassandraBackup
           properties:
@@ -92,6 +94,8 @@ spec:
             - state
             type: object
           type: array
+      required:
+      - spec
       type: object
   version: v1alpha1
   versions:

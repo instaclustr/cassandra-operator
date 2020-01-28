@@ -11,19 +11,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.instaclustr.operations.FunctionWithEx;
 import com.instaclustr.operations.Operation;
+import jmx.org.apache.cassandra.service.CassandraJMXService;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 
 public class RebuildOperation extends Operation<RebuildOperationRequest> {
 
-    private final StorageServiceMBean storageServiceMBean;
+    private final CassandraJMXService cassandraJMXService;
 
     @Inject
-    public RebuildOperation(final StorageServiceMBean storageServiceMBean,
+    public RebuildOperation(final CassandraJMXService cassandraJMXService,
                             @Assisted final RebuildOperationRequest request) {
         super(request);
-
-        this.storageServiceMBean = storageServiceMBean;
+        this.cassandraJMXService = cassandraJMXService;
     }
 
     // this constructor is not meant to be instantiated manually
@@ -40,21 +41,28 @@ public class RebuildOperation extends Operation<RebuildOperationRequest> {
                              @JsonProperty("specificTokens") final Set<RebuildOperationRequest.TokenRange> specificTokens,
                              @JsonProperty("specificSources") final Set<String> specificSources) {
         super(id, creationTime, state, failureCause, progress, startTime, new RebuildOperationRequest(sourceDC, keyspace, specificTokens, specificSources));
-        storageServiceMBean = null;
+        cassandraJMXService = null;
     }
 
     @Override
     protected void run0() throws Exception {
+        assert cassandraJMXService != null;
 
         final String specificTokens = prepareSpecificTokens(request.specificTokens);
-
         final String specificSources = prepareSpecificSources(request.specificSources);
 
-        assert storageServiceMBean != null;
-        storageServiceMBean.rebuild(request.sourceDC,
-                                    request.keyspace,
-                                    specificTokens,
-                                    specificSources);
+        cassandraJMXService.doWithStorageServiceMBean(new FunctionWithEx<StorageServiceMBean, Void>() {
+            @Override
+            public Void apply(final StorageServiceMBean object) {
+
+                object.rebuild(request.sourceDC,
+                               request.keyspace,
+                               specificTokens,
+                               specificSources);
+
+                return null;
+            }
+        });
     }
 
     private String prepareSpecificTokens(Set<RebuildOperationRequest.TokenRange> specificTokens) {

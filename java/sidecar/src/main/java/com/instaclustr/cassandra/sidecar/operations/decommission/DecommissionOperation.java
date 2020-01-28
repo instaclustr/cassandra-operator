@@ -7,18 +7,20 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.assistedinject.Assisted;
+import com.instaclustr.operations.FunctionWithEx;
 import com.instaclustr.operations.Operation;
+import jmx.org.apache.cassandra.service.CassandraJMXService;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 
 public class DecommissionOperation extends Operation<DecommissionOperationRequest> {
-    private final StorageServiceMBean storageServiceMBean;
+    private final CassandraJMXService cassandraJMXService;
 
     @Inject
-    public DecommissionOperation(final StorageServiceMBean storageServiceMBean,
+    public DecommissionOperation(final CassandraJMXService cassandraJMXService,
                                  @Assisted final DecommissionOperationRequest request) {
         super(request);
 
-        this.storageServiceMBean = storageServiceMBean;
+        this.cassandraJMXService = cassandraJMXService;
     }
 
     // this constructor is not meant to be instantiated manually
@@ -31,11 +33,18 @@ public class DecommissionOperation extends Operation<DecommissionOperationReques
                                   @JsonProperty("progress") final float progress,
                                   @JsonProperty("startTime") final Instant startTime) {
         super(id, creationTime, state, failureCause, progress, startTime, new DecommissionOperationRequest());
-        storageServiceMBean = null;
+        cassandraJMXService = null;
     }
 
     @Override
     protected void run0() throws Exception {
-        storageServiceMBean.decommission();
+        assert cassandraJMXService != null;
+        cassandraJMXService.doWithStorageServiceMBean(new FunctionWithEx<StorageServiceMBean, Void>() {
+            @Override
+            public Void apply(final StorageServiceMBean object) throws Exception {
+                object.decommission();
+                return null;
+            }
+        });
     }
 }

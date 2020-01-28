@@ -1,0 +1,50 @@
+# A config map with the content of this is supposed to be created in case
+# Cassandra is on SSL and you want to use Sidecar operations which are using CQL in the background.
+# Once such operation is executed, CqlSession will be dynamically initialized by fetching this configMap from Sidecar.
+#
+# Create this configMap like the following:
+#
+# kubectl create configmap cassandra-operator-sidecar-config-test-dc-cassandra --from-file=cassandra-config=sidecar-driver-settings
+#
+# name of a secret has to follow the convention: "cassandra-operator-sidecar-config-{name of Cassandra datacenter}"
+#
+# --from-file key has to be "cassandra-config"
+# --from-file value of "cassandra-config" key points to this file
+#
+# files in /tmp/sidecar-secret are automatically mounted into Sidecar container when you specify the following in spec:
+#
+#   sidecarSecretVolumeSource:
+#      secretName: test-cassandra-dc-ssl-sidecar
+#
+# There has to be a secret called 'test-cassandra-dc-ssl-sidecar' beforehand. The content of such secret is show below:
+#
+# $ kubectl describe secret test-cassandra-dc-ssl-sidecar
+#  Name:         test-cassandra-dc-ssl-sidecar
+#  Namespace:    default
+#  Labels:       <none>
+#  Annotations:  <none>
+#
+#  Type:  Opaque
+#
+#  Data
+#  ====
+#  keystore.p12:    5127 bytes
+#  truststore.jks:  1056 bytes
+#  ca-cert:         1399 bytes
+#  client.cer.pem:  5290 bytes
+#  client.key.pem:  1847 bytes
+
+datastax-java-driver {
+  advanced.ssl-engine-factory {
+    class = DefaultSslEngineFactory
+
+    cipher-suites = [ "TLS_RSA_WITH_AES_256_CBC_SHA" ]
+
+    hostname-validation = false
+
+    truststore-path = /tmp/sidecar-secret/truststore.jks
+    truststore-password = cassandra
+    keystore-path = /tmp/sidecar-secret/keystore.p12
+    keystore-password = cassandra
+  }
+}
