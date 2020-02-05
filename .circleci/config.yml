@@ -168,15 +168,15 @@ workflows:
             branches:
               ignore:
                 - master
-#      - test-gcp:
-#          requires:
-#            - repo-check
-#            - release
-#          filters:
-#            branches:
-#                # Don't run the test on PRs
-#                ignore:
-#                  - /^pull\/.*/
+      - test-gcp:
+          requires:
+            - repo-check
+            - release
+          filters:
+            branches:
+                # Don't run the test on PRs
+                ignore:
+                  - /^pull\/.*/
       - release:
           requires:
             - repo-check
