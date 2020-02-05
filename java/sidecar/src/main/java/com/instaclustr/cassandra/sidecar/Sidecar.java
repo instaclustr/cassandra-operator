@@ -9,28 +9,28 @@ import java.util.concurrent.Callable;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
-import com.instaclustr.cassandra.backup.aws.S3Module;
-import com.instaclustr.cassandra.backup.azure.AzureModule;
-import com.instaclustr.cassandra.backup.gcp.GCPModule;
-import com.instaclustr.cassandra.backup.impl.backup.BackupModule;
-import com.instaclustr.cassandra.backup.local.LocalFileModule;
+import com.instaclustr.cassandra.CassandraModule;
+import com.instaclustr.cassandra.backup.guice.StorageModules;
+import com.instaclustr.cassandra.backup.impl.backup.BackupModules.BackupModule;
 import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupsModule;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissioningModule;
 import com.instaclustr.cassandra.sidecar.operations.drain.DrainModule;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildModule;
+import com.instaclustr.cassandra.sidecar.operations.restart.RestartModule;
 import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubModule;
 import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesModule;
+import com.instaclustr.cassandra.sidecar.service.ServicesModule;
 import com.instaclustr.guice.Application;
 import com.instaclustr.guice.ServiceManagerModule;
 import com.instaclustr.operations.OperationsModule;
 import com.instaclustr.picocli.CLIApplication;
+import com.instaclustr.picocli.CassandraConnectionSpec;
 import com.instaclustr.picocli.CassandraJMXSpec;
 import com.instaclustr.sidecar.http.JerseyHttpServerModule;
 import com.instaclustr.sidecar.picocli.SidecarSpec;
 import com.instaclustr.threading.ExecutorsModule;
 import com.instaclustr.version.VersionModule;
-import jmx.org.apache.cassandra.JMXConnectionInfo;
-import jmx.org.apache.cassandra.guice.CassandraModule;
+import jmx.org.apache.cassandra.CassandraJMXConnectionInfo;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Mixin;
@@ -50,6 +50,9 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
 
     @Mixin
     private CassandraJMXSpec jmxSpec;
+
+    @Mixin
+    private CassandraConnectionSpec cassandraConnectionSpec;
 
     @Spec
     private CommandSpec commandSpec;
@@ -91,23 +94,21 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
         return new ArrayList<AbstractModule>() {{
             add(new VersionModule(getVersion()));
             add(new ServiceManagerModule());
-            add(new CassandraModule(new JMXConnectionInfo(jmxSpec.jmxPassword,
-                                                          jmxSpec.jmxUser,
-                                                          jmxSpec.jmxServiceURL,
-                                                          jmxSpec.trustStore,
-                                                          jmxSpec.trustStorePassword)));
+            add(new CassandraModule(new CassandraJMXConnectionInfo(jmxSpec.jmxPassword,
+                                                                   jmxSpec.jmxUser,
+                                                                   jmxSpec.jmxServiceURL,
+                                                                   jmxSpec.trustStore,
+                                                                   jmxSpec.trustStorePassword)));
             add(new JerseyHttpServerModule(sidecarSpec.httpServerAddress));
             add(new OperationsModule(sidecarSpec.operationsExpirationPeriod));
             add(new ExecutorsModule());
+            add(new ServicesModule());
         }};
     }
 
     public static List<AbstractModule> backupModules() {
         return new ArrayList<AbstractModule>() {{
-            add(new S3Module());
-            add(new AzureModule());
-            add(new GCPModule());
-            add(new LocalFileModule());
+            add(new StorageModules());
             add(new BackupModule());
         }};
     }
@@ -120,6 +121,7 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
             add(new RebuildModule());
             add(new ScrubModule());
             add(new DrainModule());
+            add(new RestartModule());
         }};
     }
 }

@@ -205,10 +205,11 @@ func FilterOperations(ops Operations, kind Kind) (result []interface{}, err erro
 
 func ParseOperation(operation OperationResponse, kind Kind) (interface{}, error) {
 	var op interface{}
-	// TODO: hopefully useless when backups are properly done
+
 	if operation["progress"] == "NaN" {
 		operation["progress"] = 0.0
 	}
+
 	if operation["type"].(string) == _KindValueToName[kind] {
 
 		switch kind {

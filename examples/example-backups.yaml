@@ -8,3 +8,4 @@ spec:
   cdc: test-dc-cassandra
   storageLocation: "s3://stefan-cassandra-testdc-bucket"
   snapshotTag: "mySnapshotTag"
+secret: cloud-backup-secrets

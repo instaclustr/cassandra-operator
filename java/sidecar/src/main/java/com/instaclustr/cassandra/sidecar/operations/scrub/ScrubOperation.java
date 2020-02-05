@@ -8,8 +8,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.instaclustr.operations.FunctionWithEx;
 import com.instaclustr.operations.Operation;
 import com.instaclustr.operations.OperationFailureException;
+import jmx.org.apache.cassandra.service.CassandraJMXService;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,14 +20,14 @@ public class ScrubOperation extends Operation<ScrubOperationRequest> {
 
     private static final Logger logger = LoggerFactory.getLogger(ScrubOperation.class);
 
-    private final StorageServiceMBean storageServiceMBean;
+    private final CassandraJMXService cassandraJMXService;
 
     @Inject
-    public ScrubOperation(final StorageServiceMBean storageServiceMBean,
+    public ScrubOperation(final CassandraJMXService cassandraJMXService,
                           @Assisted final ScrubOperationRequest request) {
         super(request);
 
-        this.storageServiceMBean = storageServiceMBean;
+        this.cassandraJMXService = cassandraJMXService;
     }
 
     // this constructor is not meant to be instantiated manually
@@ -46,14 +48,20 @@ public class ScrubOperation extends Operation<ScrubOperationRequest> {
                            @JsonProperty("tables") final Set<String> tables) {
         super(id, creationTime, state, failureCause, progress, startTime,
               new ScrubOperationRequest(disableSnapshot, skipCorrupted, noValidate, reinsertOverflowedTTL, jobs, keyspace, tables));
-        storageServiceMBean = null;
+        cassandraJMXService = null;
     }
 
     @Override
     protected void run0() throws Exception {
 
-        assert storageServiceMBean != null;
-        final int concurrentCompactors = storageServiceMBean.getConcurrentCompactors();
+        assert cassandraJMXService != null;
+
+        final int concurrentCompactors = cassandraJMXService.doWithStorageServiceMBean(new FunctionWithEx<StorageServiceMBean, Integer>() {
+            @Override
+            public Integer apply(final StorageServiceMBean object) {
+                return object.getConcurrentCompactors();
+            }
+        });
 
         if (request.jobs > concurrentCompactors) {
             logger.info(String.format("jobs (%d) is bigger than configured concurrent_compactors (%d) on this host, using at most %d threads",
@@ -62,13 +70,18 @@ public class ScrubOperation extends Operation<ScrubOperationRequest> {
                                       concurrentCompactors));
         }
 
-        final int result = storageServiceMBean.scrub(request.disableSnapshot,
-                                                     request.skipCorrupted,
-                                                     !request.noValidate,
-                                                     request.reinsertOverflowedTTL,
-                                                     request.jobs,
-                                                     request.keyspace,
-                                                     request.tables == null ? new String[]{} : request.tables.toArray(new String[0]));
+        final int result = cassandraJMXService.doWithStorageServiceMBean(new FunctionWithEx<StorageServiceMBean, Integer>() {
+            @Override
+            public Integer apply(final StorageServiceMBean object) throws Exception {
+                return object.scrub(request.disableSnapshot,
+                                    request.skipCorrupted,
+                                    !request.noValidate,
+                                    request.reinsertOverflowedTTL,
+                                    request.jobs,
+                                    request.keyspace,
+                                    request.tables == null ? new String[]{} : request.tables.toArray(new String[0]));
+            }
+        });
 
         switch (result) {
             case 1:

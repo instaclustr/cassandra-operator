@@ -12,8 +12,11 @@ rules:
     resources: ['podsecuritypolicies']
     verbs:     ['use']
   - apiGroups: [""]
-    resources: ["pods"]
+    resources: ["pods", "configmaps", "secrets" ]
     verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["get","create"]
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

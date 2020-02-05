@@ -34,11 +34,6 @@ spec:
 {{ toYaml .Values.sidecarEnv | indent 4 }}
   {{- end }}
 
-  {{- if .Values.backup }}
-  backup:
-{{ toYaml .Values.backup | indent 4 }}
-  {{- end }}
-
   resources:
 {{ toYaml .Values.resources | indent 4 }}
 {{- if .Values.sidecarResources }}
@@ -50,17 +45,22 @@ spec:
 
   dataVolumeClaimSpec:
 {{ toYaml .Values.dataVolumeClaim | indent 4 }}
-{{- if .Values.restoreFromBackup }}
-  restoreFromBackup: {{ .Values.restoreFromBackup }}
-{{- end }}
 {{- if .Values.userConfigMapVolumeSource }}
   userConfigMapVolumeSource:
   {{ toYaml .Values.userConfigMapVolumeSource | indent 4 }}
 {{- end }}
-  prometheusSupport: {{ .Values.prometheusEnabled }}
-{{- if .Values.prometheusServiceMonitorLabels}}
-  prometheusServiceMonitorLabels: {{ .Values.prometheusServiceMonitorLabels }}
+
+{{- if .Values.userSecretVolumeSource }}
+  userSecretVolumeSource:
+  {{ toYaml .Values.userSecretVolumeSource | indent 4 }}
 {{- end }}
+
+{{- if .Values.sidecarSecretVolumeSource }}
+  sidecarSecretVolumeSource:
+  {{ toYaml .Values.sidecarSecretVolumeSource | indent 4 }}
+{{- end }}
+
+  prometheusSupport: {{ .Values.prometheusEnabled }}
 {{- if .Values.optimizeKernelParams }}
   optimizeKernelParams: {{ .Values.optimizeKernelParams }}
 {{- end }}
@@ -73,3 +73,15 @@ spec:
   serviceAccountName: "cassandra"
 {{- end}}
 {{- end}}
+
+{{- if .Values.passwordAuth }}
+  cassandraAuth:
+    authenticator: PasswordAuthenticator
+    authorizer: CassandraAuthorizer
+    roleManager: CassandraRoleManager
+{{- end }}
+
+{{- if .Values.restore }}
+  restore:
+  {{ toYaml .Values.restore | indent 4 }}
+{{- end }}

@@ -21,8 +21,6 @@ imagePullPolicy: IfNotPresent
 imagePullSecrets:
   - name: "regcred"
 
-#optimizeKernelParams: true
-
 # Note these resource limits are not appropriate for production scenarios
 # Generally require 8GB for JVM heap + more see https://github.com/apache/cassandra/blob/a145a485206f6a32b07979dfb1b983addf49dd10/conf/cassandra-env.sh#L17-L176
 
@@ -45,47 +43,8 @@ dataVolumeClaim:
     requests:
       storage: 1Gi
 
-#sidecarEnv:
-#  - name: GOOGLE_APPLICATION_CREDENTIALS
-#    value: "/tmp/backup-creds/gcp.json"
-#  - name: AWS_ACCESS_KEY_ID
-#    valueFrom:
-#      secretKeyRef:
-#        name: backup-secrets
-#        key: awsaccesskeyid
-#  - name: AWS_SECRET_ACCESS_KEY
-#    valueFrom:
-#      secretKeyRef:
-#        name: backup-secrets
-#        key: awssecretaccesskey
-#  - name: AWS_REGION
-#    valueFrom:
-#      secretKeyRef:
-#        name: backup-secrets
-#        key: awsregion
-#  - name: AZURE_STORAGE_ACCOUNT
-#    valueFrom:
-#      secretKeyRef:
-#        name: backup-secrets
-#        key: azurestorageaccount
-#  - name: AZURE_STORAGE_KEY
-#    valueFrom:
-#      secretKeyRef:
-#        name: backup-secrets
-#        key: azurestoragekey
-
 # env properties for Cassandra container, similar to sidecarEnv
 # cassandraEnv:
-
-#backup:
-#  restore: false
-#  backupName: test-cassandra-backup-restore-s3
-#  backupSecretVolumeSource:
-#    secretName: gcp-auth-reference
-#    type: array
-#      items:
-#        - key: gcp.json
-#          path: gcp.json
 
 #racks:
 #  - name: "west1-b"
@@ -101,13 +60,17 @@ dataVolumeClaim:
 #userConfigMapVolumeSource:
 #  - name: configMapReference
 
-#restoreFromBackup: backup-name
+#userSecretVolumeSource:
+#  secretName: test-cassandra-dc-ssl
 
-# prometheusServiceMonitorLabels:
-#  key: value
-#  key2: value2
+#sidecarSecretVolumeSource:
+#  secretName: test-cassandra-dc-ssl-sidecar
+
+#restore:
+#  backupName: test-cassandra-backup-restore-s3
+#  secret: cloud-backup-secrets
+
+#optimizeKernelParams: true
 prometheusEnabled: false
-
 deletePVCs: false
-
-#serviceAccountName: cassandra
+passwordAuth: false

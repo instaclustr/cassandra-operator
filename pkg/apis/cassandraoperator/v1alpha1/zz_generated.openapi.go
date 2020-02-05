@@ -71,6 +71,12 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackup(ref common.Refer
 							},
 						},
 					},
+					"secret": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"globalStatus": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -90,6 +96,7 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackup(ref common.Refer
 						},
 					},
 				},
+				Required: []string{"spec"},
 			},
 		},
 		Dependencies: []string{
@@ -394,6 +401,11 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 							Ref: ref("k8s.io/api/core/v1.ConfigMapVolumeSource"),
 						},
 					},
+					"sidecarSecretVolumeSource": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.SecretVolumeSource"),
+						},
+					},
 					"resources": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/api/core/v1.ResourceRequirements"),
@@ -435,6 +447,11 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 					"operatorLabels": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.OperatorLabels"),
+						},
+					},
+					"operatorAnnotations": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.OperatorAnnotations"),
 						},
 					},
 					"sidecarEnv": {
@@ -488,16 +505,16 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 							Format: "int64",
 						},
 					},
-					"backup": {
+					"restore": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.Backup"),
+							Ref: ref("github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.Restore"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.Backup", "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.CassandraAuth", "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.OperatorLabels", "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.Rack", "k8s.io/api/core/v1.ConfigMapVolumeSource", "k8s.io/api/core/v1.EmptyDirVolumeSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.PersistentVolumeClaimSpec", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.SecretVolumeSource"},
+			"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.CassandraAuth", "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.OperatorAnnotations", "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.OperatorLabels", "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.Rack", "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1.Restore", "k8s.io/api/core/v1.ConfigMapVolumeSource", "k8s.io/api/core/v1.EmptyDirVolumeSource", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.PersistentVolumeClaimSpec", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.SecretVolumeSource"},
 	}
 }
 

@@ -1,237 +1,88 @@
 # Intro
+
 The cassandra-operator supports taking backups of a cluster managed by the operator and restoring those backups into a new cluster. This document outlines how to configure and manage backups and restores.
 
-## Configuring backups for your cluster
-Depending on your environment and Kubernetes distribution, these steps may be different. 
-The backup target location (where your backups will be stored) will determine how you configure your cluster. 
-Each supported cloud-baed backup location (Google Cloud Storage, AWS S3 and Azure Blobstore) utilises the standard Java clients from those cloud providers
-and those clients default credentials chains. 
+To backup a cluster means that the whole state of a cluster, per node, is uploaded to remote location. _The whole state_ 
+means that by default, it will upload all SSTables to some cloud destination. Currently we are supporting upload to S3, 
+Azure or GCP.
 
-This means you can generally pass in credentials via environment variables, default credential paths or let 
-the library discover credentials via mechanisms such as instance roles. Either way you will need to ensure that the backup agent can access credentials for the target location.
-This example will cover using environment variables provided by a [kubernetes secret](https://kubernetes.io/docs/concepts/configuration/secret/).
+The backup procedure is initiated by Cassandra operator itself once you apply a backup spec to Kubernetes. The backup 
+controller watches this CRD and it will call Sidecar of each node via HTTP where it submits a backup operation. Sidecar 
+internally uses our other project - Cassandra Backup / Restore - via which it will take a snapshot of a node and 
+all created SSTables are uploaded. This is happening in parallel on each node and SSTables themselves are also 
+uploaded in parallel. SSTables are stored in a bucket. Currently, a bucket has to be created before-hand.
 
-## Configuring environment variables via secrets
-First create a secret in Kubernetes to hold an IAM users access and secret keys (assuming they are stored in files named access and secret respectively).
+To restore a cluster means that before a node is started, SSTables are downloaded from remote location where they 
+were previously uploaded. They are downloaded into the location where Cassandra picks them up upon its start to 
+it seems as if these files where there all the time. A restoration is node node by node, as each node starts, so it is 
+restored.
 
-```
-$ cat example-backup-secrets.yaml 
+Upon restoration, we are setting _auto_bootstrap_ to _false_ and we set _initial_token_ to be equal to tokens 
+a node was running with when it was about to be backed up.
+
+## Backup
+
+The very first thing you need to do in order to make a backup happen is to specify credentials for a cloud you want 
+your SSTables to be backed up. The authentication mechanism varies across clouds. If you were to support all targets 
+we currently provide, you would have to creata a Kubernetes _Secret_ which would look like this:
+
+````
 apiVersion: v1
 kind: Secret
 metadata:
-  name: backup-secrets
+  name: cloud-backup-secrets
 type: Opaque
 stringData:
-  awssecretaccesskey: __enter__
-  awsaccesskeyid: __enter__
-  awsregion: __enter__
-  azurestorageaccount: __enter__
-  azurestoragekey: __enter__
+  awssecretaccesskey: _enter_here_aws_secret_access_key_
+  awsaccesskeyid: _enter_here_aws_access_key_id_
+  awsregion: _enter_here_aws_region_eu-central-1_
+  awsendpoint: _enter_aws_endpoint_if_any_
+  azurestorageaccount: _enter_here_azure_storage_account_
+  azurestoragekey: _enter_here_azure_storage_key_
+  gcp: 'put here content of gcp.json from Google GCP backend'
+```` 
 
-```
+In order to backup to your cloud of choice, you **have to** use same keys in `stringData` as above. Cassandra operator 
+reacts to these keys specifically and to nothing else. You do not need to specify _every_ key. For example, if you 
+plan to upload only to Azure, just create a secret which contains only Azure specific keys.
 
-Create these secrets by following command.
+After the secret is specified, you can proceed to backup, you have to _apply_ this spec:
 
-`kubectl create secret generic backup-secrets --from-file=./example-backup-secrets.yaml`
-
-For talking to GCP, environment variables are not enough. There needs to be a file created as a secret 
-which will be mounted to container transparently and picked up by GCP initialisation mechanism.
-
-```
-kubectl describe secrets gcp-auth-reference 
-Name:         gcp-auth-reference
-Namespace:    default
-Labels:       <none>
-Annotations:  <none>
-
-Type:  Opaque
-
-Data
-====
-gcp.json:  2338 bytes
-```
-
-In `gcp.json`, there is your service account you can get by following this [page](https://cloud.google.com/iam/docs/creating-managing-service-account-keys).
-
-```
-$ kubectl get secrets
-NAME                             TYPE                                  DATA   AGE
-backup-secrets                   Opaque                                5      13d
-gcp-auth-reference               Opaque                                1      11d
-... other secrets omitted
-```
-
-Create a `CassandraDataCenter` CRD that injects the secret as environment variables that matches the AWS client libraries expected env variables:
-
-```yaml
-  backupSecretVolumeSource:
-    secretName: gcp-auth-reference
-    type: array
-    items:
-      - key: gcp.json
-        path: gcp.json
-  sidecarEnv:
-    - name: GOOGLE_APPLICATION_CREDENTIALS
-      value: "/tmp/backup-creds/gcp.json"
-    - name: AWS_ACCESS_KEY_ID
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: awsaccesskeyid
-    - name: AWS_SECRET_ACCESS_KEY
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: awssecretaccesskey
-    - name: AWS_REGION
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: awsregion
-    - name: AZURE_STORAGE_ACCOUNT
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: azurestorageaccount
-    - name: AZURE_STORAGE_KEY
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: azurestoragekey
-
-```
-
-The resulting full CRD yaml will look like this, you will find always updated example 
-in `examples` directory.
-```yaml
-apiVersion: cassandraoperator.instaclustr.com/v1alpha1
-kind: CassandraDataCenter
-metadata:
-  name: test-dc-cassandra
-  labels:
-    app: cassandra
-spec:
-  nodes: 3
-  cassandraImage: "gcr.io/cassandra-operator/cassandra-3.11.5:latest"
-  sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
-  imagePullPolicy: IfNotPresent
-  racks:
-    - name: "west1-b"
-      labels:
-        failure-domain.beta.kubernetes.io/zone: europe-west1-b
-    - name: "west1-c"
-      labels:
-        failure-domain.beta.kubernetes.io/zone: europe-west1-b
-    - name: "west1-a"
-      labels:
-        failure-domain.beta.kubernetes.io/zone: europe-west1-a
-  imagePullSecrets:
-    - name: regcred
-  resources:
-    limits:
-      memory: 1Gi
-    requests:
-      memory: 1Gi
-
-  dataVolumeClaimSpec:
-    accessModes:
-      - ReadWriteOnce
-    resources:
-      requests:
-        storage: 500Mi
-  prometheusSupport: false
-  privilegedSupported: true
-
-  backup:
-    restore: true
-    backupName: test-cassandra-backup-restore-s3
-    backupSecretVolumeSource:
-      secretName: gcp-auth-reference
-      type: array
-      items:
-        - key: gcp.json
-          path: gcp.json
-
-  sidecarEnv:
-    - name: GOOGLE_APPLICATION_CREDENTIALS
-      value: "/tmp/backup-creds/gcp.json"
-    - name: AWS_ACCESS_KEY_ID
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: awsaccesskeyid
-    - name: AWS_SECRET_ACCESS_KEY
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: awssecretaccesskey
-    - name: AWS_REGION
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: awsregion
-    - name: AZURE_STORAGE_ACCOUNT
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: azurestorageaccount
-    - name: AZURE_STORAGE_KEY
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: azurestoragekey
-```
-
-To create a cluster using this yaml file use `kubectl apply -f example-datacenter.yaml`
-
-## Taking a backup
-The Cassandra operator manages backups via a backup CRD object in Kubernetes, this makes it easy to track and audit backups, you can schedule backups via a cron mechanism that creates new CRDs etc.
-It also allows you to reference a known backup when you restore. Backups will target all pods that match the labels specified on the backup CRD, you can backup multiple clusters via a single backup CRD. 
-Node identity is maintained via the backup path.
-
-The name field in metadata will be used as the snapshot name (e.g. via `nodetool snapshot` and when uploaded to the external storage provider).
-
-To backup the cluster we just created, create the following yaml file (called `backup.yaml` in this example):
-
-```yaml
-$ cat example-backups.yaml 
+````
 apiVersion: cassandraoperator.instaclustr.com/v1alpha1
 kind: CassandraBackup
 metadata:
-  name: test-cassandra-backup
+  name: test-cassandra-backup-restore-s3
   labels:
     app: cassandra
 spec:
   cdc: test-dc-cassandra
-  storageLocation: "s3://cassandra-testdc-bucket"
-  snapshotTag: "mySnapshotTag"
-```
+  storageLocation: "azure://stefan-cassandra-testdc-bucket"
+  snapshotTag: "restore-test"
+secret: cloud-backup-secrets
+````
 
-You need to specify `cdc` of a cluster to backup, this should reflect `metadata.name` in CRD of created cluster. 
-Secondly, you need to specify `storageLocation` which tells what cloud you want to backup a cluster to. For instance, 
-in the above example, a backup will be done in Amazon S3 under bucket `cassandra-testdc-bucket` and snapshot will 
-be named `mySnapshotTag.` All these fields are required. For backing up to Azure, use `azure://` and for GCP use `gcp://`.
+First of all, notice how we are calling our backup - _test-cassandra-backup-restore-s3_, we will use this 
+name once we want to restore a cluster. Secondly, `cdc`, that is name of our cluster. Notice also _storageLocation_, 
+its prefix is _azure_ so it means that we are going to perform a backup to Azure. Next, bucket name is 
+_stefan-cassandra-testdc-bucket_ so this will be the bucket a backup operation will upload all files to. 
+Currently, this bucket has to exist beforehand. _snapshotTag_ follows - this is the name of a snapshot a 
+backup procedure does. As you can imagine, if you apply this spec multiple times with different snapshots over time, 
+you will end up with different data which reflects different state of your cluster.
 
-Blob containers / storage buckets needs to be 
-created before backups are taken and they are not created automatically. `snapshotLocation` path is automatically 
-appended with name of a cluster and finally with name of a node (its hostname) internally.
+Lastly, you have to specify _secret_. Here, we reference the name of the secret created at the beginning.
 
-To create the backup run `kubectl apply -f backup.yaml`
-
-The Cassandra operator will detect the new backup CRD and take snapshots of all nodes that match the same labels as the `CassandraBackup`. You can follow the progress of the backup by following the sidecar logs for each node included in the backup.
-The backup will include all user data as well as the system/schema tables. This means on restoration your schema will exist.
-
-You can inspect the progress of backup like:
+If you apply this CRD, you can track the progress by _getting_ or _describing_ respective resource:
 
 ```
 $ kubectl get cassandrabackups.cassandraoperator.instaclustr.com 
-NAME                    STATUS    PROGRESS
-test-cassandra-backup   RUNNING   83%
+NAME                               STATUS    PROGRESS
+test-cassandra-backup-restore-s3   RUNNING   83%
 ```
 
 ```
 $ kubectl describe cassandrabackups.cassandraoperator.instaclustr.com 
-Name:             test-cassandra-backup
+Name:             test-cassandra-backup-restore-s3
 ... other fields omitted
 Status:
   Node:      cassandra-test-dc-cassandra-west1-a-0
@@ -240,36 +91,86 @@ Status:
   Node:      cassandra-test-dc-cassandra-west1-b-0
   Progress:  48%
   State:     RUNNING
+  Node:      cassandra-test-dc-cassandra-west1-c-0
+  Progress:  45%
+  State:     RUNNING
+``` 
+
+Once all pods are backed up, `Progress` will be 100% and `State` will become `Completed`.
+
+Congratulations, you have backed up your cluster. Let's see how you actually restore it.
+
+## Restore
+
+The restoration is very simple. Firstly, be sure your secret exists as specified so we can talk to a cloud storage 
+upon restore. Restoration is done by init container, before Cassandra and Sidecar is even started. Init container 
+will download all data from a cloud so when Cassandra starts, it feels as if it just started.
+
+All you need to do is to specify this snippet in CDC:
+
+```
+apiVersion: cassandraoperator.instaclustr.com/v1alpha1
+kind: CassandraDataCenter
+metadata:
+  name: test-dc-cassandra
+  labels:
+    app: cassandra
+spec:
+  # a bunch of other configration parameters
+  restore:
+    backupName: test-cassandra-backup-restore-s3
+    secret: cloud-backup-secrets
 ```
 
-Eventually, progress will reach `COMPLETED` state. 
+All CDC spec is as you are used to, it differs only on `restore`. `backupName` is, surprisingly, name of a backup. 
+That backup object has to exist. `secret` name is name of a secret from beginning. We inject name of this 
+secret to init container so restoration procedure will resolve all necessary credentials from Kubernetes dynamically.
 
-## Restoring from a backup
+### Can I change credentials in my secret?
 
-The Cassandra operator allows you to create a new cluster from an existing backup. 
-To do so, make sure you have already taken a backup from a previous/existing cluster.
+Absolutely. This is the reason why we have implemented it in that way. The trick is that once a backup operation 
+request is sent to a Sidecar container, it will internally reach to Kubernetes API, from within, by official Kubernetes 
+Java API client and it will try to resolve credentials for a cloud you have specified a prefix in _storageLocation_ for.
+Hence you can change your credentials as you wish because they will be retrieved from Kubernetes every time dynamically.
 
-To achieve the restoration, you have to set `spec.backup.restore` on CDC to true and apply it. `CassandraBackup` name is, 
-surprisingly, referenced by field `spec.backup.backupName`. `CassandraBackup` name has to already exist otherwise 
-operator will not know the bucket to download files from etc. You can list your backups by `kubectl describe cassandrabackups`.
+### What if I have files remotely but I do not have backup spec to reference to?
 
-In some cases, you do have remote backup but you have not backed it up by the cluster you are working on. In this case, 
-you may _reconstruct_ a `CassandraBackup` by simply applying it, pretending you are going to take a backup, but 
-the run of that backup will be dummy and it will result only into creation of `CassandraBackup` but no action would be taken.
-You have to setup `justCreate: true` as top-level field (not in `spec`). 
- 
-Then add the property `restoreFromBackup: test-cassandra-backup` to the CassandraDataCenter CRD `spec`. 
-This is the name of the backup (CRD) you wish to restore from. All other fields on your original CRD will be same, you just add that 
-one field into spec and apply it.
+No worries. Imagine you have a completely different Kubernetes cluster you want to restore a Cassandra cluster into. 
+Similarly, maybe you have just lost your backup spec accidentally. In either case, we can create a backup spec but when 
+we create it, it will not proceed to actual backup because there is _nothing to backup_. You have to specify 
+a field with name `justCreate` and set it to true like this: 
 
-It is possible to either create a cluster with completely same name. If you want to restore into a cluster which datacenter 
-would differ, you can do it too without any problems. If you reference name of a `CassandraBackup` in CDC in `spec.backup.backupName`,
-even that CDC is named differently, it will internally resolve. Hence you are practically making a clone of a cluster.
+```
+apiVersion: cassandraoperator.instaclustr.com/v1alpha1
+kind: CassandraBackup
+metadata:
+  name: test-cassandra-backup-restore-s3
+  labels:
+    app: cassandra
+spec:
+  cdc: test-dc-cassandra
+  storageLocation: "azure://stefan-cassandra-testdc-bucket"
+  snapshotTag: "restore-test"
+secret: cloud-backup-secrets
+justCreate: true         <------ see?
+```
 
-Restore process will also take care of initial tokens and other configuration bits automatically. 
-The new cluster will download the sstables from the existing backup before starting Cassandra and 
-restore the tokens associated with the node the backup was taken on.
+### Can I create a backup of same CDC into same storage location with same snapshot name?
 
-The schema will be restored along side the data as well. You should always restore to a cluster with the same 
-number of nodes as the original backup cluster. Restore currently works against just a single DC, i
-if you backup using a broader set of labels, restore from that broader label group won't work.
+No. In spite of snapshots being deleted automatically after files where uploaded, it does not make sense to upload something 
+_twice_ under same snapshot. Why would you even want that? Rule of thumb is to include some date and time information 
+into its name so you can return back to it in the future, referencing arbitrary snapshot.
+
+### My AWS node instance has credentials to S3 itself
+
+That is fine. So do not specify any credentials related to AWS. Firstly it will try to look them up and if it fails, it will 
+eventually fallback to last chance to authenticate. This is delegated to S3 client builder itself.
+
+If _awsendpoint_ is set but _awsregion_ is not, the backup request fails. If _awsendpoint_ is not set but _awsregion_ is set, 
+only this region will be set.
+
+If you do not specify _awssecretaccesskey_ nor _awsaccesskeyid_, as stated above, it will fallback to instance authentication mechanism.
+
+### With what configuration is a Cassandra node started after being restored?
+
+We are setting _auto_bootstrap: false_ and _initial_token_ with tokes a respective node was running with when it was backed up.

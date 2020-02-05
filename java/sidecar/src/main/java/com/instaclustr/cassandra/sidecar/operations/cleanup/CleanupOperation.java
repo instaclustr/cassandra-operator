@@ -8,19 +8,21 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.assistedinject.Assisted;
+import com.instaclustr.operations.FunctionWithEx;
 import com.instaclustr.operations.Operation;
 import com.instaclustr.operations.OperationFailureException;
+import jmx.org.apache.cassandra.service.CassandraJMXService;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 
 public class CleanupOperation extends Operation<CleanupOperationRequest> {
-    private final StorageServiceMBean storageServiceMBean;
+    private final CassandraJMXService cassandraJMXService;
 
     @Inject
-    public CleanupOperation(final StorageServiceMBean storageServiceMBean,
+    public CleanupOperation(final CassandraJMXService cassandraJMXService,
                             @Assisted final CleanupOperationRequest request) {
         super(request);
 
-        this.storageServiceMBean = storageServiceMBean;
+        this.cassandraJMXService = cassandraJMXService;
     }
 
     // this constructor is not meant to be instantiated manually
@@ -36,13 +38,21 @@ public class CleanupOperation extends Operation<CleanupOperationRequest> {
                              @JsonProperty("tables") final Set<String> tables,
                              @JsonProperty("jobs") final int jobs) {
         super(id, creationTime, state, failureCause, progress, startTime, new CleanupOperationRequest(keyspace, tables, jobs));
-        storageServiceMBean = null;
+        cassandraJMXService = null;
     }
 
     @Override
     protected void run0() throws Exception {
-        assert storageServiceMBean != null;
-        int result = storageServiceMBean.forceKeyspaceCleanup(request.jobs, request.keyspace, request.tables == null ? new String[]{} : request.tables.toArray(new String[]{}));
+        assert cassandraJMXService != null;
+
+        int result = cassandraJMXService.doWithStorageServiceMBean(new FunctionWithEx<StorageServiceMBean, Integer>() {
+            @Override
+            public Integer apply(final StorageServiceMBean object) throws Exception {
+                return object.forceKeyspaceCleanup(request.jobs,
+                                                   request.keyspace,
+                                                   request.tables == null ? new String[]{} : request.tables.toArray(new String[]{}));
+            }
+        });
 
         switch (result) {
             case 1:

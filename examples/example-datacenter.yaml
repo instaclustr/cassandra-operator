@@ -5,6 +5,9 @@ metadata:
   labels:
     app: cassandra
 spec:
+  prometheusSupport: false
+  optimizeKernelParams: true
+  serviceAccountName: cassandra-performance
   nodes: 3
   racks:
     - name: "west1-b"
@@ -18,56 +21,10 @@ spec:
         failure-domain.beta.kubernetes.io/zone: europe-west1-a
   cassandraImage: "gcr.io/cassandra-operator/cassandra-3.11.5:latest"
   sidecarImage: "gcr.io/cassandra-operator/cassandra-sidecar:latest"
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always
   imagePullSecrets:
     - name: regcred
 
-#  backup:
-#    restore: false
-#    backupName: test-cassandra-backup-restore-s3
-#    backupSecretVolumeSource:
-#      secretName: gcp-auth-reference
-#      type: array
-#      items:
-#        - key: gcp.json
-#          path: gcp.json
-
-  sidecarEnv:
-    - name: GOOGLE_APPLICATION_CREDENTIALS
-      value: "/tmp/backup-creds/gcp.json"
-    - name: AWS_ACCESS_KEY_ID
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: awsaccesskeyid
-    - name: AWS_SECRET_ACCESS_KEY
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: awssecretaccesskey
-    - name: AWS_REGION
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: awsregion
-    - name: AZURE_STORAGE_ACCOUNT
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: azurestorageaccount
-    - name: AZURE_STORAGE_KEY
-      valueFrom:
-        secretKeyRef:
-          name: backup-secrets
-          key: azurestoragekey
-  userConfigMapVolumeSource:
-    # example from doc/providers/pks.md
-    # the name of the ConfigMap
-    name: concurrent-data
-    # ConfigMap keys -> file paths (relative to /etc/cassandra)
-    items:
-      - key: 100-concurrent-yaml
-        path: cassandra.yaml.d/100-concurrent.yaml
   resources:
     limits:
       memory: 1Gi
@@ -78,7 +35,6 @@ spec:
       memory: 512Mi
     requests:
       memory: 512Mi
-
   dataVolumeClaimSpec:
     accessModes:
       - ReadWriteOnce
@@ -86,8 +42,52 @@ spec:
       requests:
         storage: 2Gi
 
-  prometheusSupport: false
-  optimizeKernelParams: true
-  serviceAccountName: cassandra-performance
+#  userConfigMapVolumeSource:
+#    name: test-dc-cassandra-user-config
+#    type: array
+#    items:
+#      - key: cassandra_ssl
+#        path: cassandra.yaml.d/003-ssl.yaml
+#      - key: cqlshrc
+#        path: cqlshrc
+#      - key: install_cqlshrc
+#        path: cassandra-env.sh.d/003-install-cqlshrc.sh
+#      - key: cassandra_concurrent
+#        path: cassandra.yaml.d/100-concurrent.yaml
+#  userSecretVolumeSource:
+#    secretName: test-cassandra-dc-ssl
+#
+#  sidecarSecretVolumeSource:
+#    secretName: test-cassandra-dc-ssl-sidecar
+
+  cassandraAuth:
+    authenticator: PasswordAuthenticator
+    authorizer: CassandraAuthorizer
+    roleManager: CassandraRoleManager
+
+#  operatorLabels:
+#    prometheusService:
+#      cassandratestdclabel: testdc
+#    nodesService:
+#      mynodesservicelabel: labelvalue1
+#    statefulSet:
+#      mystatefullabel: labelvalue2
+#    podTemplate:
+#      mypodlabel: label1
+#      myanotherpod: label2
+#
+#  operatorAnnotations:
+#    prometheusService:
+#      p1 : pv1
+#    nodesService:
+#      n1: nv1
+#      n2: nv2
+#    statefulSet:
+#      s1: sv1
+#      s2: sv2
+#    podTemplate:
+#      pt1: ptv1
+#      pt2: ptv2
+
   # Needed to run on AKS
   fsGroup: 999

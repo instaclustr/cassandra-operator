@@ -8,8 +8,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.instaclustr.operations.FunctionWithEx;
 import com.instaclustr.operations.Operation;
 import com.instaclustr.operations.OperationFailureException;
+import jmx.org.apache.cassandra.service.CassandraJMXService;
 import jmx.org.apache.cassandra.service.StorageServiceMBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,14 +20,14 @@ public class UpgradeSSTablesOperation extends Operation<UpgradeSSTablesOperation
 
     private static final Logger logger = LoggerFactory.getLogger(UpgradeSSTablesOperation.class);
 
-    private final StorageServiceMBean storageServiceMBean;
+    private final CassandraJMXService cassandraJMXService;
 
     @Inject
-    public UpgradeSSTablesOperation(final StorageServiceMBean storageServiceMBean,
+    public UpgradeSSTablesOperation(final CassandraJMXService cassandraJMXService,
                                     @Assisted final UpgradeSSTablesOperationRequest request) {
         super(request);
 
-        this.storageServiceMBean = storageServiceMBean;
+        this.cassandraJMXService = cassandraJMXService;
     }
 
     // this constructor is not meant to be instantiated manually
@@ -36,21 +38,26 @@ public class UpgradeSSTablesOperation extends Operation<UpgradeSSTablesOperation
                                      @JsonProperty("state") final State state,
                                      @JsonProperty("failureCause") final Throwable failureCause,
                                      @JsonProperty("progress") final float progress,
-                                     @JsonProperty("startTime")final Instant startTime,
+                                     @JsonProperty("startTime") final Instant startTime,
                                      @JsonProperty("keyspace") final String keyspace,
                                      @JsonProperty("tables") final Set<String> tables,
                                      @JsonProperty("includeAllSStables") final boolean includeAllSSTables,
                                      @JsonProperty("jobs") final int jobs) {
         super(id, creationTime, state, failureCause, progress, startTime,
               new UpgradeSSTablesOperationRequest(keyspace, tables, includeAllSSTables, jobs));
-        storageServiceMBean = null;
+        cassandraJMXService = null;
     }
 
     @Override
     protected void run0() throws Exception {
+        assert cassandraJMXService != null;
 
-        assert storageServiceMBean != null;
-        final int concurrentCompactors = storageServiceMBean.getConcurrentCompactors();
+        final Integer concurrentCompactors = cassandraJMXService.doWithStorageServiceMBean(new FunctionWithEx<StorageServiceMBean, Integer>() {
+            @Override
+            public Integer apply(final StorageServiceMBean object) {
+                return object.getConcurrentCompactors();
+            }
+        });
 
         if (request.jobs > concurrentCompactors) {
             logger.info(String.format("jobs (%d) is bigger than configured concurrent_compactors (%d) on this host, using at most %d threads",
@@ -59,10 +66,15 @@ public class UpgradeSSTablesOperation extends Operation<UpgradeSSTablesOperation
                                       concurrentCompactors));
         }
 
-        final int result = storageServiceMBean.upgradeSSTables(request.keyspace,
-                                                               !request.includeAllSSTables,
-                                                               request.jobs,
-                                                               request.tables == null ? new String[]{} : request.tables.toArray(new String[0]));
+        final Integer result = cassandraJMXService.doWithStorageServiceMBean(new FunctionWithEx<StorageServiceMBean, Integer>() {
+            @Override
+            public Integer apply(final StorageServiceMBean object) throws Exception {
+                return object.upgradeSSTables(request.keyspace,
+                                              !request.includeAllSSTables,
+                                              request.jobs,
+                                              request.tables == null ? new String[]{} : request.tables.toArray(new String[0]));
+            }
+        });
 
         switch (result) {
             case 1:

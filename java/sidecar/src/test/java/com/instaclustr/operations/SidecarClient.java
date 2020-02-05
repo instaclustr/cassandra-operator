@@ -28,11 +28,13 @@ import com.instaclustr.cassandra.sidecar.operations.drain.DrainOperation;
 import com.instaclustr.cassandra.sidecar.operations.drain.DrainOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildOperation;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildOperationRequest;
+import com.instaclustr.cassandra.sidecar.operations.restart.RestartOperation;
+import com.instaclustr.cassandra.sidecar.operations.restart.RestartOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubOperation;
 import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesOperation;
 import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesOperationRequest;
-import com.instaclustr.cassandra.sidecar.resource.StatusResource;
+import com.instaclustr.cassandra.sidecar.service.CassandraStatusService.Status;
 import org.glassfish.jersey.server.ResourceConfig;
 
 public class SidecarClient implements Closeable {
@@ -53,7 +55,7 @@ public class SidecarClient implements Closeable {
 
     public StatusResult getStatus() {
         final Response response = statusWebTarget.request(APPLICATION_JSON).get();
-        final StatusResource.Status status = response.readEntity(StatusResource.Status.class);
+        final Status status = response.readEntity(Status.class);
 
         return new StatusResult(status, response);
     }
@@ -96,6 +98,10 @@ public class SidecarClient implements Closeable {
 
     public OperationResult<DrainOperation> drain(final DrainOperationRequest operationRequest) {
         return performOperationSubmission(operationRequest, DrainOperation.class);
+    }
+
+    public OperationResult<RestartOperation> restart(final RestartOperationRequest operationRequest) {
+        return performOperationSubmission(operationRequest, RestartOperation.class);
     }
 
     public Collection<Operation> getOperations() {
@@ -159,10 +165,10 @@ public class SidecarClient implements Closeable {
     }
 
     public static class StatusResult {
-        public final StatusResource.Status status;
+        public final Status status;
         public final Response response;
 
-        public StatusResult(final StatusResource.Status status, final Response response) {
+        public StatusResult(final Status status, final Response response) {
             this.status = status;
             this.response = response;
         }
