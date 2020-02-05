@@ -56,9 +56,12 @@ func PrometheusAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) m
 	// Fetch cdc annotations
 	annotations := DataCenterAnnotations(cdc)
 	// Add prometheus annotations if defined
-	for label, val := range cdc.Spec.OperatorAnnotations.PrometheusService {
-		annotations[label] = val
+	if cdc.Spec.OperatorAnnotations != nil {
+		for label, val := range cdc.Spec.OperatorAnnotations.PrometheusService {
+			annotations[label] = val
+		}
 	}
+
 	return annotations
 }
 
@@ -115,9 +118,13 @@ func PrometheusLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[st
 	// Fetch cdc labels
 	labels := DataCenterLabels(cdc)
 	// Add prometheus labels if defined
-	for label, val := range cdc.Spec.OperatorLabels.PrometheusService {
-		labels[label] = val
+
+	if cdc.Spec.OperatorLabels != nil {
+		for label, val := range cdc.Spec.OperatorLabels.PrometheusService {
+			labels[label] = val
+		}
 	}
+
 	return labels
 }
 
