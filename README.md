@@ -10,13 +10,15 @@ Currently user facing Cassandra cluster objects are created as [Kubernetes Custo
 
 We expect to consider the Cassandra operator stable soon; backwards incompatible changes will not be made once the project reaches stability.
 
+### Cassandra version support
+
+We are currently building images for Cassandra 3.11.5 and 4.0-alpha3. 
+
 ## Documentation
 
 1) [Operations Guide](./doc/op_guide.md) for how to run the operator and deploy, scale and decommission Cassandra clusters.
 
 1) [Custom configuration](./doc/custom-configuration.md) how to configure Cassandra itself
-
-1) [RBAC docs](./doc/rbac.md) for how to setup RBAC rules for Cassandra operator and Cassandra containers if RBAC is in place.
 
 1) [Developer Guide](./doc/developers.md) for setting up development environment if you want to contribute.
 

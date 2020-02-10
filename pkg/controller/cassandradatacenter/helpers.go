@@ -90,7 +90,7 @@ func podsToString(pods []*corev1.Pod) string {
 func rackExist(name string, sets []v1.StatefulSet) bool {
 	// check if a rack exists in the list of racks
 	for _, set := range sets {
-		if set.Labels[rackKey] == name {
+		if set.Labels[RackKey] == name {
 			return true
 		}
 	}

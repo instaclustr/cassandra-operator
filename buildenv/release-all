@@ -3,31 +3,47 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-cd `dirname "$BASH_SOURCE"`/..
+cd $(dirname "$BASH_SOURCE")/..
 
 source ./buildenv/repo
 
-function defer {
-	if [[ $REGISTRY == gcr.io/* ]]; then
-		docker logout gcr.io
-		export DONT_LOGIN="false"
-	fi
+function defer() {
+  if [[ $REGISTRY == gcr.io/* ]]; then
+    docker logout gcr.io
+    export DONT_LOGIN="false"
+  fi
 }
 
-trap defer EXIT
-
-if [[ $REGISTRY == gcr.io/* ]]; then
-	gcloud docker -a
-fi
-
-export DONT_LOGIN="true"
-
-# only push from CI environment and only push to a go tag for the moment
-if [[ "${CIRCLE_BRANCH}" == master ]]; then
+function release_prod() {
+  if [[ "${CIRCLE_BRANCH}" == master ]]; then
     docker push "${REGISTRY}/cassandra-operator:${TAG}"
     docker push "${REGISTRY}/cassandra-operator:latest"
     docker push "${REGISTRY}/cassandra-sidecar:${TAG}"
     docker push "${REGISTRY}/cassandra-sidecar:latest"
     docker push "${REGISTRY}/cassandra-3.11.5:latest"
     docker push "${REGISTRY}/cassandra-3.11.5:${TAG}"
+    docker push "${REGISTRY}/cassandra-4.0-alpha3:latest"
+    docker push "${REGISTRY}/cassandra-4.0-alpha3:${TAG}"
+  fi
+}
+
+function release_dev() {
+  docker push "${REGISTRY}/cassandra-operator:latest-dev"
+  docker push "${REGISTRY}/cassandra-sidecar:latest-dev"
+  docker push "${REGISTRY}/cassandra-3.11.5:latest-dev"
+  docker push "${REGISTRY}/cassandra-4.0-alpha3:latest-dev"
+}
+
+trap defer EXIT
+
+if [[ $REGISTRY == gcr.io/* ]]; then
+  gcloud docker -a
+fi
+
+export DONT_LOGIN="true"
+
+if [ "${1}" = "dev" ]; then
+  release_dev
+elif [ "${1}" = "prod" ]; then
+  release_prod
 fi

@@ -306,6 +306,26 @@ func populateUnsetFields(instance *cassandraoperatorv1alpha1.CassandraDataCenter
 
 func newReconciliationContext(r *ReconcileCassandraDataCenter, reqLogger logr.Logger, instance *cassandraoperatorv1alpha1.CassandraDataCenter) (*reconciliationRequestContext, error) {
 
+	if len(instance.DataCenter) == 0 {
+		datacenterFromLabel := instance.Labels["datacenter"]
+
+		if len(datacenterFromLabel) == 0 {
+			instance.DataCenter = instance.Name
+		} else {
+			instance.DataCenter = datacenterFromLabel
+		}
+	}
+
+	if len(instance.Cluster) == 0 {
+		clusterNameFromLabel := instance.Labels["cluster"]
+
+		if len(clusterNameFromLabel) == 0 {
+			instance.Cluster = instance.Name
+		} else {
+			instance.Cluster = clusterNameFromLabel
+		}
+	}
+
 	// Figure out the scaling operation. If no change needed, then it's noop
 	allPods, err := AllPodsInCDC(r.client, instance)
 	if err != nil {

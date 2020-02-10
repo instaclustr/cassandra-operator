@@ -8,9 +8,5 @@ NO_DEV="${NO_DEV:-}"
 CIRCLE_BRANCH="${CIRCLE_BRANCH:-}"
 export REGISTRY="$REGISTRY"
 
-if [[ "${CIRCLE_TAG}" == "" ]] && [[ "${CIRCLE_BRANCH}" != master ]] && [[ "${NO_DEV}" != "true" ]]; then
-	export REGISTRY="${REGISTRY}-dev"
-fi
-
-SHA1=`git rev-parse --short HEAD`
+SHA1=$(git rev-parse --short HEAD)
 export TAG="${TAG:-${SHA1}}"

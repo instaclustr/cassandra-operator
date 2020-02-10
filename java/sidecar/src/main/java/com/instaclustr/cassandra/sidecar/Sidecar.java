@@ -24,7 +24,6 @@ import com.instaclustr.guice.Application;
 import com.instaclustr.guice.ServiceManagerModule;
 import com.instaclustr.operations.OperationsModule;
 import com.instaclustr.picocli.CLIApplication;
-import com.instaclustr.picocli.CassandraConnectionSpec;
 import com.instaclustr.picocli.CassandraJMXSpec;
 import com.instaclustr.sidecar.http.JerseyHttpServerModule;
 import com.instaclustr.sidecar.picocli.SidecarSpec;
@@ -50,9 +49,6 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
 
     @Mixin
     private CassandraJMXSpec jmxSpec;
-
-    @Mixin
-    private CassandraConnectionSpec cassandraConnectionSpec;
 
     @Spec
     private CommandSpec commandSpec;

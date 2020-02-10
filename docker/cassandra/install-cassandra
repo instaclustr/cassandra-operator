@@ -19,20 +19,20 @@ INSTALL_CASSANDRA_EXPORTER="${INSTALL_CASSANDRA_EXPORTER:-true}"
     curl -SLO "${C_APACHE_MIRROR_URL}/cassandra_${cassandra_version}_all.deb" &&
     curl -SLO "${C_APACHE_MIRROR_URL}/cassandra-tools_${cassandra_version}_all.deb")
 
-dagi dpkg-dev cpio
+dagi dpkg-dev cpio libcap2-bin
 
-# build a local repository
-(cd "${pkg_dir}" && dpkg-scanpackages ${arch} | gzip -9c > "${arch_pkg_dir}/Packages.gz")
-
-# install C*
-echo "deb file:${pkg_dir} ${arch}/" > /etc/apt/sources.list.d/cassandra.sources.list
-APT_GET_OPTS="--allow-unauthenticated" dagi cassandra cassandra-tools libcap2-bin
+APT_GET_OPTS="--allow-unauthenticated" dagi file ${arch_pkg_dir}/cassandra_${cassandra_version}_all.deb
+APT_GET_OPTS="--allow-unauthenticated" dagi file ${arch_pkg_dir}/cassandra-tools_${cassandra_version}_all.deb
 
 # package "cleanup"
 mkdir /usr/share/cassandra/agents
-mv /usr/share/cassandra/lib/jamm-0.3.0.jar /usr/share/cassandra/agents/jamm-0.3.0.jar
+# without version, it varies from 3.x to 4.x
+mv /usr/share/cassandra/lib/jamm-*.jar /usr/share/cassandra/agents/jamm.jar
 cp /etc/cassandra/hotspot_compiler /usr/share/cassandra/
 cp /etc/cassandra/cassandra.yaml /usr/share/cassandra/
+
+# save Cassandra version, handy for further configuration which is version specific
+echo ${cassandra_version} > /usr/share/cassandra/cassandra_version
 
 # nuke contents of /etc/cassandra and /var/lib/cassandra since they're injected by volume mounts
 rm -rf /etc/cassandra/* /var/lib/cassandra/*
@@ -56,4 +56,4 @@ rm -rf "${pkg_dir}"
 apt-get -y remove dpkg-dev && apt-get -y autoremove
 
 rm "${BASH_SOURCE}"
-rm /etc/apt/sources.list.d/cassandra.sources.list
+rm -rf /etc/apt/sources.list.d/cassandra.sources.list

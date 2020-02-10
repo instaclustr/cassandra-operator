@@ -30,17 +30,17 @@ function check-go-formatting {
 }
 
 function install-operator-sdk {
-    RELEASE_VERSION=v0.11.0
+    RELEASE_VERSION=v0.13.0
     curl -LO https://github.com/operator-framework/operator-sdk/releases/download/${RELEASE_VERSION}/operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
     curl -LO https://github.com/operator-framework/operator-sdk/releases/download/${RELEASE_VERSION}/operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu.asc
     chmod +x operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu && mv operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu operator-sdk
 }
 
 function check-open-api {
-    ./operator-sdk generate openapi
+    ./operator-sdk generate crds
     git diff --quiet --exit-code deploy/crds/cassandraoperator_*_cassandra*_crd.yaml
     if [[ $? != 0 ]]; then
-        echo "API files were not regenerated with latest changes, make sure to run 'operator-sdk generate openapi'"
+        echo "API files were not regenerated with latest changes, make sure to run 'operator-sdk generate crds'"
         exit 1
     fi
 }

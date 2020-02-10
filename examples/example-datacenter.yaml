@@ -1,9 +1,11 @@
 apiVersion: cassandraoperator.instaclustr.com/v1alpha1
 kind: CassandraDataCenter
 metadata:
-  name: test-dc-cassandra
+  name: test-cluster-dc1
   labels:
     app: cassandra
+datacenter: dc1
+cluster: test-cluster
 spec:
   prometheusSupport: false
   optimizeKernelParams: true

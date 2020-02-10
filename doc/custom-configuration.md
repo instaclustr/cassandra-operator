@@ -89,6 +89,16 @@ spec:
 
 Cassandra will load the `cassandra.yaml.d/100-concurrent.yaml` file as well as the default settings managed by the operator!
 
+### JVM options
+
+It is possible to override / add options to JVM. All it takes is to 
+construct a file and mount it under path `jvm.options.d`. 
+
+In case you want to provide your own GC settings as this might be highly 
+specific to your load and application and so on, you can do so by 
+specifying an option file under path `jvm.options.d/gc.options`. If specified, 
+we will not step into GC settings and you can set it how you wish.
+
 ### Prometheus support
 
 The Cassandra image that is included with this project has the [cassandra-exporter](https://github.com/instaclustr/cassandra-exporter) built in, so it is ready to expose metrics to be gathered by a Prometheus instance. In order to use this capability automatically, one must have a running Prometheus operator in the same Kubernetes cluster as well as a Prometheus object.

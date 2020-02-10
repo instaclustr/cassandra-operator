@@ -4,22 +4,19 @@
 
 replicaCount: 1
 
-fullnameOverride: test-dc-cassandra
+fullnameOverride: test-cluster-dc1
+
+datacenter: dc1
+cluster: test-cluster
 
 image:
-# Dev images
-#  cassandraRepository: cassandra
-#  sidecarRepository: cassandra-sidecar
-
-# Published images
   cassandraRepository: gcr.io/cassandra-operator/cassandra-3.11.5
   sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar
   cassandraTag: latest
   sidecarTag: latest
 
-imagePullPolicy: IfNotPresent
-imagePullSecrets:
-  - name: "regcred"
+imagePullPolicy: Always
+#imagePullSecrets: "regcred"
 
 # Note these resource limits are not appropriate for production scenarios
 # Generally require 8GB for JVM heap + more see https://github.com/apache/cassandra/blob/a145a485206f6a32b07979dfb1b983addf49dd10/conf/cassandra-env.sh#L17-L176
@@ -29,11 +26,11 @@ resources:
     memory: 1Gi
   requests:
     memory: 1Gi
-#sidecarResources:
-#  limits:
-#    memory: 512Mi
-#  requests:
-#    memory: 512Mi
+sidecarResources:
+  limits:
+    memory: 512Mi
+  requests:
+    memory: 512Mi
 dataVolumeClaim:
   # Refer to doc/persistent_volumes.md for PV setup for dynamic volume provisioning
   # storageClassName: <topology-aware-standard>
@@ -73,4 +70,4 @@ dataVolumeClaim:
 #optimizeKernelParams: true
 prometheusEnabled: false
 deletePVCs: false
-passwordAuth: false
+passwordAuth: true

@@ -6,7 +6,7 @@ You will need to ensure your build environment has the following dependencies in
 * jdk 8
 * maven
 * docker 
-* operator-sdk 0.10
+* operator-sdk 0.13.0
 * git
 * go 1.13
 

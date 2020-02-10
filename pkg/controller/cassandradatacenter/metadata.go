@@ -3,26 +3,31 @@ package cassandradatacenter
 import (
 	"strings"
 
-	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	"github.com/instaclustr/cassandra-operator/pkg/common/cluster"
+
+	cop "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	rackKey = "cassandra-operator.instaclustr.com/rack"
-	cdcKey  = "cassandra-operator.instaclustr.com/datacenter"
+	ManagedByKey   = "app.kubernetes.io/managed-by"
+	ManagedByValue = "com.instaclustr.cassandra-operator"
+	RackKey        = "cassandra-operator.instaclustr.com/rack"
+	DataCenterKey  = "cassandra-operator.instaclustr.com/datacenter"
+	ClusterKey     = "cassandra-operator.instaclustr.com/cluster"
 )
 
 // ANNOTATIONS
 
-func DataCenterAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func DataCenterAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	return map[string]string{
-		cdcKey:                         cdc.Name,
-		"app.kubernetes.io/managed-by": "com.instaclustr.cassandra-operator",
+		DataCenterKey: cdc.DataCenter,
+		ClusterKey:    cdc.Cluster,
+		ManagedByKey:  ManagedByValue,
 	}
 }
 
-func SeedNodesAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func SeedNodesAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectAnnotations = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
@@ -32,7 +37,7 @@ func SeedNodesAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) ma
 	return objectAnnotations
 }
 
-func NodesServiceAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func NodesServiceAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectAnnotations = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
@@ -42,7 +47,7 @@ func NodesServiceAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCenter)
 	return objectAnnotations
 }
 
-func PodTemplateSpecAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func PodTemplateSpecAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectAnnotations = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
@@ -52,7 +57,7 @@ func PodTemplateSpecAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCent
 	return objectAnnotations
 }
 
-func PrometheusAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func PrometheusAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	// Fetch cdc annotations
 	annotations := DataCenterAnnotations(cdc)
 	// Add prometheus annotations if defined
@@ -65,7 +70,7 @@ func PrometheusAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) m
 	return annotations
 }
 
-func CustomStatefulSetAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func CustomStatefulSetAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectAnnotations = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
@@ -77,14 +82,15 @@ func CustomStatefulSetAnnotations(cdc *cassandraoperatorv1alpha1.CassandraDataCe
 
 // LABELS
 
-func DataCenterLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func DataCenterLabels(cdc *cop.CassandraDataCenter) map[string]string {
 	return map[string]string{
-		cdcKey:                         cdc.Name,
-		"app.kubernetes.io/managed-by": "com.instaclustr.cassandra-operator",
+		DataCenterKey: cdc.DataCenter,
+		ClusterKey:    cdc.Cluster,
+		ManagedByKey:  ManagedByValue,
 	}
 }
 
-func SeedNodesLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func SeedNodesLabels(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectLabels = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
@@ -94,7 +100,7 @@ func SeedNodesLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[str
 	return objectLabels
 }
 
-func NodesServiceLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func NodesServiceLabels(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectLabels = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
@@ -104,7 +110,7 @@ func NodesServiceLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[
 	return objectLabels
 }
 
-func PodTemplateSpecLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func PodTemplateSpecLabels(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectLabels = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
@@ -114,7 +120,7 @@ func PodTemplateSpecLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) m
 	return objectLabels
 }
 
-func PrometheusLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func PrometheusLabels(cdc *cop.CassandraDataCenter) map[string]string {
 	// Fetch cdc labels
 	labels := DataCenterLabels(cdc)
 	// Add prometheus labels if defined
@@ -128,27 +134,29 @@ func PrometheusLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[st
 	return labels
 }
 
-func RackLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluster.Rack) map[string]string {
+func RackLabels(cdc *cop.CassandraDataCenter, rack *cluster.Rack) map[string]string {
 	// Fetch cdc labels
 	rackLabels := DataCenterLabels(cdc)
 	// Add rack info
-	rackLabels[rackKey] = rack.Name
+	rackLabels[RackKey] = rack.Name
 	return rackLabels
 }
 
 // METADATA
 
-func DataCenterResourceMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, suffixes ...string) metav1.ObjectMeta {
+func DataCenterResourceMetadata(cdc *cop.CassandraDataCenter, suffixes ...string) metav1.ObjectMeta {
 	suffix := strings.Join(append([]string{""}, suffixes...), "-")
 
-	return metav1.ObjectMeta{
+	objectMeta := metav1.ObjectMeta{
 		Namespace: cdc.Namespace,
-		Name:      "cassandra-" + cdc.Name + suffix,
+		Name:      "cassandra-" + cdc.Cluster + "-" + cdc.DataCenter + suffix,
 		Labels:    DataCenterLabels(cdc),
 	}
+
+	return objectMeta
 }
 
-func CustomStatefulSetLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) map[string]string {
+func CustomStatefulSetLabels(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectLabels = map[string]string{}
 
 	if cdc.Spec.OperatorLabels != nil {
@@ -158,16 +166,18 @@ func CustomStatefulSetLabels(cdc *cassandraoperatorv1alpha1.CassandraDataCenter)
 	return objectLabels
 }
 
-func RackMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, rack *cluster.Rack, suffixes ...string) metav1.ObjectMeta {
+func RackMetadata(cdc *cop.CassandraDataCenter, rack *cluster.Rack, suffixes ...string) metav1.ObjectMeta {
 	suffix := strings.Join(append([]string{""}, suffixes...), "-")
-	return metav1.ObjectMeta{
+	objectMeta := metav1.ObjectMeta{
 		Namespace: cdc.Namespace,
-		Name:      "cassandra-" + cdc.Name + suffix + "-" + rack.Name,
+		Name:      "cassandra-" + cdc.Cluster + "-" + cdc.DataCenter + suffix + "-" + rack.Name,
 		Labels:    RackLabels(cdc, rack),
 	}
+
+	return objectMeta
 }
 
-func StatefulSetMetadata(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, objectMetaData metav1.ObjectMeta) metav1.ObjectMeta {
+func StatefulSetMetadata(cdc *cop.CassandraDataCenter, objectMetaData metav1.ObjectMeta) metav1.ObjectMeta {
 	objectMetaData.Labels = mergeLabelMaps(objectMetaData.Labels, CustomStatefulSetLabels(cdc))
 	objectMetaData.Annotations = mergeLabelMaps(objectMetaData.Annotations, CustomStatefulSetAnnotations(cdc))
 	return objectMetaData

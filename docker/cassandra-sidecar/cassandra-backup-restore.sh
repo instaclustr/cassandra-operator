@@ -4,14 +4,16 @@ RESTORE_MARKING_FILE="/var/lib/cassandra/restore_done"
 
 function podName() {
     local restoration_cdc
+    local restoration_cluster
     local rack
     local replica_in_rack
 
-    restoration_cdc=$1
-    rack=$2
-    replica_in_rack=$(echo $3 | rev | cut -d "-" -f1 | rev)
+    restoration_cluster=$1
+    restoration_cdc=$2
+    rack=$3
+    replica_in_rack=$(echo $4 | rev | cut -d "-" -f1 | rev)
 
-    echo cassandra-${restoration_cdc}-${rack}-${replica_in_rack}
+    echo cassandra-${restoration_cluster}-${restoration_cdc}-${rack}-${replica_in_rack}
 }
 
 declare -a args
@@ -20,7 +22,8 @@ for arg in "$@"; do
     case ${arg} in
         --storage-location=*)
             RESTORATION_CDC=$(echo "${arg#*=}" | rev | cut -d "/" -f1 | rev)
-            RESTORATION_POD=$(podName "${RESTORATION_CDC}" "${CASSANDRA_RACK}" "$(hostname)")
+            RESTORATION_CLUSTER=$(echo "${arg#*=}" | rev | cut -d "/" -f2 | rev)
+            RESTORATION_POD=$(podName "${RESTORATION_CLUSTER}" "${RESTORATION_CDC}" "${CASSANDRA_RACK}" "$(hostname)")
             args+=("${arg}/${RESTORATION_POD}")
         shift
         ;;

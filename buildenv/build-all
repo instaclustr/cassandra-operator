@@ -4,17 +4,32 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-cd `dirname "$BASH_SOURCE"`/..
+cd $(dirname "$BASH_SOURCE")/..
 
 source ./buildenv/repo
 
 make
 
-if [[ "${CIRCLE_BRANCH}" == master ]]; then
-    docker tag cassandra-operator:latest "${REGISTRY}/cassandra-operator:${TAG}"
-    docker tag cassandra-operator:latest "${REGISTRY}/cassandra-operator:latest"
-    docker tag cassandra-sidecar:latest "${REGISTRY}/cassandra-sidecar:${TAG}"
-    docker tag cassandra-sidecar:latest "${REGISTRY}/cassandra-sidecar:latest"
-    docker tag cassandra-3.11.5:latest "${REGISTRY}/cassandra-3.11.5:${TAG}"
-    docker tag cassandra-3.11.5:latest "${REGISTRY}/cassandra-3.11.5:latest"
+function release_dev() {
+  docker tag cassandra-operator:latest "${REGISTRY}/cassandra-operator:latest-dev"
+  docker tag cassandra-sidecar:latest "${REGISTRY}/cassandra-sidecar:latest-dev"
+  docker tag cassandra-3.11.5:latest "${REGISTRY}/cassandra-3.11.5:latest-dev"
+  docker tag cassandra-4.0-alpha3:latest "${REGISTRY}/cassandra-4.0-alpha3:latest-dev"
+}
+
+function release_prod() {
+  docker tag cassandra-operator:latest "${REGISTRY}/cassandra-operator:${TAG}"
+  docker tag cassandra-operator:latest "${REGISTRY}/cassandra-operator:latest"
+  docker tag cassandra-sidecar:latest "${REGISTRY}/cassandra-sidecar:${TAG}"
+  docker tag cassandra-sidecar:latest "${REGISTRY}/cassandra-sidecar:latest"
+  docker tag cassandra-3.11.5:latest "${REGISTRY}/cassandra-3.11.5:${TAG}"
+  docker tag cassandra-3.11.5:latest "${REGISTRY}/cassandra-3.11.5:latest"
+  docker tag cassandra-4.0-alpha3:latest "${REGISTRY}/cassandra-4.0-alpha3:${TAG}"
+  docker tag cassandra-4.0-alpha3:latest "${REGISTRY}/cassandra-4.0-alpha3:latest"
+}
+
+if [ "${1}" = "dev" ]; then
+  release_dev
+elif [ "${1}" = "prod" ]; then
+  release_prod
 fi

@@ -1,13 +1,3 @@
--Dcassandra.config.loader=com.instaclustr.cassandra.k8s.ConcatenatedYamlConfigurationLoader
-
--Dcassandra.jmx.remote.port=7199
--Dcom.sun.management.jmxremote.authenticate=false
-
--Dcassandra.libjemalloc=/usr/lib64/libjemalloc.so.1
-
--XX:+UseThreadPriorities
--XX:ThreadPriorityPolicy=42
-
 -Xss256k
 
 -XX:StringTableSize=1000003
@@ -26,20 +16,11 @@
 
 # GC logging
 -XX:+PrintGCDetails
--XX:+PrintGCDateStamps
--XX:+PrintHeapAtGC
--XX:+PrintTenuringDistribution
--XX:+PrintGCApplicationStoppedTime
--XX:+PrintPromotionFailure
 -Xloggc:/var/log/cassandra/gc.log
--XX:+UseGCLogFileRotation
--XX:NumberOfGCLogFiles=10
--XX:GCLogFileSize=10M
 
 -XX:+HeapDumpOnOutOfMemoryError
 
 # TODO: should this be set by the operator?
 -XX:MaxDirectMemorySize=18G
-
 
 # GC settings are not defined here -- they are chosen by the operator at runtime

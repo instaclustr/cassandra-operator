@@ -10,6 +10,8 @@ metadata:
 {{- if .Values.labels }}
 {{ toYaml .Values.labels | indent 4 }}
 {{- end }}
+datacenter: {{ .Values.datacenter }}
+cluster: {{ .Values.cluster }}
 spec:
   nodes: {{ .Values.replicaCount }}
   {{- if .Values.racks }}
@@ -22,6 +24,11 @@ spec:
   {{- if  .Values.imagePullSecrets }}
   imagePullSecrets:
 {{ toYaml .Values.imagePullSecrets | indent 4}}
+  {{- end }}
+
+  {{- if .Values.imagePullSecrets }}
+  imagePullSecrets:
+    - name: {{ .Values.imagePullSecrets }}
   {{- end }}
 
   {{- if .Values.cassandraEnv }}
@@ -84,4 +91,8 @@ spec:
 {{- if .Values.restore }}
   restore:
   {{ toYaml .Values.restore | indent 4 }}
+{{- end }}
+
+{{- if .Values.fsGroup }}
+  fsGroup: {{ .Values.fsGroup }}
 {{- end }}

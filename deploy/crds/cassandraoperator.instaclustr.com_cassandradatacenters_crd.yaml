@@ -20,12 +20,16 @@ spec:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
             of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        cluster:
+          type: string
+        datacenter:
           type: string
         kind:
           description: 'Kind is a string value representing the REST resource this
             object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
           type: string
         metadata:
           type: object
@@ -77,7 +81,7 @@ spec:
                               TODO: Add other useful fields. apiVersion, kind, uid?'
                             type: string
                           optional:
-                            description: Specify whether the ConfigMap or it's key
+                            description: Specify whether the ConfigMap or its key
                               must be defined
                             type: boolean
                         required:
@@ -131,7 +135,7 @@ spec:
                               TODO: Add other useful fields. apiVersion, kind, uid?'
                             type: string
                           optional:
-                            description: Specify whether the Secret or it's key must
+                            description: Specify whether the Secret or its key must
                               be defined
                             type: boolean
                         required:
@@ -425,7 +429,7 @@ spec:
                               TODO: Add other useful fields. apiVersion, kind, uid?'
                             type: string
                           optional:
-                            description: Specify whether the ConfigMap or it's key
+                            description: Specify whether the ConfigMap or its key
                               must be defined
                             type: boolean
                         required:
@@ -479,7 +483,7 @@ spec:
                               TODO: Add other useful fields. apiVersion, kind, uid?'
                             type: string
                           optional:
-                            description: Specify whether the Secret or it's key must
+                            description: Specify whether the Secret or its key must
                               be defined
                             type: boolean
                         required:
@@ -558,7 +562,7 @@ spec:
                     type: object
                   type: array
                 optional:
-                  description: Specify whether the Secret or it's keys must be defined
+                  description: Specify whether the Secret or its keys must be defined
                   type: boolean
                 secretName:
                   description: 'Name of the secret in the pod''s namespace to use.
@@ -618,8 +622,7 @@ spec:
                     TODO: Add other useful fields. apiVersion, kind, uid?'
                   type: string
                 optional:
-                  description: Specify whether the ConfigMap or it's keys must be
-                    defined
+                  description: Specify whether the ConfigMap or its keys must be defined
                   type: boolean
               type: object
             userSecretVolumeSource:
@@ -670,7 +673,7 @@ spec:
                     type: object
                   type: array
                 optional:
-                  description: Specify whether the Secret or it's keys must be defined
+                  description: Specify whether the Secret or its keys must be defined
                   type: boolean
                 secretName:
                   description: 'Name of the secret in the pod''s namespace to use.
@@ -681,6 +684,9 @@ spec:
         status:
           description: CassandraDataCenterStatus defines the observed state of CassandraDataCenter
           type: object
+      required:
+      - cluster
+      - datacenter
       type: object
   version: v1alpha1
   versions:
