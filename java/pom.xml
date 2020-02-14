@@ -8,7 +8,9 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>k8s-addons</module>
+        <module>cassandra-k8s-addons</module>
+        <module>cassandra-3-k8s-addons</module>
+        <module>cassandra-4-k8s-addons</module>
         <module>sidecar</module>
     </modules>
 

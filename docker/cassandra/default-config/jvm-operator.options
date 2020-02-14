@@ -1,0 +1,2 @@
+-Dcassandra.config.loader=com.instaclustr.cassandra.k8s.ConcatenatedYamlConfigurationLoader
+-Dcassandra.libjemalloc=/usr/lib64/libjemalloc.so.1

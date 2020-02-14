@@ -1,2 +1,0 @@
-#!/usr/bin/env bash
-helm install -f ~/cassandra-operator/test/testvalues.yaml -n cassandra-operator --wait ~/cassandra-operator/helm/cassandra-operator

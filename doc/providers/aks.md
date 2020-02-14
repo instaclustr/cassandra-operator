@@ -13,6 +13,7 @@ apiVersion: cassandraoperator.instaclustr.com/v1alpha1
 kind: CassandraDataCenter
 metadata:
   name: cassandra-test
+...
 spec:
   fsGroup: 999
 EOF

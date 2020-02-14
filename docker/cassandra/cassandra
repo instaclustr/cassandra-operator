@@ -12,7 +12,7 @@ JVM_OPTS="${JVM_OPTS} -Dcassandra.config=${CASSANDRA_HOME}/cassandra.yaml:/etc/c
 JVM_OPTS="${JVM_OPTS} -XX:CompileCommandFile=${CASSANDRA_HOME}/hotspot_compiler"
 
 # add the jamm agent
-JVM_OPTS="${JVM_OPTS} -javaagent:${CASSANDRA_HOME}/agents/jamm-0.3.0.jar"
+JVM_OPTS="${JVM_OPTS} -javaagent:${CASSANDRA_HOME}/agents/jamm.jar"
 
 # sigar support
 JVM_OPTS="${JVM_OPTS} -Djava.library.path=${CASSANDRA_HOME}/lib/sigar-bin"
@@ -20,12 +20,18 @@ JVM_OPTS="${JVM_OPTS} -Djava.library.path=${CASSANDRA_HOME}/lib/sigar-bin"
 # heap dumps to tmp
 JVM_OPTS="${JVM_OPTS} -XX:HeapDumpPath=/var/tmp/cassandra-`date +%s`-pid$$.hprof"
 
+# determine Java version, the assumption here is that C* 4.x runs with Java 11 and C* 3.11.x runs wih Java 8
 
 # read additional JVM options from jvm.options files
-for options_file in "${CASSANDRA_CONF}/jvm.options" "${CASSANDRA_CONF}/jvm.options.d"/*.options
+for options_file in "${CASSANDRA_CONF}/jvm-operator.options" "${CASSANDRA_CONF}/jvm-jmx.options" "${CASSANDRA_CONF}/jvm.options" "${CASSANDRA_CONF}/jvm.options.d"/*.options
 do
     JVM_OPTS="${JVM_OPTS} "$((sed -ne "/^-/p" | tr '\n' ' ') < "${options_file}")
 done
+
+# Cassandra 4 runs on Java 11 so we need to add specific flags to JVM
+if [ "$(grep -c "^4" /usr/share/cassandra/cassandra_version)" = "1" ]; then
+  JVM_OPTS="${JVM_OPTS} "$((sed -ne "/^-/p" | tr '\n' ' ') < "${CASSANDRA_CONF}/jvm11-server.options")
+fi
 
 # source additional environment settings
 for env_file in "${CASSANDRA_CONF}/cassandra-env.sh" "${CASSANDRA_CONF}/cassandra-env.sh.d"/*.sh

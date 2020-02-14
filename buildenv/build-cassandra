@@ -9,13 +9,5 @@ cd `dirname "$BASH_SOURCE"`/..
 
 source ./buildenv/repo
 
-echo "Building Cassandra versions in version list"
-while IFS="" read -r line || [[ -n "$line" ]]; do
-    cassandra_version=$(echo ${line} | cut -d ":" -f1)
-    cassandra_image_version=$(echo ${line} | cut -d ":" -f2)
-    echo "Building ${REGISTRY}-:${line}"
-    docker build --tag "${REGISTRY}-${cassandra_version}:${cassandra_image_version}" \
-                 --tag "${1}-${cassandra_version}:${cassandra_image_version}" \
-                --build-arg cassandra_version="${cassandra_version}" \
-                docker/${1} 1>/dev/null
-done < buildenv/CASSANDRA_VERSIONS
+(source ./buildenv/repo && cd docker && C_IMAGE_VERSION=3.3.0 make cassandra)
+(source ./buildenv/repo && cd docker && C_IMAGE_VERSION=3.3.0 make cassandra-4)

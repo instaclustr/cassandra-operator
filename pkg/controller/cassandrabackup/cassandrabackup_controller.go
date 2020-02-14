@@ -134,8 +134,8 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 			instance,
 			corev1.EventTypeWarning,
 			"BackupSkipped",
-			fmt.Sprintf("cdc %s was not backed up to %s under snapshot %s because such backup already exists",
-				instance.Spec.CDC, instance.Spec.StorageLocation, instance.Spec.SnapshotTag))
+			fmt.Sprintf("cdc %s in cluster %s was not backed up to %s under snapshot %s because such backup already exists",
+				instance.Spec.Datacenter, instance.Spec.Cluster, instance.Spec.StorageLocation, instance.Spec.SnapshotTag))
 		return reconcile.Result{}, nil
 	}
 
@@ -163,7 +163,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	// Get CDC.
+	// Get Datacenter.
 	cdc := &cassandraoperatorv1alpha1.CassandraDataCenter{}
 	if err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CDC, Namespace: instance.Namespace}, cdc); err != nil {
 		if k8sErrors.IsNotFound(err) {
@@ -171,7 +171,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 				instance,
 				corev1.EventTypeWarning,
 				"FailureEvent",
-				fmt.Sprintf("cdc %s to backup not found", instance.Spec.CDC))
+				fmt.Sprintf("cdc %s of cluster %s to backup not found", instance.Spec.Datacenter, instance.Spec.Cluster))
 
 			return reconcile.Result{}, nil
 		}
@@ -203,7 +203,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		instance,
 		corev1.EventTypeNormal,
 		"BackupFinished",
-		fmt.Sprintf("cdc %s was backed up to %s under snapshot %s", instance.Spec.CDC, instance.Spec.StorageLocation, instance.Spec.SnapshotTag))
+		fmt.Sprintf("cdc %s of cluster %s was backed up to %s under snapshot %s", instance.Spec.Datacenter, instance.Spec.Cluster, instance.Spec.StorageLocation, instance.Spec.SnapshotTag))
 
 	return reconcile.Result{}, nil
 }
@@ -220,8 +220,10 @@ func backupOfSameSnapshotExists(c client.Client, instance *cassandraoperatorv1al
 		if existingBackup.Status != nil {
 			if existingBackup.Spec.SnapshotTag == instance.Spec.SnapshotTag {
 				if existingBackup.Spec.StorageLocation == instance.Spec.StorageLocation {
-					if existingBackup.Spec.CDC == instance.Spec.CDC {
-						return true, nil
+					if existingBackup.Spec.Cluster == instance.Spec.Cluster {
+						if existingBackup.Spec.Datacenter == instance.Spec.Datacenter {
+							return true, nil
+						}
 					}
 				}
 			}
@@ -292,7 +294,7 @@ func backup(
 	defer wg.Done()
 
 	backupRequest := &sidecar.BackupRequest{
-		StorageLocation:       fmt.Sprintf("%s/%s/%s", instance.backup.Spec.StorageLocation, instance.backup.Spec.CDC, podHostname),
+		StorageLocation:       fmt.Sprintf("%s/%s/%s/%s", instance.backup.Spec.StorageLocation, instance.backup.Spec.Cluster, instance.backup.Spec.Datacenter, podHostname),
 		SnapshotTag:           instance.backup.Spec.SnapshotTag,
 		Duration:              instance.backup.Spec.Duration,
 		Bandwidth:             instance.backup.Spec.Bandwidth,

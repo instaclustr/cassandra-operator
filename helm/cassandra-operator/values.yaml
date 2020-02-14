@@ -2,25 +2,20 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
-
-apiVersion: stable.instaclustr.com/v1
-
 image:
   repository: gcr.io/cassandra-operator/cassandra-operator
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 #imagePullSecrets: "regcred"
 
-resources: {}
-  # Suggested resource limits for the operator itself (not cassandra), works with a reasonable sized minikube.
-#  limits:
-#    cpu: 200m
-#    memory: 100Mi
-#  requests:
-#    cpu: 100m
-#    memory: 50Mi
+resources:
+  limits:
+    cpu: 200m
+    memory: 100Mi
+  requests:
+    cpu: 100m
+    memory: 50Mi
 
 nodeSelector: {}
 

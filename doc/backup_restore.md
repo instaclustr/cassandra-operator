@@ -52,18 +52,21 @@ After the secret is specified, you can proceed to backup, you have to _apply_ th
 apiVersion: cassandraoperator.instaclustr.com/v1alpha1
 kind: CassandraBackup
 metadata:
-  name: test-cassandra-backup-restore-s3
+  name: test-cassandra-backup
   labels:
     app: cassandra
 spec:
-  cdc: test-dc-cassandra
-  storageLocation: "azure://stefan-cassandra-testdc-bucket"
-  snapshotTag: "restore-test"
+  cdc: test-cluster-dc1-cassandra
+  cluster: test-cluster
+  datacenter: dc1
+  storageLocation: "s3://cassandra-bucket"
+  snapshotTag: "mySnapshotTag"
 secret: cloud-backup-secrets
 ````
 
 First of all, notice how we are calling our backup - _test-cassandra-backup-restore-s3_, we will use this 
-name once we want to restore a cluster. Secondly, `cdc`, that is name of our cluster. Notice also _storageLocation_, 
+name once we want to restore a cluster. Secondly, `cdc`, that is name of our cluster, `datacenter` and `cluster` 
+are taken from Cassandra CDC too. Notice also _storageLocation_, 
 its prefix is _azure_ so it means that we are going to perform a backup to Azure. Next, bucket name is 
 _stefan-cassandra-testdc-bucket_ so this will be the bucket a backup operation will upload all files to. 
 Currently, this bucket has to exist beforehand. _snapshotTag_ follows - this is the name of a snapshot a 

@@ -91,7 +91,8 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			podVolumes = append(podVolumes, *emptyDirVolume)
 		}
 
-		podSpec := newPodSpec(rctx.cdc, rack,
+		podSpec := newPodSpec(rctx.cdc,
+			rack,
 			podVolumes,
 			[]corev1.Container{*cassandraContainer, *sidecarContainer},
 			initContainers,
@@ -132,7 +133,7 @@ func newStatefulSetSpec(
 	podRackLabels := RackLabels(cdc, rack)
 	podLabels := PodTemplateSpecLabels(cdc)
 	statefulSetSpec := &v1.StatefulSetSpec{
-		ServiceName: "cassandra-" + cdc.Name + "-nodes",
+		ServiceName: "cassandra-" + cdc.Cluster + "-" + cdc.DataCenter + "-nodes",
 		Replicas:    &rack.Replicas,
 		Selector:    &metav1.LabelSelector{MatchLabels: podRackLabels},
 		Template: corev1.PodTemplateSpec{
@@ -159,7 +160,6 @@ func newPodSpec(
 	containers []corev1.Container,
 	initContainers []corev1.Container,
 	securityContext *corev1.PodSecurityContext) *corev1.PodSpec {
-	// TODO: should this spec be fully exposed into the CDC.Spec?
 	podSpec := &corev1.PodSpec{
 		Volumes:            volumes,
 		Containers:         containers,
@@ -328,14 +328,14 @@ func newRestoreContainer(
 		return nil, err
 	}
 
-	if len(backup.Spec.CDC) == 0 {
+	if len(backup.Spec.Datacenter) == 0 {
 		return nil, errors.New(fmt.Sprintf("cdc field in backup CRD %s was not set!", cdc.Spec.Restore.BackupName))
 	}
 
 	restoreArgs := []string{
 		"restore",
 		"--snapshot-tag=" + backup.Spec.SnapshotTag,
-		"--storage-location=" + backup.Spec.StorageLocation + "/" + backup.Spec.CDC,
+		"--storage-location=" + backup.Spec.StorageLocation + "/" + backup.Spec.Cluster + "/" + backup.Spec.Datacenter,
 		"--k8s-namespace=" + cdc.Namespace,
 		"--k8s-backup-secret-name=" + backup.Secret,
 	}
@@ -517,7 +517,7 @@ func scaleStatefulSet(
 			if decommissionedNodes[0].Name != newestPod.Name {
 				return fmt.Errorf("skipping StatefulSet reconciliation as the DataCenter contains one decommissioned Cassandra node, but it is not the newest in this rack (%v), "+
 					"might belong to a different rack (%v); decommissioned pod: %v, expected pod: %v",
-					rack.Name, decommissionedNodes[0].Labels[rackKey], decommissionedNodes[0].Name, newestPod.Name)
+					rack.Name, decommissionedNodes[0].Labels[RackKey], decommissionedNodes[0].Name, newestPod.Name)
 			}
 
 			existingStatefulSet.Spec = *newStatefulSetSpec
@@ -668,7 +668,7 @@ func findRackToReconcile(rctx *reconciliationRequestContext) (*cluster.Rack, err
 
 	// 3. Otherwise, we have all stateful sets running. Let's see which one we should reconcile.
 	for _, sts := range rctx.sets {
-		rack := racksDistribution.GetRack(sts.Labels[rackKey])
+		rack := racksDistribution.GetRack(sts.Labels[RackKey])
 		if rack == nil {
 			continue
 		}
@@ -696,7 +696,8 @@ func getStatefulSets(rctx *reconciliationRequestContext) ([]v1.StatefulSet, erro
 	listOptions := []client.ListOption{
 		client.InNamespace(rctx.cdc.Namespace),
 		client.MatchingLabels{
-			"cassandra-operator.instaclustr.com/datacenter": rctx.cdc.Name,
+			"cassandra-operator.instaclustr.com/datacenter": rctx.cdc.DataCenter,
+			"cassandra-operator.instaclustr.com/cluster":    rctx.cdc.Cluster,
 		},
 	}
 

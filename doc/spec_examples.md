@@ -1,3 +1,3 @@
 ## Specific Examples
-### TODO - Feel free to submit some examples :)
-For the moment check out the master readme.md
+
+You may find examples in `examples` directory in root of this repository.

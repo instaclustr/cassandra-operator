@@ -10,8 +10,10 @@ import (
 // CassandraBackupSpec defines the desired state of CassandraBackup
 // +k8s:openapi-gen=true
 type CassandraBackupSpec struct {
+	CDC     string `json:"cdc"`
+	Cluster string `json:"cluster"`
 	// Cassandra DC name to back up. Used to find the pods in the CDC
-	CDC string `json:"cdc"`
+	Datacenter string `json:"datacenter"`
 	// The uri for the backup target location e.g. s3 bucket, filepath
 	StorageLocation string `json:"storageLocation"`
 	// The snapshot tag for the backup

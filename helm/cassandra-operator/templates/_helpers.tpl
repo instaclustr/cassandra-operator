@@ -24,9 +24,6 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 {{- end -}}
 
-{{/*
-Return the appropriate apiVersion value to use for the prometheus-operator managed k8s resources
-*/}}
 {{- define "cassandra-operator.apiVersion" -}}
 {{- printf "%s" "stable.instaclustr.com/v1" -}}
 {{- end -}}

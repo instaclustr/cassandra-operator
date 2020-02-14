@@ -1,0 +1,2 @@
+-Dcassandra.jmx.remote.port=7199
+-Dcom.sun.management.jmxremote.authenticate=false

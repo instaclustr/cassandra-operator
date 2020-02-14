@@ -5,7 +5,9 @@ metadata:
   labels:
     app: cassandra
 spec:
-  cdc: test-dc-cassandra
-  storageLocation: "s3://stefan-cassandra-testdc-bucket"
+  cdc: test-cluster-dc1-cassandra
+  cluster: test-cluster
+  datacenter: dc1
+  storageLocation: "s3://cassandra-bucket"
   snapshotTag: "mySnapshotTag"
 secret: cloud-backup-secrets

@@ -67,7 +67,7 @@ func (in *CassandraBackup) DeepCopyObject() runtime.Object {
 func (in *CassandraBackupList) DeepCopyInto(out *CassandraBackupList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]CassandraBackup, len(*in))
@@ -165,7 +165,7 @@ func (in *CassandraCluster) DeepCopyObject() runtime.Object {
 func (in *CassandraClusterList) DeepCopyInto(out *CassandraClusterList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]CassandraCluster, len(*in))
@@ -258,7 +258,7 @@ func (in *CassandraDataCenter) DeepCopyObject() runtime.Object {
 func (in *CassandraDataCenterList) DeepCopyInto(out *CassandraDataCenterList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]CassandraDataCenter, len(*in))

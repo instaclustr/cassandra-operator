@@ -52,8 +52,10 @@ type CassandraDataCenter struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CassandraDataCenterSpec   `json:"spec,omitempty"`
-	Status CassandraDataCenterStatus `json:"status,omitempty"`
+	Cluster    string                    `json:"cluster"`
+	DataCenter string                    `json:"datacenter"`
+	Spec       CassandraDataCenterSpec   `json:"spec,omitempty"`
+	Status     CassandraDataCenterStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
