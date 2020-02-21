@@ -2,7 +2,7 @@ ARG openjre_image
 
 FROM ${openjre_image}
 
-ARG cassandra_version=3.11.5
+ARG cassandra_version=3.11.6
 ARG cassandra_exporter_version=0.9.10
 ARG cassandra_k8s_addons_jar
 ARG cassandra_k8s_addons_core_jar

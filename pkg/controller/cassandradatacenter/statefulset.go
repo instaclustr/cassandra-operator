@@ -460,7 +460,14 @@ func scaleStatefulSet(
 		log.Info(fmt.Sprintf("unable to list pods in rack %v", rack.Name))
 		return err
 	}
-	states := cassandraStates(rctx.sidecarClients)
+
+	clients, err := GetAllSidecarClients(rctx.client, rctx.cdc)
+
+	if err != nil {
+		return err
+	}
+
+	states := cassandraStates(clients)
 	decommissionedNodes := nodesInState(states, nodestate.DECOMMISSIONED)
 
 	if existingStatefulSet.CreationTimestamp.IsZero() {
@@ -494,7 +501,18 @@ func scaleStatefulSet(
 		newestPod := podsInRack[len(podsInRack)-1]
 		if len(decommissionedNodes) == 0 {
 			log.Info("No Cassandra nodes have been decommissioned. Decommissioning the newest one " + newestPod.Name)
-			if clientForNewestPod := sidecar.ClientFromPods(rctx.sidecarClients, newestPod); clientForNewestPod != nil {
+
+			clients, err = GetAllSidecarClients(rctx.client, rctx.cdc)
+
+			if err != nil {
+				rctx.recorder.Event(
+					rctx.cdc,
+					corev1.EventTypeWarning,
+					"FailureEvent",
+					fmt.Sprintf("Node %s was unable to be decommissioned, unable to get sidecar clients: %v", newestPod.Name, err))
+			}
+
+			if clientForNewestPod := sidecar.ClientFromPods(clients, newestPod); clientForNewestPod != nil {
 				if _, err := clientForNewestPod.StartOperation(&sidecar.DecommissionRequest{}); err != nil {
 
 					rctx.recorder.Event(
@@ -595,12 +613,20 @@ func (states nodeStates) contains(state nodestate.NodeState) bool {
 	return false
 }
 
-func badNodes(rctx *reconciliationRequestContext) (map[string]nodestate.NodeState, string) {
+func badNodes(rctx *reconciliationRequestContext) (map[string]nodestate.NodeState, string, error) {
 
 	// return map of [bad pods name]: [their state]
 	// return list of desired states appropriate to the current scaling operation as a string
 
-	states := cassandraStates(rctx.sidecarClients)
+	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
+
+	if err != nil {
+		return nil, "", err
+	}
+
+	clients := sidecar.SidecarClients(allPods, &sidecar.DefaultSidecarClientOptions)
+
+	states := cassandraStates(clients)
 
 	opModes := scaleUpOperationModes
 	if rctx.operation == scalingDown {
@@ -614,7 +640,7 @@ func badNodes(rctx *reconciliationRequestContext) (map[string]nodestate.NodeStat
 		}
 	}
 
-	return podsInBadState, opModes.asString()
+	return podsInBadState, opModes.asString(), nil
 }
 
 func checkClusterHealth(rctx *reconciliationRequestContext) (bool, error) {
@@ -622,13 +648,23 @@ func checkClusterHealth(rctx *reconciliationRequestContext) (bool, error) {
 	// Check the cluster health. If the cluster is not ready, do not reconcile and just wait.
 
 	// 1. Check all the currently existing pods, and make sure they're all in a Running state.
-	if allRun, notRunningPods := allPodsAreRunning(rctx.allPods); !allRun {
+
+	allPods, err := AllPodsInCDC(rctx.client, rctx.cdc)
+
+	if err != nil {
+		return false, err
+	}
+
+	if allRun, notRunningPods := allPodsAreRunning(allPods); !allRun {
 		log.Info("Skipping reconciliation as some pods are not running yet: " + strings.Join(notRunningPods, " "))
 		return false, ErrorClusterNotReady
 	}
 
 	// 2. Check all the currently existing C*, and make sure they're all in either NORMAL or DECOMMISSIONED state.
-	if badNodes, desiredNodeStates := badNodes(rctx); len(badNodes) > 0 {
+
+	if badNodes, desiredNodeStates, err := badNodes(rctx); err != nil {
+		return false, err
+	} else if len(badNodes) > 0 {
 		log.Info(fmt.Sprintf("skipping StatefulSet reconciliation as some Cassandra nodes are not in modes %s", desiredNodeStates))
 		for pod, status := range badNodes {
 			log.Info(fmt.Sprintf("Pod: '%v', Status: '%v'", pod, status))

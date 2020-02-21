@@ -3,10 +3,10 @@ entries:
   cassandra:
   - apiVersion: v1
     appVersion: "1.0"
-    created: "2020-02-14T17:24:27.312254506+01:00"
+    created: "2020-02-21T23:18:31.1188084+01:00"
     description: A Helm chart for creating Cassandra clusters using the Cassandra
       operator
-    digest: 239466265e0afbad77d73258bf80514db731c901d671cec242a05fade0556143
+    digest: 5c4a3c2204a5e1e84478cdc711e0be9e1ae4e003c144f29e62e1ff5034f81218
     home: https://www.instaclustr.com
     keywords:
     - operator
@@ -26,9 +26,9 @@ entries:
   cassandra-operator:
   - apiVersion: v1
     appVersion: "1.0"
-    created: "2020-02-14T17:24:27.313050281+01:00"
+    created: "2020-02-21T23:18:31.120111621+01:00"
     description: A Helm chart for Cassandra Operator for Kubernetes by Instaclustr
-    digest: b4ea77d3a18afd04dd8ae8ff716ac302815284f7ca048024404168edfce5b8e3
+    digest: ce3d2a9ca0fae6ac3d3b40c7d081f23dafa68199b4d8919c14c817bb6adae960
     home: https://www.instaclustr.com
     keywords:
     - operator
@@ -45,4 +45,4 @@ entries:
     urls:
     - cassandra-operator-1.0.0.tgz
     version: 1.0.0
-generated: "2020-02-14T17:24:27.310767076+01:00"
+generated: "2020-02-21T23:18:31.117871005+01:00"
