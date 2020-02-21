@@ -1,7 +1,7 @@
 # Auth
 
 Cassandra operator is by default set up with the following 
-configuration properties in CDC spec (1):
+configuration properties in CDC spec:
 
 ```
 cassandraAuth:
@@ -12,15 +12,6 @@ cassandraAuth:
 
 By default, Cassandra will not ask you for any password and it will behave as if the authentication 
 is completely turned off.
-
-You can change it to classic password-based auth like the following (2): 
-
-```
-  cassandraAuth:
-    authenticator: PasswordAuthenticator
-    authorizer: CassandraAuthorizer
-    roleManager: CassandraRoleManager
-```
 
 When you are starting your cluster from scratch, e.g. from 1 to 3 nodes, Cassandra 
 sets up `system_auth` keyspace which has the replication strategy of `SimpleStrategy` and replication factor of 1.
@@ -59,23 +50,34 @@ should be replicated everywhere.
 
 ### Switching between AllowAllAuthenticator to PasswordAuthenticator
 
-If you happened to deploy your cluster without password authentication turned on, you might want to do that on live 
-cluster. Before proceeding, be sure you have changed your replication strategy to `NetworkTopologyStrategy` and you 
-repaired all nodes.
-
-Only after you do that, change `spec.cassandraAuth` in your YAML to contain same properties as it is specified in (2) 
-(all of them). Apply that spec as you are used to (`kubectl apply -f your_spec.yaml`). It is applied now but pods are 
-still running with old Cassandra configuration so you have to restart nodes one by one. Restarting a pod a Cassandra 
-node is running in is quite a tricky task but we will just _delete_ that pod. Once it is deleted, operator sees that 
-the stateful set has _n-1_ pods running but it should have _n_ pods running so it will start the same pod we just took down.
-Deletion of a pod is done like:
+You can change it to classic password-based auth like the following: 
 
 ```
-$ kubectl delete pod cassandra-test-dc-cassandra-west1-a-0
+  cassandraAuth:
+    authenticator: PasswordAuthenticator
+    authorizer: CassandraAuthorizer
+    roleManager: CassandraRoleManager
 ```
+
+If you `apply` a spec again, since pods and nodes in them are still running, this change is not propagated automatically. 
+Hence, you have to _restart_ that container. We are restartring a container by invoking _restart operation_ again its Sidecar 
+container. There is HTTP server in Sidecar container which listens to various operations, `restart` being one of them.
+
+If an IP of a pod is 10.20.30.40, you have to `POST` the following body as `application/json` to `http://10.20.30.40:4567/operations`
+
+```
+{
+	"type": "restart"
+}
+```
+
+Under the hood, restarting of a container means that Cassandra node is _drained_ first and then it leaves a ring. 
+Afterwards, its process (pid 1) is killed from Sidecar calling Kubernetes' `exec` command from Sidecar against Cassandra 
+container. Once that process is killed, container exists, so it is automatically restarted by Kubernetes, but now 
+it picks up different configuration (password-based) which we applied before. 
 
 Since we are using persistent volumes, these volumes are still there even we delete our pod so 
-if a pod is restarted, it will reuse same persistent volumes were our data are. You can check that 
+if a container is restarted, it will reuse same persistent volumes were our data are. You can check that 
 operator is restarting you pod after you delete that, automatically.
 
 Persistent volumes are deleted automatically only in case you have set flag `deletePVCs` in your spec to true.

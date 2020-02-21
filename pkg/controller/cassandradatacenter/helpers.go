@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
+
 	"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +27,14 @@ func sortStatefulSetsDescending(sets []v1.StatefulSet) (s []v1.StatefulSet) {
 		return sets[i].Status.Replicas > sets[j].Status.Replicas
 	})
 	return sets
+}
+
+func GetAllSidecarClients(client client.Client, instance *v1alpha1.CassandraDataCenter) (map[*corev1.Pod]*sidecar.Client, error) {
+	if allPods, err := AllPodsInCDC(client, instance); err != nil {
+		return nil, err
+	} else {
+		return sidecar.SidecarClients(allPods, &sidecar.DefaultSidecarClientOptions), nil
+	}
 }
 
 func AllPodsInCDC(c client.Client, cdc *v1alpha1.CassandraDataCenter) ([]corev1.Pod, error) {

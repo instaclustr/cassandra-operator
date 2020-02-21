@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-logr/logr"
 	cassandraoperatorv1alpha1 "github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
-	"github.com/instaclustr/cassandra-operator/pkg/sidecar"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -86,13 +85,11 @@ type ReconcileCassandraDataCenter struct {
 
 type reconciliationRequestContext struct {
 	ReconcileCassandraDataCenter
-	logger         logr.Logger
-	cdc            *cassandraoperatorv1alpha1.CassandraDataCenter
-	sets           []v1.StatefulSet
-	operation      scalingOperation
-	allPods        []corev1.Pod
-	sidecarClients map[*corev1.Pod]*sidecar.Client
-	recorder       record.EventRecorder
+	logger    logr.Logger
+	cdc       *cassandraoperatorv1alpha1.CassandraDataCenter
+	sets      []v1.StatefulSet
+	operation scalingOperation
+	recorder  record.EventRecorder
 }
 
 type scalingOperation string
@@ -328,6 +325,7 @@ func newReconciliationContext(r *ReconcileCassandraDataCenter, reqLogger logr.Lo
 
 	// Figure out the scaling operation. If no change needed, then it's noop
 	allPods, err := AllPodsInCDC(r.client, instance)
+
 	if err != nil {
 		return nil, err
 	}
@@ -344,8 +342,6 @@ func newReconciliationContext(r *ReconcileCassandraDataCenter, reqLogger logr.Lo
 		ReconcileCassandraDataCenter: *r,
 		cdc:                          instance,
 		operation:                    op,
-		allPods:                      allPods,
-		sidecarClients:               sidecar.SidecarClients(allPods, &sidecar.DefaultSidecarClientOptions),
 		logger:                       reqLogger,
 		recorder:                     r.recorder,
 	}
