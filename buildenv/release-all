@@ -20,8 +20,8 @@ function release_prod() {
     docker push "${REGISTRY}/cassandra-operator:latest"
     docker push "${REGISTRY}/cassandra-sidecar:${TAG}"
     docker push "${REGISTRY}/cassandra-sidecar:latest"
-    docker push "${REGISTRY}/cassandra-3.11.5:latest"
-    docker push "${REGISTRY}/cassandra-3.11.5:${TAG}"
+    docker push "${REGISTRY}/cassandra-3.11.6:latest"
+    docker push "${REGISTRY}/cassandra-3.11.6:${TAG}"
     docker push "${REGISTRY}/cassandra-4.0-alpha3:latest"
     docker push "${REGISTRY}/cassandra-4.0-alpha3:${TAG}"
   fi
@@ -30,7 +30,7 @@ function release_prod() {
 function release_dev() {
   docker push "${REGISTRY}/cassandra-operator:latest-dev"
   docker push "${REGISTRY}/cassandra-sidecar:latest-dev"
-  docker push "${REGISTRY}/cassandra-3.11.5:latest-dev"
+  docker push "${REGISTRY}/cassandra-3.11.6:latest-dev"
   docker push "${REGISTRY}/cassandra-4.0-alpha3:latest-dev"
 }
 

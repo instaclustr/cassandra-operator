@@ -9,5 +9,5 @@ cd `dirname "$BASH_SOURCE"`/..
 
 source ./buildenv/repo
 
-(source ./buildenv/repo && cd docker && C_IMAGE_VERSION=3.3.0 make cassandra)
-(source ./buildenv/repo && cd docker && C_IMAGE_VERSION=3.3.0 make cassandra-4)
+(source ./buildenv/repo && cd docker && C_IMAGE_VERSION=1.0.0 make cassandra)
+(source ./buildenv/repo && cd docker && C_IMAGE_VERSION=4.0.1 make cassandra-4)

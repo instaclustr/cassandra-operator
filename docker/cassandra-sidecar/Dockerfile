@@ -8,7 +8,7 @@ ARG cassandra_backup_restore_jar
 # Create 'cassandra' user and group
 RUN groupadd -g 999 cassandra && useradd -r -u 999 -g cassandra cassandra
 
-RUN mkdir -p /opt/{bin,lib/cassandra-sidecar,lib/cassandra-backup-restore}
+RUN mkdir -p /opt/bin && mkdir -p /opt/lib/cassandra-sidecar && mkdir -p /opt/lib/cassandra-backup-restore
 
 COPY ${cassandra_sidecar_jar} /opt/lib/cassandra-sidecar/
 RUN ln -s /opt/lib/cassandra-sidecar/${cassandra_sidecar_jar} /opt/lib/cassandra-sidecar/cassandra-sidecar.jar

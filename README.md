@@ -12,7 +12,7 @@ We expect to consider the Cassandra operator stable soon; backwards incompatible
 
 ### Cassandra version support
 
-We are currently building images for Cassandra 3.11.5 and 4.0-alpha3. 
+We are currently building images for Cassandra 3.11.6 and 4.0-alpha3. 
 
 ## Documentation
 
