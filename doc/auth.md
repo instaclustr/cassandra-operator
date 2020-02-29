@@ -243,3 +243,69 @@ Connected to test-dc-cassandra at cassandra-test-dc-cassandra-west1-a-0:9042.
 Use HELP for help.
 cassandra@cqlsh> 
 ``` 
+
+## SSL with Sidecar
+
+Once you are on SSL, the interesting (or rather, quite obvious) fact is that your Sidecar probe will fail to execute a CQL statement against a Cassandra node, because it started to be secured (if you enabled client-node SSL, which is most probably the case). Kubernetes uses the execution on a CQL statement from Sidecar as a proof that a Cassandra node is up and if you configed your Cassandra node to be on SSL, well, Sidecar has to know how to talk to Cassandra securely too.
+
+In order to achieve this, we use the following config map:
+
+```
+$ kubectl describe configmap cassandra-operator-sidecar-config-test-dc
+Name:         cassandra-operator-sidecar-config-test-dc
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+
+Data
+====
+cassandra-config:
+----
+datastax-java-driver {
+  advanced.ssl-engine-factory {
+    class = DefaultSslEngineFactory
+
+    cipher-suites = [ "TLS_RSA_WITH_AES_256_CBC_SHA" ]
+    
+    hostname-validation = false
+
+    truststore-path = /tmp/sidecar-secret/truststore.jks
+    truststore-password = cassandra
+    keystore-path = /tmp/sidecar-secret/keystore.p12
+    keystore-password = cassandra
+  }
+}
+
+Events:  <none>
+```
+
+Few things to check:
+
+* the name of this config map follows a pattern. It is _cassandra-operator-sidecar-config-name-of-dc_.
+* the name of config map entry is in every case _cassandra-config_
+* the content of _cassandra-config_ is a configuration fragment of Cassandra Datastax Driver of version 4.
+* truststore and keystore paths are referencing the very same files you used in `cassandra.yaml` configration
+
+As a reference to further dig deeper, we are using custom `DriverConfigLoader` from Datastax 4 driver which is not fetching configration from a file but it is fetching it by calling Kubernetes API (by official Kubernetes Java client) and it reads that configuration from there. The configuration retrieval mechanism is pluggable in Datastax driver of version 4 so we are using this configuration mechanism transparently here. One just have to be sure to create a config map of right name and follow the naming pattern and this configuration will be resolved automatically. If you feel brave enough to follow the code in more depth, you are welcome do to so in the below links, .e.g in helper, you see how names of configs and other things are resolved.
+
+* [KubernetesCassandraConfigReader](https://github.com/instaclustr/instaclustr-commons/blob/master/src/main/java/com/instaclustr/cassandra/service/kubernetes/KubernetesCassandraConfigReader.java)
+
+* [KubernetesCqlSession](https://github.com/instaclustr/instaclustr-commons/blob/master/src/main/java/com/instaclustr/cassandra/service/kubernetes/KubernetesCqlSession.java#L53-L87)
+
+* [CassandraKubernetesHelper](https://github.com/instaclustr/instaclustr-commons/blob/master/src/main/java/com/instaclustr/cassandra/service/kubernetes/CassandraKubernetesHelper.java)
+
+You might argue that the configuration here is security sensitive as it contains passwords. Fair enough. If you do not want to have them there, you might put them into a secret. The very same configuration mechanism holds. For example, imagine that you want your Sidecar to talk to a Cassandra node with different username and password from `cassandra:cassandra` which is used by default and you are using `PasswordAuthenticator`. In that case, you need to configure Sidecar accordingly so it is "password-aware" and it does not use defaults. In that case, you would create this secret:
+
+```
+datastax-java-driver {
+  advanced.auth-provider {
+    class = PlainTextAuthProvider
+    username = cassandra
+    password = cassandra
+  }
+}
+```
+
+This secret would have name _cassandra-operator-sidecar-secret-name-of-dc_ and its only entry would have name `cassandra-config`.
+
+This custom configuration mechanism has various advantages. Imagine your password has changed or you have changed some configuration parameters so the driver has to cope with that. Normally, you would the most probably restart the pod / container or something similar so such container would "re-fetch" its configration. But since we are constructing `CqlSession` per request, we actually retrieve configuration and secrets for every `CqlSession` created so if you update your config maps or secrets from outside, it will be transparently propagated into Sidecar container as if nothing happened. Eventually, you should not see your probe failing anymore.
