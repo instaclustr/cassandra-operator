@@ -314,3 +314,5 @@ datastax-java-driver {
 This secret would have name _cassandra-operator-sidecar-secret-name-of-dc_ and its only entry would have name `cassandra-config`.
 
 This custom configuration mechanism has various advantages. Imagine your password has changed or you have changed some configuration parameters so the driver has to cope with that. Normally, you would the most probably restart the pod / container or something similar so such container would "re-fetch" its configration. But since we are constructing `CqlSession` per request, we actually retrieve configuration and secrets for every `CqlSession` created so if you update your config maps or secrets from outside, it will be transparently propagated into Sidecar container as if nothing happened. Eventually, you should not see your probe failing anymore.
+
+There are [examples](https://github.com/instaclustr/cassandra-operator/tree/master/examples) for Sidecar configuration which guides you through whole process in even more granular level.
