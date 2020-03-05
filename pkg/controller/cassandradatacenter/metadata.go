@@ -30,7 +30,7 @@ func DataCenterAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 func SeedNodesAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectAnnotations = map[string]string{}
 
-	if cdc.Spec.OperatorLabels != nil {
+	if cdc.Spec.OperatorAnnotations != nil {
 		objectAnnotations = cdc.Spec.OperatorAnnotations.SeedNodesService
 	}
 
@@ -40,7 +40,7 @@ func SeedNodesAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 func NodesServiceAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectAnnotations = map[string]string{}
 
-	if cdc.Spec.OperatorLabels != nil {
+	if cdc.Spec.OperatorAnnotations != nil {
 		objectAnnotations = cdc.Spec.OperatorAnnotations.NodesService
 	}
 
@@ -50,7 +50,7 @@ func NodesServiceAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 func PodTemplateSpecAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectAnnotations = map[string]string{}
 
-	if cdc.Spec.OperatorLabels != nil {
+	if cdc.Spec.OperatorAnnotations != nil {
 		objectAnnotations = cdc.Spec.OperatorAnnotations.PodTemplate
 	}
 
@@ -73,7 +73,7 @@ func PrometheusAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 func CustomStatefulSetAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	var objectAnnotations = map[string]string{}
 
-	if cdc.Spec.OperatorLabels != nil {
+	if cdc.Spec.OperatorAnnotations != nil {
 		objectAnnotations = cdc.Spec.OperatorAnnotations.StatefulSet
 	}
 
