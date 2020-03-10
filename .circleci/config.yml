@@ -82,7 +82,7 @@ jobs:
 
       - run:
           name: Setup K8s cluster and Credentials
-          command: gcloud --quiet container clusters create ${K8S_CLUSTER_NAME} --cluster-version=1.15.8-gke.2 && gcloud --quiet container clusters get-credentials ${K8S_CLUSTER_NAME}
+          command: gcloud --quiet container clusters create ${K8S_CLUSTER_NAME} --cluster-version=${K8S_CLUSTER_VERSION} && gcloud --quiet container clusters get-credentials ${K8S_CLUSTER_NAME}
 
       - setup_remote_docker:
           docker_layer_caching: false
