@@ -224,6 +224,32 @@ automatically deleted and PV will be recycled (or retained, but does it make sen
 Similarly, if the whole data center is deleted, all pods are terminated and all PVCs would be deleted too 
 if this option is active. This functionality is done via _finalizers_.
 
+### Access to cluster from outside
+
+You can use e.g. LoadBalancer service in front and route it to a node.
+
+Exposing would be done like:
+
+```
+kubectl expose pod cassandra-test-cluster-dc1-west1-a-0 \
+  --type="LoadBalancer" \
+  --name=node1-service \
+  --port=9042 \
+  --target-port=9042
+```
+
+So you can do just this:
+
+```
+[smiklosovic@E091-FED ~]$ cqlsh 52.226.147.210
+Connected to cassandra-test at 52.226.147.210:9042.
+[cqlsh 5.0.1 | Cassandra 3.11.6 | CQL spec 3.4.4 | Native protocol v4]
+Use HELP for help.
+
+```
+
+This was tested against Azure.
+
 [aks]: https://azure.microsoft.com/en-in/services/kubernetes-service/
 [gke]: https://console.cloud.google.com/kubernetes
 [crds]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions
