@@ -14,6 +14,16 @@ rather risky situation, if exercised and tried out beforehand, it should be a ro
 
 Notable changes between the versions will be summarised here:
 
+### v5.1.0
+
+Sidecar image is smaller (in MBs) because Sidecar from now on integrates 
+backup-restore application as well. Previously, back-restore was standalone 
+command (JAR) as it was used upon restores as well as for performing backup 
+requests from operator so Sidecar depended on its API. This is now consolidated and Sidecar is able to be 
+invoked as a server application as well as CLI application for taking backups / restores 
+so there is not any need to have backup-restore application standalone which renders 
+whole image smaller.
+
 ### v5.0.0
 
 No notable changes. Cassandra image was updated to use Cassandra 3.11.6.

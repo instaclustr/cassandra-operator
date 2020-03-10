@@ -37,10 +37,11 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Spec;
 
 @Command(name = "cassandra-sidecar",
-         mixinStandardHelpOptions = true,
-         description = "Sidecar management application for Apache Cassandra running on Kubernetes.",
-         versionProvider = Sidecar.class,
-         sortOptions = false
+    description = "Sidecar management application for Apache Cassandra running on Kubernetes.",
+    versionProvider = Sidecar.class,
+    sortOptions = false,
+    usageHelpWidth = 128,
+    mixinStandardHelpOptions = true
 )
 public final class Sidecar extends CLIApplication implements Callable<Void> {
 
@@ -53,11 +54,23 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
     @Spec
     private CommandSpec commandSpec;
 
-    public static void main(final String[] args) {
+    public static void main(String[] args) {
+        main(args, true);
+    }
+
+    public static void mainWithoutExit(String[] args) {
+        main(args, false);
+    }
+
+    public static void main(final String[] args, boolean exit) {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
-        System.exit(execute(new Sidecar(), args));
+        int exitCode = execute(new Sidecar(), args);
+
+        if (exit) {
+            System.exit(exitCode);
+        }
     }
 
     @Override
