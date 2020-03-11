@@ -27,6 +27,35 @@ function release_prod() {
   fi
 }
 
+function get_helm_chart_version() {
+  grep "version: " ${1}/Chart.yaml | cut -d " " -f2
+}
+
+function release_helm() {
+
+  TAG_SUFFIX=""
+
+  if [ ! "x${1}" = "x" ]; then
+    TAG_SUFFIX="-${1}"
+  fi
+
+  cassandra_chart_version=$(get_helm_chart_version "helm/cassandra")
+
+  helm chart save helm/cassandra/ gcr.io/cassandra-operator/cassandra-chart:${cassandra_chart_version}${TAG_SUFFIX}
+  helm chart save helm/cassandra/ gcr.io/cassandra-operator/cassandra-chart:latest${TAG_SUFFIX}
+
+  helm chart push gcr.io/cassandra-operator/cassandra-chart:${cassandra_chart_version}${TAG_SUFFIX}
+  helm chart push gcr.io/cassandra-operator/cassandra-chart:latest${TAG_SUFFIX}
+
+  cassandra_operator_chart_version=$(get_helm_chart_version "helm/cassandra-operator")
+
+  helm chart save helm/cassandra-operator/ gcr.io/cassandra-operator/cassandra-operator-chart:${cassandra_operator_chart_version}${TAG_SUFFIX}
+  helm chart save helm/cassandra-operator/ gcr.io/cassandra-operator/cassandra-operator-chart:latest${TAG_SUFFIX}
+
+  helm chart push gcr.io/cassandra-operator/cassandra-operator-chart:${cassandra_operator_chart_version}${TAG_SUFFIX}
+  helm chart push gcr.io/cassandra-operator/cassandra-operator-chart:latest${TAG_SUFFIX}
+}
+
 function release_dev() {
   docker push "${REGISTRY}/cassandra-operator:latest-dev"
   docker push "${REGISTRY}/cassandra-sidecar:latest-dev"
@@ -44,6 +73,8 @@ export DONT_LOGIN="true"
 
 if [ "${1}" = "dev" ]; then
   release_dev
+  release_helm "dev"
 elif [ "${1}" = "prod" ]; then
   release_prod
+  release_helm
 fi
