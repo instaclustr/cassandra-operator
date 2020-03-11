@@ -16,7 +16,7 @@ operator:
 
 .PHONY: helm
 helm:
-	./buildenv/create-helm-repo
+	./buildenv/prepare-helm
 
 
 # Build Docker images

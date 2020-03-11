@@ -45,6 +45,16 @@ function check-open-api {
     fi
 }
 
+function check-helm {
+    ./buildenv/prepare-helm
+
+    git diff --quiet --exit-code deploy
+    if [[ $? != 0 ]]; then
+        echo "Helm files in 'helm' directory where not updated, make sure you have run 'prepare-helm' script and committed all changes"
+        exit 1
+    fi
+}
+
 function check-k8s {
     ./operator-sdk generate k8s
     git diff --quiet --exit-code pkg/apis
@@ -71,5 +81,8 @@ check-open-api
 
 echo "Check k8s"
 check-k8s
+
+echo "Check helm"
+check-helm
 
 echo "All clean, you may continue"

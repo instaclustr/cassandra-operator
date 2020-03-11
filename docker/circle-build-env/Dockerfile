@@ -1,9 +1,9 @@
-FROM debian:buster
+FROM debian:stretch
 
 COPY dagi /usr/local/bin/
 
 RUN dagi locales gnupg2 dirmngr lsb-release curl git \
-    openjdk-11-jdk-headless maven apt-transport-https make
+    openjdk-8-jdk-headless maven apt-transport-https make
 
 RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
     echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
@@ -16,8 +16,8 @@ RUN dagi google-cloud-sdk docker-engine
 
 RUN dagi kubectl
 
-RUN curl https://get.helm.sh/helm-v3.0.3-linux-amd64.tar.gz -o /tmp/helm-v3.0.3-linux-amd64.tar.gz \
-    && (cd /tmp && tar -zxvf /tmp/helm-v3.0.3-linux-amd64.tar.gz && mv /tmp/linux-amd64/helm /usr/local/bin/helm) \
+RUN curl https://get.helm.sh/helm-v3.1.1-linux-amd64.tar.gz -o /tmp/helm-v3.1.1-linux-amd64.tar.gz \
+    && (cd /tmp && tar -zxvf /tmp/helm-v3.1.1-linux-amd64.tar.gz && mv /tmp/linux-amd64/helm /usr/local/bin/helm) \
     && chmod +x /usr/local/bin/helm \
     && rm -rf /tmp/helm* /tmp/linux-amd64
 

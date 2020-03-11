@@ -23,3 +23,6 @@ vendor/
 .local_build_env
 
 .vscode/
+/helm/cassandra-*.tgz
+/helm/cassandra-operator-*.tgz
+/helm/index.yaml
