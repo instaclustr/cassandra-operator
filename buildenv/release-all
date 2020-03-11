@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-set -o errexit
-set -o nounset
-set -o pipefail
 
 cd $(dirname "$BASH_SOURCE")/..
 
@@ -41,21 +38,29 @@ function release_helm() {
     TAG_SUFFIX="-${1}"
   fi
 
+  # cassandra
+
   cassandra_chart_version=$(get_helm_chart_version "helm/cassandra")
-
   helm chart save helm/cassandra/ gcr.io/cassandra-operator/cassandra-chart:${cassandra_chart_version}${TAG_SUFFIX}
-  helm chart save helm/cassandra/ gcr.io/cassandra-operator/cassandra-chart:latest${TAG_SUFFIX}
 
-  helm chart push gcr.io/cassandra-operator/cassandra-chart:${cassandra_chart_version}${TAG_SUFFIX}
-  helm chart push gcr.io/cassandra-operator/cassandra-chart:latest${TAG_SUFFIX}
+  helm chart pull gcr.io/cassandra-operator/cassandra-chart:${cassandra_chart_version}${TAG_SUFFIX}
+
+  if [ "$?" = "1" ]; then
+    echo "cassandra-chart of version ${cassandra_chart_version}${TAG_SUFFIX} is not pushed yet, pushing now ..."
+    helm chart push gcr.io/cassandra-operator/cassandra-chart:${cassandra_chart_version}${TAG_SUFFIX}
+  fi
+
+  # operator
 
   cassandra_operator_chart_version=$(get_helm_chart_version "helm/cassandra-operator")
-
   helm chart save helm/cassandra-operator/ gcr.io/cassandra-operator/cassandra-operator-chart:${cassandra_operator_chart_version}${TAG_SUFFIX}
-  helm chart save helm/cassandra-operator/ gcr.io/cassandra-operator/cassandra-operator-chart:latest${TAG_SUFFIX}
 
-  helm chart push gcr.io/cassandra-operator/cassandra-operator-chart:${cassandra_operator_chart_version}${TAG_SUFFIX}
-  helm chart push gcr.io/cassandra-operator/cassandra-operator-chart:latest${TAG_SUFFIX}
+  helm chart pull gcr.io/cassandra-operator/cassandra-operator-chart:${cassandra_operator_chart_version}${TAG_SUFFIX}
+
+  if [ "$?" = "1" ]; then
+    echo "cassandra-operator-chart of version ${cassandra_operator_chart_version}${TAG_SUFFIX} is not pushed yet, pushing now ..."
+    helm chart push gcr.io/cassandra-operator/cassandra-operator-chart:${cassandra_operator_chart_version}${TAG_SUFFIX}
+  fi
 }
 
 function release_dev() {
