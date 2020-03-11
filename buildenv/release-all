@@ -68,7 +68,7 @@ function release_dev() {
 trap defer EXIT
 
 if [[ $REGISTRY == gcr.io/* ]]; then
-  yes | gcloud auth configure-docker gcr.io
+  gcloud --quiet auth configure-docker gcr.io
 fi
 
 export DONT_LOGIN="true"
