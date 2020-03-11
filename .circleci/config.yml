@@ -69,7 +69,7 @@ jobs:
     environment:
       # Customize the JVM maximum heap limit
       MAVEN_OPTS: -Xmx3200m
-      # for helm to be able to use registry feature for push charts
+      # for helm to be able to use registry feature for push charts https://helm.sh/docs/topics/registries/
       HELM_EXPERIMENTAL_OCI: 1
 
     steps:
