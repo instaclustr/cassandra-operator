@@ -87,10 +87,6 @@ jobs:
           name: Setup K8s cluster and Credentials
           command: gcloud --quiet container clusters create ${K8S_CLUSTER_NAME} --cluster-version=${K8S_CLUSTER_VERSION} && gcloud --quiet container clusters get-credentials ${K8S_CLUSTER_NAME}
 
-      - run:
-          name: Helm repository login
-          command: helm registry login -u _json_key --password-stdin gcr.io < ${HOME}/gcp-key.json
-
       - setup_remote_docker:
           docker_layer_caching: false
 

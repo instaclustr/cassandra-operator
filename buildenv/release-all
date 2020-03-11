@@ -33,6 +33,8 @@ function get_helm_chart_version() {
 
 function release_helm() {
 
+  helm registry login -u _json_key --password-stdin gcr.io < ${HOME}/gcp-key.json
+
   TAG_SUFFIX=""
 
   if [ ! "x${1}" = "x" ]; then
@@ -66,7 +68,7 @@ function release_dev() {
 trap defer EXIT
 
 if [[ $REGISTRY == gcr.io/* ]]; then
-  gcloud docker -a
+  yes | gcloud auth configure-docker gcr.io
 fi
 
 export DONT_LOGIN="true"
