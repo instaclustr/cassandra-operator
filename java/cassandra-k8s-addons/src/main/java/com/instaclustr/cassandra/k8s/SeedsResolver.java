@@ -1,20 +1,51 @@
 package com.instaclustr.cassandra.k8s;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class SeedsResolver<T> {
+/**
+ * The logic in this seed resolver seems to  be rather counter-intuitive, using of dig command ... eh?
+ *
+ * The reason for this is that we have a seed service (as Kubernetes service) in operator and it work in such
+ * way that it exposes even unready endpoints which is what we want, sure, but the resolution of addresses it
+ * has is in the following format, imagine one node is running and second one is joining, if we read all addresses
+ * from "" it returns these two (for that second node joining)
+ *
+ * cassandra-test-cluster-dc1-west1-b-0.cassandra-test-cluster-dc1-nodes.default.svc.cluster.local
+ * 10-244-2-117.cassandra-test-cluster-dc1-nodes.default.svc.cluster.local
+ *
+ * Seeds are told to be only nodes which are ending on "-0" (first node in a rack) but we can not
+ * parse this suffix from the second address. No matter what, it will always return ip address at the beginning
+ * in case of the other pod and we can not determine if the pod is indeed a seed or not (its hostname ending on "-0")
+ *
+ * For that reason, we are using dig command here and we are asking for SRV records of service name, which returns this:
+ *
+ * cassandra-test-cluster-dc1-west1-b-0.cassandra-test-cluster-dc1-nodes.default.svc.cluster.local
+ * cassandra-test-cluster-dc1-west1-a-0.cassandra-test-cluster-dc1-nodes.default.svc.cluster.local
+ *
+ * From that we can filter out only seeds and that will be returned.
+ *
+ * @param <T>
+ */
+public class SeedsResolver<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(SeedsResolver.class);
+
+    private static final Pattern digResponseLinePattern = Pattern.compile("(.*) (.*) (.*) (.*)");
 
     private final String serviceName;
 
@@ -25,68 +56,94 @@ public abstract class SeedsResolver<T> {
         this.addressTranslator = addressTranslator;
     }
 
-    public List<T> resolve() {
-        try {
+    public List<T> resolve() throws Exception {
+        List<InetAddress> seeds = resolveSeeds(serviceName);
 
-            while (true) {
-                // we are repeatedly executing "getAllByName" on host from respective service because
-                // some InetAddresses, when asked for their getAllByName, are not returning hostname of a pod but only its ip address like
-                // 10-20-30-40.{node-service}.svc.default.cluster.local so we can not decide if they should be seeds or not (seed is only a
-                // node which hostname ends on "-0" - there will be 1 seed per rack and the first node in a rack always ends on "-0" as it is
-                // the first node started in that stateful set)
-                //
-                // There seems to be some time until DNS records are truly propagated and resolved hostname
-                // is indeed the hostname of a pod instead of an IP address.
-                final List<InetAddress> serviceAddresses = Arrays.asList(InetAddress.getAllByName(serviceName));
-
-                if (!serviceAddresses.stream().allMatch(this::allHostnamesResolved)) {
-                    continue;
-                }
-
-                final List<T> seeds = new ArrayList<>();
-
-                for (final InetAddress serviceAddress : serviceAddresses) {
-                    try {
-                        final T[] allByName = addressTranslator.translate(InetAddress.getAllByName(serviceAddress.getHostAddress()));
-
-                        for (final T byName : allByName) {
-                            final String hostname = addressTranslator.getHostname(byName);
-
-                            if (hostname.split("\\.")[0].endsWith("-0")) {
-                                seeds.add(byName);
-                            }
-                        }
-                    } catch (final Exception ex) {
-                        logger.info(format("Unable to resolve hostname for %s.", serviceAddress), ex);
-                    }
-                }
-
-                logger.info("Discovered {} seed nodes: {}", seeds.size(), seeds);
-
-                return seeds;
-            }
-        } catch (final UnknownHostException e) {
-            logger.warn("Unable to resolve k8s service {}.", serviceName, e);
+        if (seeds.isEmpty()) {
+            throw new IllegalStateException("Seed list is empty!");
         }
 
-        return Collections.emptyList();
+        return addressTranslator.translate(seeds);
     }
 
-    private boolean allHostnamesResolved(final InetAddress inetAddress) {
-        try {
-            for (final InetAddress byName : InetAddress.getAllByName(inetAddress.getHostAddress())) {
-                if (isIPAddress(byName.getCanonicalHostName().split("\\.")[0].replace("-", "."))) {
-                    return false;
-                }
-            }
+    private List<InetAddress> resolveSeeds(String service) throws Exception {
+        String namespace = readNamespace();
 
-            return true;
-        } catch (final Exception ex) {
-            logger.info(format("Could not resolve hostname  for %s", inetAddress), ex);
+        String digQuery = constructDomainName(service, namespace);
+
+        List<String> digResult = executeShellCommand("dig", "-t", "SRV", digQuery, "+short");
+
+        List<String> endpoints = parseEndpoints(digResult);
+
+        List<String> seeds = filterSeeds(endpoints);
+
+        return mapEndpointAsInetAddresses(seeds);
+    }
+
+    private List<String> filterSeeds(final List<String> endpoints) {
+        return endpoints.stream().filter(endpoint -> endpoint.split("\\.")[0].endsWith("-0")).collect(toList());
+    }
+
+    private List<InetAddress> mapEndpointAsInetAddresses(final List<String> endpoints) {
+
+        List<InetAddress> inetAddresses = new ArrayList<>();
+
+        for (String endpoint : endpoints) {
+            try {
+                InetAddress inetAddress = InetAddress.getByName(endpoint);
+
+                logger.info(String.format("Resolved seed: %s", inetAddress.getCanonicalHostName()));
+
+                inetAddresses.add(inetAddress);
+            } catch (Exception ex) {
+                logger.warn(format("Unable to resolve endpoint %s by name", endpoint), ex);
+            }
         }
 
-        return false;
+        return inetAddresses;
     }
 
-    public abstract boolean isIPAddress(final String possibleIpAddress);
+    private List<String> parseEndpoints(List<String> digResult) {
+        List<String> endpoints = new ArrayList<>();
+
+        for (String line : digResult) {
+            Matcher matcher = digResponseLinePattern.matcher(line);
+
+            if (matcher.matches()) {
+                String endpoint = matcher.group(4);
+
+                endpoint = endpoint.substring(0, endpoint.length() - 1);
+
+                endpoints.add(endpoint);
+            }
+        }
+
+        return endpoints;
+    }
+
+    private String constructDomainName(String serviceName, String namespace) {
+        return format("%s.%s.svc.cluster.local", serviceName, namespace);
+    }
+
+    private String readNamespace() throws Exception {
+        return new String(Files.readAllBytes(Paths.get("/var/run/secrets/kubernetes.io/serviceaccount/namespace")));
+    }
+
+    private List<String> executeShellCommand(String... command) throws IOException {
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+
+        Process process = processBuilder.start();
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line;
+
+        List<String> output = new ArrayList<>();
+
+        while ((line = br.readLine()) != null) {
+            logger.debug("dig output: {}", line);
+            output.add(line);
+        }
+
+        return output;
+    }
 }

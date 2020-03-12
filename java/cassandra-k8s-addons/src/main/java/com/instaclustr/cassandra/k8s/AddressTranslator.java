@@ -1,17 +1,18 @@
 package com.instaclustr.cassandra.k8s;
 
 import java.net.InetAddress;
+import java.util.List;
 
 public interface AddressTranslator<T> {
 
-    T[] translate(InetAddress[] addresses);
+    List<T> translate(List<InetAddress> addresses);
 
     String getHostname(T address);
 
     final class NoOpAddressTranslator implements AddressTranslator<InetAddress> {
 
         @Override
-        public InetAddress[] translate(final InetAddress[] addresses) {
+        public List<InetAddress> translate(final List<InetAddress> addresses) {
             return addresses;
         }
 

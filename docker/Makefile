@@ -23,10 +23,14 @@ base-openjre-11:
 
 .PHONY: cassandra-4
 cassandra-4:
-	INSTALL_CASSANDRA_EXPORTER=false CASSANDRA_VERSION=4.0~alpha3 OPENJRE_IMAGE=base-openjre:buster-11.0.6-10-1-deb10u1 CASSANDRA_K8S_ADDONS_VERSION=1.0.0 CASSANDRA_K8S_ADDONS_ARTIFACT=cassandra-4-k8s-addons CASSANDRA_IMAGE_VERSION=${C_IMAGE_VERSION} $(MAKE) -C cassandra
+	INSTALL_CASSANDRA_EXPORTER=false CASSANDRA_VERSION=4.0~alpha3 OPENJRE_IMAGE=base-openjre:buster-11.0.6-10-1-deb10u1 CASSANDRA_K8S_ADDONS_VERSION=1.0.1 CASSANDRA_K8S_ADDONS_ARTIFACT=cassandra-4-k8s-addons CASSANDRA_IMAGE_VERSION=${C_IMAGE_VERSION} $(MAKE) -C cassandra
 
 cassandra-4: base-openjre-11
 
-cassandra cassandra-sidecar cassandra-operator: base-openjre
+.PHONY: cassandra-sidecar
+cassandra-sidecar:
+	OPENJRE_IMAGE_TAG=buster-11.0.6-10-1-deb10u1 $(MAKE) -C cassandra
+
+cassandra: base-openjre
 
 .DEFAULT_GOAL := all

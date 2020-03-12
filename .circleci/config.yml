@@ -5,7 +5,7 @@ version: 2
 jobs:
   repo-check:
     docker:
-      - image: circleci/golang:1.13.0
+      - image: circleci/golang:1.13.7
 
     working_directory: /go/src/github.com/instaclustr/cassandra-operator
     steps:

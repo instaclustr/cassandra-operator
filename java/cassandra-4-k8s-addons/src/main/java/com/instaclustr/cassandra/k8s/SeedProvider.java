@@ -3,11 +3,10 @@ package com.instaclustr.cassandra.k8s;
 import static java.lang.String.format;
 
 import java.net.InetAddress;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import com.google.common.net.InetAddresses;
 import org.apache.cassandra.locator.InetAddressAndPort;
 
 public class SeedProvider implements org.apache.cassandra.locator.SeedProvider {
@@ -23,25 +22,18 @@ public class SeedProvider implements org.apache.cassandra.locator.SeedProvider {
 
     @Override
     public List<InetAddressAndPort> getSeeds() {
-        return new SeedsResolver<InetAddressAndPort>(service, new InetAddressAndPortAddressTranslator()) {
-            @Override
-            public boolean isIPAddress(final String possibleIpAddress) {
-                try {
-                    InetAddresses.forString(possibleIpAddress);
-                    return true;
-                } catch (Exception e) {
-                    // intentionally returning false
-                    return false;
-                }
-            }
-        }.resolve();
+        try {
+            return new SeedsResolver<>(service, new InetAddressAndPortAddressTranslator()).resolve();
+        } catch (final Exception ex) {
+            throw new IllegalStateException("Unable to resolve any seeds!", ex);
+        }
     }
 
     public static final class InetAddressAndPortAddressTranslator implements AddressTranslator<InetAddressAndPort> {
 
         @Override
-        public InetAddressAndPort[] translate(final InetAddress[] addresses) {
-            return Arrays.stream(addresses).map(InetAddressAndPort::getByAddress).toArray(InetAddressAndPort[]::new);
+        public List<InetAddressAndPort> translate(final List<InetAddress> addresses) {
+            return addresses.stream().map(InetAddressAndPort::getByAddress).collect(Collectors.toList());
         }
 
         @Override

@@ -133,7 +133,7 @@ func newStatefulSetSpec(
 	podRackLabels := RackLabels(cdc, rack)
 	podLabels := PodTemplateSpecLabels(cdc)
 	statefulSetSpec := &v1.StatefulSetSpec{
-		ServiceName: "cassandra-" + cdc.Cluster + "-" + cdc.DataCenter + "-nodes",
+		ServiceName: "cassandra-" + cdc.Cluster + "-" + cdc.DataCenter + "-seeds",
 		Replicas:    &rack.Replicas,
 		Selector:    &metav1.LabelSelector{MatchLabels: podRackLabels},
 		Template: corev1.PodTemplateSpec{
