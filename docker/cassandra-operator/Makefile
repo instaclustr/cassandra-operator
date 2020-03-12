@@ -1,4 +1,4 @@
-GOLANG_BASE_IMAGE := $(if $(GOLANG_BASE_IMAGE),$(GOLANG_BASE_IMAGE),"golang:1.13.7")
+GOLANG_BASE_IMAGE := $(if $(GOLANG_BASE_IMAGE),$(GOLANG_BASE_IMAGE),"golang:1.13.8")
 
 # Figure out the path to the root of the repository
 rootdir = $(shell git rev-parse --show-toplevel)

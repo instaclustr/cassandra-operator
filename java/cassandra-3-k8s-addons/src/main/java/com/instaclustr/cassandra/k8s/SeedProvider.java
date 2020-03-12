@@ -6,7 +6,6 @@ import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.net.InetAddresses;
 import com.instaclustr.cassandra.k8s.AddressTranslator.NoOpAddressTranslator;
 
 public class SeedProvider implements org.apache.cassandra.locator.SeedProvider {
@@ -22,16 +21,10 @@ public class SeedProvider implements org.apache.cassandra.locator.SeedProvider {
 
     @Override
     public List<InetAddress> getSeeds() {
-        return new SeedsResolver<InetAddress>(service, new NoOpAddressTranslator()) {
-            @Override
-            public boolean isIPAddress(final String possibleIpAddress) {
-                try {
-                    InetAddresses.forString(possibleIpAddress);
-                    return true;
-                } catch (Exception e) {
-                    return false;
-                }
-            }
-        }.resolve();
+        try {
+            return new SeedsResolver<>(service, new NoOpAddressTranslator()).resolve();
+        } catch (final Exception ex) {
+            throw new IllegalStateException("Unable to resolve any seeds!", ex);
+        }
     }
 }
