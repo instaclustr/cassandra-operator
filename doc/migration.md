@@ -70,7 +70,7 @@ API will not change for foreseeable future.
 
 The operator of version 4.0.0 is also built on top of Operator SDK framework of version [0.13.0](https://github.com/operator-framework/operator-sdk/blob/master/doc/migration/version-upgrade-guide.md#v013x).
 
-# How to migrate from operator 2.x to later
+## How to migrate from operator 2.x to 4.x and later
 
 If you end up in a situation you have a running cluster deployed by operator of version lower than 2.6 and you are 
 migrating to e.g. 5.x, one way how to migrate is as follows:
