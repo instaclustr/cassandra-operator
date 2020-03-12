@@ -147,15 +147,17 @@ a field with name `justCreate` and set it to true like this:
 apiVersion: cassandraoperator.instaclustr.com/v1alpha1
 kind: CassandraBackup
 metadata:
-  name: test-cassandra-backup-restore-s3
+  name: test-cassandra-backup
   labels:
     app: cassandra
 spec:
-  cdc: test-dc-cassandra
-  storageLocation: "azure://stefan-cassandra-testdc-bucket"
-  snapshotTag: "restore-test"
+  cdc: test-cluster-dc1-cassandra
+  cluster: test-cluster
+  datacenter: dc1
+  storageLocation: "s3://cassandra-bucket"
+  snapshotTag: "mySnapshotTag"
 secret: cloud-backup-secrets
-justCreate: true         <------ see?
+justCreate: true                   <----- see?
 ```
 
 ### Can I create a backup of same CDC into same storage location with same snapshot name?
