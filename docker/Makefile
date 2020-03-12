@@ -27,10 +27,6 @@ cassandra-4:
 
 cassandra-4: base-openjre-11
 
-.PHONY: cassandra-sidecar
-cassandra-sidecar:
-	OPENJRE_IMAGE_TAG=buster-11.0.6-10-1-deb10u1 $(MAKE) -C cassandra
-
-cassandra: base-openjre
+cassandra cassandra-sidecar cassandra-operator: base-openjre
 
 .DEFAULT_GOAL := all
