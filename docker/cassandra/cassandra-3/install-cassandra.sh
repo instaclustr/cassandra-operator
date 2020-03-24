@@ -14,15 +14,20 @@ arch_pkg_dir="${pkg_dir}/${arch}" && mkdir "${arch_pkg_dir}"
 C_APACHE_MIRROR_URL="${C_APACHE_MIRROR_URL:-https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra}"
 INSTALL_CASSANDRA_EXPORTER="${INSTALL_CASSANDRA_EXPORTER:-true}"
 
-# download the C* packages
-(cd "${arch_pkg_dir}" &&
-    curl -SLO "${C_APACHE_MIRROR_URL}/cassandra_${cassandra_version}_all.deb" &&
-    curl -SLO "${C_APACHE_MIRROR_URL}/cassandra-tools_${cassandra_version}_all.deb")
+if [ "$(find /tmp -type f -name '*.deb' | wc -l)" != "0" ]; then
+  mv /tmp/cassandra*.deb ${arch_pkg_dir}
+else
+  # download the C* packages
+  (cd "${arch_pkg_dir}" &&
+      curl -SLO "${C_APACHE_MIRROR_URL}/cassandra_${cassandra_version}_all.deb" &&
+      curl -SLO "${C_APACHE_MIRROR_URL}/cassandra-tools_${cassandra_version}_all.deb")
+fi
 
 dagi dpkg-dev cpio libcap2-bin dnsutils
 
 APT_GET_OPTS="--allow-unauthenticated" dagi file ${arch_pkg_dir}/cassandra_${cassandra_version}_all.deb
 APT_GET_OPTS="--allow-unauthenticated" dagi file ${arch_pkg_dir}/cassandra-tools_${cassandra_version}_all.deb
+APT_GET_OPTS="--allow-unauthenticated" dagi vim
 
 # package "cleanup"
 mkdir /usr/share/cassandra/agents
@@ -30,9 +35,6 @@ mkdir /usr/share/cassandra/agents
 mv /usr/share/cassandra/lib/jamm-*.jar /usr/share/cassandra/agents/jamm.jar
 cp /etc/cassandra/hotspot_compiler /usr/share/cassandra/
 cp /etc/cassandra/cassandra.yaml /usr/share/cassandra/
-
-# save Cassandra version, handy for further configuration which is version specific
-echo ${cassandra_version} > /usr/share/cassandra/cassandra_version
 
 # nuke contents of /etc/cassandra and /var/lib/cassandra since they're injected by volume mounts
 rm -rf /etc/cassandra/* /var/lib/cassandra/*

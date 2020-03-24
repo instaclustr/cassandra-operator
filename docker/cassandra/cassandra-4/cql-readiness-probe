@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# This script is using -f flag for cqlsh because as of alpha3 (and trunk)
+# for 4 release, -e flag does not work, see https://issues.apache.org/jira/browse/CASSANDRA-15660
+
+if [ -f "/var/lib/cassandra/cassandra-config.yaml" ]; then
+  if [ "$(grep -c "authenticator: PasswordAuthenticator" /var/lib/cassandra/cassandra-config.yaml)" = "1" ]; then
+    TEMP_FILE=/tmp/probe-command-result
+
+    echo "SELECT * FROM system.local;" > /tmp/cqlcommand
+
+    cqlsh -u probe -p probe -f /tmp/cqlcommand "$(hostname)" 2> ${TEMP_FILE}
+
+    probe_result=$?
+
+    rm /tmp/cqlcommand
+
+    if [ "$(grep -c "Role .* does not exist" ${TEMP_FILE})" = "1" ] || [ "$(grep -c "Provided username probe and/or password are incorrect" ${TEMP_FILE})" = "1" ]; then
+      # this happens on the beginning of cluster creation and it does not matter
+      # password is 'cassandra' here as it might be changed afterwards
+      echo "CREATE ROLE IF NOT EXISTS probe WITH PASSWORD = 'probe' AND LOGIN = true and SUPERUSER = false;" > /tmp/cqlcommand
+
+      cqlsh -u cassandra -p cassandra -f /tmp/cqlcommand "$(hostname)"
+      rm /tmp/cqlcommand
+    fi
+
+    rm -rf ${TEMP_FILE}
+
+    exit $probe_result
+  else
+    echo "SELECT * FROM system.local;" > /tmp/cqlcommand
+    cqlsh -f /tmp/cqlcommand "$(hostname)"
+
+    probe_result=$?
+
+    rm /tmp/cqlcommand
+
+    exit $probe_result
+  fi
+else
+    echo "SELECT * FROM system.local;" > /tmp/cqlcommand
+    cqlsh -f /tmp/cqlcommand "$(hostname)"
+
+    probe_result=$?
+
+    rm /tmp/cqlcommand
+
+    exit $probe_result
+fi

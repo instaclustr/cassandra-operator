@@ -217,8 +217,7 @@ func addCassandraJVMOptions(cdc *cassandraoperatorv1alpha1.CassandraDataCenter, 
 		return
 	}
 
-	// TODO: should this be Limits or Requests?
-	memoryLimit := cdc.Spec.Resources.Limits.Memory().Value()
+	memoryLimit := cdc.Spec.Resources.Requests.Memory().Value()
 
 	jvmHeapSize := maxInt64(minInt64(memoryLimit/2, GIBIBYTE), minInt64(memoryLimit/4, 8*GIBIBYTE))
 
