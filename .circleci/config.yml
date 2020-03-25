@@ -96,7 +96,7 @@ jobs:
 
       - run:
           name: Setup K8s cluster and Credentials
-          command: gcloud beta container clusters create test-cluster --release-channel rapid --zone ${GOOGLE_COMPUTE_ZONE} && sleep 20 && gcloud beta container clusters get-credentials ${K8S_CLUSTER_NAME} --zone ${GOOGLE_COMPUTE_ZONE}
+          command: gcloud beta container clusters create test-cluster --release-channel rapid --zone ${GOOGLE_COMPUTE_ZONE} && sleep 60 && gcloud container clusters get-credentials test-cluster --zone us-central1-b --project cassandra-operator
 
       - run:
           name: Deploy Operator and Cassandra
