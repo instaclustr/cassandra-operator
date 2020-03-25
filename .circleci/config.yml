@@ -104,7 +104,7 @@ jobs:
 
       - run:
           name: Cleanup GCP resources
-          command: gcloud --quiet container clusters delete ${K8S_CLUSTER_NAME} --async
+          command: gcloud --quiet container clusters delete ${K8S_CLUSTER_NAME} --async --zone us-central1-b --project cassandra-operator
           when: always
 
   release:
