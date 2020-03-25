@@ -9,7 +9,7 @@ spec:
     listKind: CassandraDataCenterList
     plural: cassandradatacenters
     singular: cassandradatacenter
-  scope: ""
+  scope: Namespaced
   subresources:
     status: {}
   validation:

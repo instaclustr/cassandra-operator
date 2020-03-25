@@ -9,7 +9,7 @@ spec:
     listKind: CassandraClusterList
     plural: cassandraclusters
     singular: cassandracluster
-  scope: ""
+  scope: Namespaced
   subresources:
     status: {}
   validation:

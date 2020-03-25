@@ -14,6 +14,10 @@ rather risky situation, if exercised and tried out beforehand, it should be a ro
 
 Notable changes between the versions will be summarised here:
 
+### v6.0.0
+
+Operator SDK was updated to version 0.16.0. Operator's Go version was updated to 1.13.8.
+
 ### v5.1.0
 
 Sidecar image is smaller (in MBs) because Sidecar from now on integrates 

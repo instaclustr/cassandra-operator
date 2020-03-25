@@ -4,10 +4,10 @@ go 1.13
 
 require (
 	github.com/go-logr/logr v0.1.0
-	github.com/go-openapi/spec v0.19.2
+	github.com/go-openapi/spec v0.19.4
 	github.com/go-resty/resty/v2 v2.1.0
 	github.com/google/uuid v1.1.1
-	github.com/operator-framework/operator-sdk v0.13.0
+	github.com/operator-framework/operator-sdk v0.16.0
 	github.com/pkg/errors v0.8.1
 	github.com/spf13/pflag v1.0.5
 	gopkg.in/yaml.v2 v2.2.4
@@ -43,3 +43,7 @@ replace (
 	k8s.io/metrics => k8s.io/metrics v0.0.0-20191016113814-3b1a734dba6e
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.0.0-20191016112829-06bb3c9d77c9
 )
+
+replace github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309 // Required by Helm
+
+replace github.com/openshift/api => github.com/openshift/api v0.0.0-20190924102528-32369d4db2ad // Required until https://github.com/operator-framework/operator-lifecycle-manager/pull/1241 is resolved
