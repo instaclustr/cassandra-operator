@@ -31,6 +31,6 @@ cassandra-4:
 
 cassandra-4: base-openjre-11
 
-cassandra-3 cassandra-sidecar cassandra-operator: base-openjre
+cassandra-3 cassandra-sidecar: base-openjre
 
 .DEFAULT_GOAL := all

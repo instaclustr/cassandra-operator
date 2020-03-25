@@ -24,7 +24,7 @@ const (
 )
 
 type testingContext struct {
-	ctx            *framework.TestCtx
+	ctx            *framework.Context
 	t              *testing.T
 	f              *framework.Framework
 	cleanupOptions *framework.CleanupOptions
@@ -33,7 +33,7 @@ type testingContext struct {
 
 func initialise(t *testing.T) *testingContext {
 
-	ctx := framework.NewTestCtx(t)
+	ctx := framework.NewContext(t)
 
 	cleanupOptions := framework.CleanupOptions{
 		TestContext:   ctx,

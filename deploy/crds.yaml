@@ -19,7 +19,7 @@ spec:
     listKind: CassandraBackupList
     plural: cassandrabackups
     singular: cassandrabackup
-  scope: ""
+  scope: Namespaced
   subresources: {}
   validation:
     openAPIV3Schema:
@@ -121,7 +121,7 @@ spec:
     listKind: CassandraClusterList
     plural: cassandraclusters
     singular: cassandracluster
-  scope: ""
+  scope: Namespaced
   subresources:
     status: {}
   validation:
@@ -164,7 +164,7 @@ spec:
     listKind: CassandraDataCenterList
     plural: cassandradatacenters
     singular: cassandradatacenter
-  scope: ""
+  scope: Namespaced
   subresources:
     status: {}
   validation:
