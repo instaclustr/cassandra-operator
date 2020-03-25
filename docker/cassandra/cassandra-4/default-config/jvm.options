@@ -1,0 +1,26 @@
+-Xss256k
+
+-XX:StringTableSize=1000003
+
+-XX:+AlwaysPreTouch
+-XX:-UseBiasedLocking
+
+-XX:+UseTLAB
+-XX:+ResizeTLAB
+-XX:+UseNUMA
+
+-XX:+PerfDisableSharedMem
+
+-Djava.net.preferIPv4Stack=true
+
+
+# GC logging
+-XX:+PrintGCDetails
+-Xloggc:/var/log/cassandra/gc.log
+
+-XX:+HeapDumpOnOutOfMemoryError
+
+# TODO: should this be set by the operator?
+-XX:MaxDirectMemorySize=18G
+
+# GC settings are not defined here -- they are chosen by the operator at runtime

@@ -33,7 +33,7 @@ We are currently building images for Cassandra 3.11.6 and 4.0-alpha3.
 ## Requirements
 
 - Kubernetes 1.13+
-- Helm 2 (if you want to use the included helm charts)
+- Helm 3 (if you want to use the included helm charts)
 
 ## Limitations
 

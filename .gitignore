@@ -26,3 +26,7 @@ vendor/
 /helm/cassandra-*.tgz
 /helm/cassandra-operator-*.tgz
 /helm/index.yaml
+/docker/cassandra/cassandra-3/debs/*
+/docker/cassandra/cassandra-4/debs/*
+/docker/cassandra/cassandra-3/jars/*
+/docker/cassandra/cassandra-4/jars/*

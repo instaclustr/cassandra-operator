@@ -1,0 +1,8 @@
+data_file_directories:
+  - /var/lib/cassandra/data
+
+commitlog_directory: /var/lib/cassandra/commitlog
+
+hints_directory: /var/lib/cassandra/hints
+
+cdc_raw_directory: /var/lib/cassandra/cdc
