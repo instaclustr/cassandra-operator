@@ -304,8 +304,14 @@ func (in *CassandraDataCenterSpec) DeepCopyInto(out *CassandraDataCenterSpec) {
 	}
 	if in.UserSecretVolumeSource != nil {
 		in, out := &in.UserSecretVolumeSource, &out.UserSecretVolumeSource
-		*out = new(v1.SecretVolumeSource)
-		(*in).DeepCopyInto(*out)
+		*out = make([]*v1.SecretVolumeSource, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1.SecretVolumeSource)
+				(*in).DeepCopyInto(*out)
+			}
+		}
 	}
 	if in.UserConfigMapVolumeSource != nil {
 		in, out := &in.UserConfigMapVolumeSource, &out.UserConfigMapVolumeSource

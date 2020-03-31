@@ -14,6 +14,13 @@ rather risky situation, if exercised and tried out beforehand, it should be a ro
 
 Notable changes between the versions will be summarised here:
 
+### v6.0.1
+
+`userSecretVolumeSource` in spec became array. You can enumerate more than one 
+secret. This is handy e.g. for Cassandra container when you have different secrets 
+for different things, being it certificates and secrets for inter-node and client-node 
+which are externally treated differently and they are separate secrets.
+
 ### v6.0.0
 
 Operator SDK was updated to version 0.16.0. Operator's Go version was updated to 1.13.8.

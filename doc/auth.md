@@ -244,6 +244,17 @@ Use HELP for help.
 cassandra@cqlsh> 
 ``` 
 
+If you have more than one secret you would like to mount, specify it like this in your spec:
+
+```
+  userSecretVolumeSource:
+    - secretName: test-cassandra-dc-ssl
+    - secretName: test-cassandra-dc-ssl-2
+```
+
+`userSecretVolumeSource` is array, just enumerate your secrets here. The first secret will be mounted under 
+`/tmp/user-secret`, the second one under `/tmp/user-secret-2` and so on.
+
 ## How is CQL probe working?
 
 From Kubernetes point of view, Kubernetes has to have a way how to check if a container is up or not. This is done by _readiness probe_. In our case, it is a simple script in Cassandra container in [/usr/bin/cql-rediness-probe](https://github.com/instaclustr/cassandra-operator/blob/master/docker/cassandra/cql-readiness-probe). The logic is simple, if we are on the password authenticator, we have to log in with a password. We are using `probe` role for this. If that role 
