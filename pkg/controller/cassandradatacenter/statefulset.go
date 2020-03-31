@@ -51,7 +51,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 		emptyDirVolume := newEmptyDirVolume(rctx.cdc.Spec.DummyVolume)
 		dataVolumeClaim := newPersistenceVolumeClaim(rctx.cdc.Spec.DataVolumeClaimSpec)
 		podInfoVolume := newPodInfoVolume()
-		userSecretVolume := newUserSecretVolume(rctx)
+		userSecretVolumes := newUserSecretVolumes(rctx)
 		userConfigVolume := newUserConfigVolume(rctx)
 		sidecarSecretVolume := newSidecarSecretVolume(rctx)
 		rackConfigVolume, err := createOrUpdateCassandraRackConfig(rctx, rack)
@@ -59,7 +59,7 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			return err
 		}
 
-		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, emptyDirVolume, configVolume, rackConfigVolume, userSecretVolume, userConfigVolume)
+		cassandraContainer := newCassandraContainer(rctx.cdc, dataVolumeClaim, emptyDirVolume, configVolume, rackConfigVolume, userSecretVolumes, userConfigVolume)
 
 		sidecarContainer := newSidecarContainer(rctx.cdc, dataVolumeClaim, emptyDirVolume, podInfoVolume, rackConfigVolume, sidecarSecretVolume)
 
@@ -99,8 +99,10 @@ func createOrUpdateStatefulSet(rctx *reconciliationRequestContext, configVolume 
 			sc,
 		)
 
-		if userSecretVolume != nil {
-			podSpec.Volumes = append(podSpec.Volumes, *userSecretVolume)
+		if userSecretVolumes != nil {
+			for _, vol := range userSecretVolumes {
+				podSpec.Volumes = append(podSpec.Volumes, *vol)
+			}
 		}
 
 		if userConfigVolume != nil {
@@ -177,7 +179,10 @@ func newCassandraContainer(
 	cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
 	dataVolumeClaim *corev1.PersistentVolumeClaim,
 	emptyDirVolume *corev1.Volume,
-	configVolume, rackConfigVolume, userSecretVolume, userConfigVolume *corev1.Volume) *corev1.Container {
+	configVolume *corev1.Volume,
+	rackConfigVolume *corev1.Volume,
+	userSecretVolumes []*corev1.Volume,
+	userConfigVolume *corev1.Volume) *corev1.Container {
 	container := &corev1.Container{
 		Name:            "cassandra",
 		Image:           cdc.Spec.CassandraImage,
@@ -232,8 +237,14 @@ func newCassandraContainer(
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: userConfigVolume.Name, MountPath: UserConfigVolumeMountPath})
 	}
 
-	if userSecretVolume != nil {
-		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: userSecretVolume.Name, MountPath: UserSecretVolumeMountPath})
+	if userSecretVolumes != nil {
+		for i, vol := range userSecretVolumes {
+			var mountPath = UserSecretVolumeMountPath
+			if i != 0 {
+				mountPath = fmt.Sprintf("%s-%d", UserSecretVolumeMountPath, i+1)
+			}
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: vol.Name, MountPath: mountPath})
+		}
 	}
 
 	if cdc.Spec.PrometheusSupport == true {
@@ -380,14 +391,21 @@ func newUserConfigVolume(rctx *reconciliationRequestContext) *corev1.Volume {
 	}
 }
 
-func newUserSecretVolume(rctx *reconciliationRequestContext) *corev1.Volume {
-	if rctx.cdc.Spec.UserSecretVolumeSource == nil {
+func newUserSecretVolumes(rctx *reconciliationRequestContext) []*corev1.Volume {
+	if rctx.cdc.Spec.UserSecretVolumeSource == nil || len(rctx.cdc.Spec.UserSecretVolumeSource) == 0 {
 		return nil
 	}
-	return &corev1.Volume{
-		Name:         rctx.cdc.Spec.UserSecretVolumeSource.SecretName,
-		VolumeSource: corev1.VolumeSource{Secret: rctx.cdc.Spec.UserSecretVolumeSource},
+
+	volumes := make([]*corev1.Volume, len(rctx.cdc.Spec.UserSecretVolumeSource))
+
+	for i, vol := range rctx.cdc.Spec.UserSecretVolumeSource {
+		volumes[i] = &corev1.Volume{
+			Name:         vol.SecretName,
+			VolumeSource: corev1.VolumeSource{Secret: vol},
+		}
 	}
+
+	return volumes
 }
 
 func newSidecarSecretVolume(rctx *reconciliationRequestContext) *corev1.Volume {
