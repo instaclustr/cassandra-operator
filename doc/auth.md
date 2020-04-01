@@ -136,11 +136,11 @@ data:
         internode_encryption: all 
         # path to our keystore, note here we are referencing to 
         # /tmp/user-secret, which is a Kubernetes volume mounted
-        keystore: /tmp/user-secret/keystore.p12
+        keystore: /tmp/test-cassandra-dc-ssl/keystore.p12
         # password to keystore
         keystore_password: cassandra
         # similar entry for truststore as it is done for keystore
-        truststore: /tmp/user-secret/truststore.jks
+        truststore: /tmp/test-cassandra-dc-ssl/truststore.jks
         # password for truststore
         truststore_password: cassandra
         # other configuration
@@ -153,10 +153,10 @@ data:
     client_encryption_options:
         enabled: true
         # path to keystore, same as for server options
-        keystore: /tmp/user-secret/keystore.p12
+        keystore: /tmp/test-cassandra-dc-ssl/keystore.p12
         keystore_password: cassandra
         # path to truststore, same as for server options
-        truststore: /tmp/user-secret/truststore.jks
+        truststore: /tmp/test-cassandra-dc-ssl/truststore.jks
         truststore_password: cassandra
         # other options
         protocol: TLS 
@@ -172,12 +172,12 @@ data:
     ssl = true
     [ssl]
     # location of ca-cert file from user’s secret
-    certfile = /tmp/user-secret/ca-cert
+    certfile = /tmp/test-cassandra-dc-ssl/ca-cert
     validate = true
     # location of client.cert.pem and client.key.pem we will mount 
-    # under /tmp/user-secret from secret source volume
-    usercert = /tmp/user-secret/client.cer.pem
-    userkey = /tmp/user-secret/client.key.pem
+    # under /tmp/test-cassandra-dc-ssl from secret source volume
+    usercert = /tmp/test-cassandra-dc-ssl/client.cer.pem
+    userkey = /tmp/test-cassandra-dc-ssl/client.key.pem
   # script copying cqlshrc above under ~/.cassandra/cqlshrc of cassandra user
   install_cqlshrc: |
     mkdir -p ~/.cassandra
@@ -207,7 +207,9 @@ spec:
 
 If you start a cluster as you are used to, check out the logs by 
 
+```
 $ kubectl logs -f _name_of_the_pod_ cassandra
+```
 
 You have to see these logging output to see TLS was applied:
 
@@ -228,10 +230,10 @@ port = 9042
 factory = cqlshlib.ssl.ssl_transport_factory
 ssl = true
 [ssl]
-certfile = /tmp/user-secret/ca-cert
+certfile = /tmp/test-cassandra-dc-ssl/ca-cert
 validate = true
-usercert = /tmp/user-secret/client.cer.pem
-userkey = /tmp/user-secret/client.key.pem
+usercert = /tmp/test-cassandra-dc-ssl/client.cer.pem
+userkey = /tmp/test-cassandra-dc-ssl/client.key.pem
 ```
 
 You should be able to connect. This connection will be secured because `ssl` was set to `true` in `cqlshrc`.
@@ -253,16 +255,17 @@ If you have more than one secret you would like to mount, specify it like this i
 ```
 
 `userSecretVolumeSource` is array, just enumerate your secrets here. The first secret will be mounted under 
-`/tmp/user-secret`, the second one under `/tmp/user-secret-2` and so on.
+`/tmp/test-cassandra-dc-ssl`, the second one under `/tmp/test-cassandra-dc-ssl-2` and so on. This might be handy 
+if you want to have different secrets for node-to-node and client-to-node communication.
 
 ## How is CQL probe working?
 
 From Kubernetes point of view, Kubernetes has to have a way how to check if a container is up or not. This is done by _readiness probe_. In our case, it is a simple script in Cassandra container in [/usr/bin/cql-rediness-probe](https://github.com/instaclustr/cassandra-operator/blob/master/docker/cassandra/cql-readiness-probe). The logic is simple, if we are on the password authenticator, we have to log in with a password. We are using `probe` role for this. If that role 
-does not exist yet, it is created as non-super-user. Check the fact that we are using `cassandra:cassanra` to create it because the probe role will be the very first CQL statement against started Cassandra and it does not matter you change this password for `cassandra` afterwards because probe role would be already created. We are also not using any SSL-like configuration for `cqlsh` command itself because this is all done transparently in `/home/cassandra/cassandra/.cqlshrc`. Be sure you have this file populated with the configuration above otherwise that probe wil fail to connect.
+does not exist yet, it is created as non-super-user. Check the fact that we are using `cassandra:cassandra` to create it because the probe role will be the very first CQL statement against started Cassandra and it does not matter you change this password for `cassandra` afterwards because probe role would be already created. We are also not using any SSL-like configuration for `cqlsh` command itself because this is all done transparently in `/home/cassandra/cassandra/.cqlshrc`. Be sure you have this file populated with the configuration above otherwise that probe wil fail to connect.
 
 ## SSL with Sidecar
 
-Once you are on SSL, the interesting (or rather, quite obvious) fact is that whatever CQL request you would do against Cassandra, it will fail because it started to be secured (if you enabled client-node SSL, which is most probably the case). If you configed your Cassandra node to be on SSL, well, Sidecar has to know how to talk to Cassandra securely too. Please keep in mind that right now, the only case this configuration needs to be in place is the situation you are restring a node by calling `restart` operation above as that one internally tries to check if a node is back online by executing some CQL statement against it.
+Once you are on SSL, the interesting (or rather, quite obvious) fact is that whatever CQL request you would do against Cassandra, it will fail because it started to be secured (if you enabled client-node SSL, which is most probably the case). If you configured your Cassandra node to be on SSL, well, Sidecar has to know how to talk to Cassandra securely too. Please keep in mind that right now, the only case this configuration needs to be in place is the situation you are restring a node by calling `restart` operation above as that one internally tries to check if a node is back online by executing some CQL statement against it.
 
 In order to achieve this, we use the following config map:
 
