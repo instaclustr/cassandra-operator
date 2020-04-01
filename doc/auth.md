@@ -136,11 +136,11 @@ data:
         internode_encryption: all 
         # path to our keystore, note here we are referencing to 
         # /tmp/user-secret, which is a Kubernetes volume mounted
-        keystore: /tmp/user-secret/keystore.p12
+        keystore: /tmp/test-cassandra-dc-ssl/keystore.p12
         # password to keystore
         keystore_password: cassandra
         # similar entry for truststore as it is done for keystore
-        truststore: /tmp/user-secret/truststore.jks
+        truststore: /tmp/test-cassandra-dc-ssl/truststore.jks
         # password for truststore
         truststore_password: cassandra
         # other configuration
@@ -153,10 +153,10 @@ data:
     client_encryption_options:
         enabled: true
         # path to keystore, same as for server options
-        keystore: /tmp/user-secret/keystore.p12
+        keystore: /tmp/test-cassandra-dc-ssl/keystore.p12
         keystore_password: cassandra
         # path to truststore, same as for server options
-        truststore: /tmp/user-secret/truststore.jks
+        truststore: /tmp/test-cassandra-dc-ssl/truststore.jks
         truststore_password: cassandra
         # other options
         protocol: TLS 
@@ -172,12 +172,12 @@ data:
     ssl = true
     [ssl]
     # location of ca-cert file from user’s secret
-    certfile = /tmp/user-secret/ca-cert
+    certfile = /tmp/test-cassandra-dc-ssl/ca-cert
     validate = true
     # location of client.cert.pem and client.key.pem we will mount 
-    # under /tmp/user-secret from secret source volume
-    usercert = /tmp/user-secret/client.cer.pem
-    userkey = /tmp/user-secret/client.key.pem
+    # under /tmp/test-cassandra-dc-ssl from secret source volume
+    usercert = /tmp/test-cassandra-dc-ssl/client.cer.pem
+    userkey = /tmp/test-cassandra-dc-ssl/client.key.pem
   # script copying cqlshrc above under ~/.cassandra/cqlshrc of cassandra user
   install_cqlshrc: |
     mkdir -p ~/.cassandra
@@ -228,10 +228,10 @@ port = 9042
 factory = cqlshlib.ssl.ssl_transport_factory
 ssl = true
 [ssl]
-certfile = /tmp/user-secret/ca-cert
+certfile = /tmp/test-cassandra-dc-ssl/ca-cert
 validate = true
-usercert = /tmp/user-secret/client.cer.pem
-userkey = /tmp/user-secret/client.key.pem
+usercert = /tmp/test-cassandra-dc-ssl/client.cer.pem
+userkey = /tmp/test-cassandra-dc-ssl/client.key.pem
 ```
 
 You should be able to connect. This connection will be secured because `ssl` was set to `true` in `cqlshrc`.
@@ -253,7 +253,8 @@ If you have more than one secret you would like to mount, specify it like this i
 ```
 
 `userSecretVolumeSource` is array, just enumerate your secrets here. The first secret will be mounted under 
-`/tmp/user-secret`, the second one under `/tmp/user-secret-2` and so on.
+`/tmp/test-cassandra-dc-ssl`, the second one under `/tmp/test-cassandra-dc-ssl-2` and so on. This might be handy 
+if you want to have different secrets for node-to-node and client-to-node communication.
 
 ## How is CQL probe working?
 

@@ -6,9 +6,9 @@ data:
   cassandra_ssl: |
     server_encryption_options:
         internode_encryption: all
-        keystore: /tmp/user-secret/keystore.p12
+        keystore: /tmp/test-cassandra-dc-ssl/keystore.p12
         keystore_password: cassandra
-        truststore: /tmp/user-secret/truststore.jks
+        truststore: /tmp/test-cassandra-dc-ssl/truststore.jks
         truststore_password: cassandra
         protocol: TLS
         algorithm: SunX509
@@ -17,9 +17,9 @@ data:
         require_client_auth: true
     client_encryption_options:
         enabled: true
-        keystore: /tmp/user-secret/keystore.p12
+        keystore: /tmp/test-cassandra-dc-ssl/keystore.p12
         keystore_password: cassandra
-        truststore: /tmp/user-secret/truststore.jks
+        truststore: /tmp/test-cassandra-dc-ssl/truststore.jks
         truststore_password: cassandra
         protocol: TLS
         store_type: JKS
@@ -32,10 +32,10 @@ data:
     factory = cqlshlib.ssl.ssl_transport_factory
     ssl = true
     [ssl]
-    certfile = /tmp/user-secret/ca-cert
+    certfile = /tmp/test-cassandra-dc-ssl/ca-cert
     validate = true
-    usercert = /tmp/user-secret/client.cer.pem
-    userkey = /tmp/user-secret/client.key.pem
+    usercert = /tmp/test-cassandra-dc-ssl/client.cer.pem
+    userkey = /tmp/test-cassandra-dc-ssl/client.key.pem
   install_cqlshrc: |
     mkdir -p ~/.cassandra
     cp /etc/cassandra/cqlshrc ~/.cassandra/cqlshrc

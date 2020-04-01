@@ -14,6 +14,15 @@ rather risky situation, if exercised and tried out beforehand, it should be a ro
 
 Notable changes between the versions will be summarised here:
 
+### v6.0.2
+
+`userSecretVolumeSource` is still an array as it was in v6.0.1, but it is not mounted under 
+`/tmp/user-secret/` but under `/tmp/{name-of-that-secret}.`
+
+The mere upgrade in this case will not work out of the box as this change is not backward compatible 
+if one is using TLS on client-node or inter-node. One would have to firstly update the config maps 
+and restart these pods so the change is propagated and right paths are set.
+
 ### v6.0.1
 
 `userSecretVolumeSource` in spec became array. You can enumerate more than one 

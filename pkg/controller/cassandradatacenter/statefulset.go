@@ -26,7 +26,6 @@ const (
 	OperatorConfigVolumeMountPath = "/tmp/operator-config"
 	RackConfigVolumeMountPath     = "/tmp/cassandra-rack-config"
 	UserConfigVolumeMountPath     = "/tmp/user-config"
-	UserSecretVolumeMountPath     = "/tmp/user-secret"
 	SidecarSecretVolumeMountPath  = "/tmp/sidecar-secret"
 )
 
@@ -238,12 +237,8 @@ func newCassandraContainer(
 	}
 
 	if userSecretVolumes != nil {
-		for i, vol := range userSecretVolumes {
-			var mountPath = UserSecretVolumeMountPath
-			if i != 0 {
-				mountPath = fmt.Sprintf("%s-%d", UserSecretVolumeMountPath, i+1)
-			}
-			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: vol.Name, MountPath: mountPath})
+		for _, vol := range userSecretVolumes {
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: vol.Name, MountPath: "/tmp/" + vol.Name})
 		}
 	}
 
