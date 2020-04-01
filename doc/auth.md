@@ -207,7 +207,9 @@ spec:
 
 If you start a cluster as you are used to, check out the logs by 
 
+```
 $ kubectl logs -f _name_of_the_pod_ cassandra
+```
 
 You have to see these logging output to see TLS was applied:
 
@@ -259,11 +261,11 @@ if you want to have different secrets for node-to-node and client-to-node commun
 ## How is CQL probe working?
 
 From Kubernetes point of view, Kubernetes has to have a way how to check if a container is up or not. This is done by _readiness probe_. In our case, it is a simple script in Cassandra container in [/usr/bin/cql-rediness-probe](https://github.com/instaclustr/cassandra-operator/blob/master/docker/cassandra/cql-readiness-probe). The logic is simple, if we are on the password authenticator, we have to log in with a password. We are using `probe` role for this. If that role 
-does not exist yet, it is created as non-super-user. Check the fact that we are using `cassandra:cassanra` to create it because the probe role will be the very first CQL statement against started Cassandra and it does not matter you change this password for `cassandra` afterwards because probe role would be already created. We are also not using any SSL-like configuration for `cqlsh` command itself because this is all done transparently in `/home/cassandra/cassandra/.cqlshrc`. Be sure you have this file populated with the configuration above otherwise that probe wil fail to connect.
+does not exist yet, it is created as non-super-user. Check the fact that we are using `cassandra:cassandra` to create it because the probe role will be the very first CQL statement against started Cassandra and it does not matter you change this password for `cassandra` afterwards because probe role would be already created. We are also not using any SSL-like configuration for `cqlsh` command itself because this is all done transparently in `/home/cassandra/cassandra/.cqlshrc`. Be sure you have this file populated with the configuration above otherwise that probe wil fail to connect.
 
 ## SSL with Sidecar
 
-Once you are on SSL, the interesting (or rather, quite obvious) fact is that whatever CQL request you would do against Cassandra, it will fail because it started to be secured (if you enabled client-node SSL, which is most probably the case). If you configed your Cassandra node to be on SSL, well, Sidecar has to know how to talk to Cassandra securely too. Please keep in mind that right now, the only case this configuration needs to be in place is the situation you are restring a node by calling `restart` operation above as that one internally tries to check if a node is back online by executing some CQL statement against it.
+Once you are on SSL, the interesting (or rather, quite obvious) fact is that whatever CQL request you would do against Cassandra, it will fail because it started to be secured (if you enabled client-node SSL, which is most probably the case). If you configured your Cassandra node to be on SSL, well, Sidecar has to know how to talk to Cassandra securely too. Please keep in mind that right now, the only case this configuration needs to be in place is the situation you are restring a node by calling `restart` operation above as that one internally tries to check if a node is back online by executing some CQL statement against it.
 
 In order to achieve this, we use the following config map:
 
