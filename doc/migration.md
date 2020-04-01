@@ -14,7 +14,7 @@ rather risky situation, if exercised and tried out beforehand, it should be a ro
 
 Notable changes between the versions will be summarised here:
 
-### v6.0.2
+### v6.1.0
 
 `userSecretVolumeSource` is still an array as it was in v6.0.1, but it is not mounted under 
 `/tmp/user-secret/` but under `/tmp/{name-of-that-secret}.`
