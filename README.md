@@ -26,6 +26,8 @@ We are currently building images for Cassandra 3.11.6 and 4.0-alpha3.
 
 1) [Service accounts, login and SSL](./doc/auth.md) documentation for authentication and how you can log in to cluster
 
+1) [Logging](./doc/logging.md) documentation for Cassandra logging
+
 1) [Migration guide](./doc/migration.md) documentation how to migrate from one version to another
 
 1) Using [Helm](./doc/helm.md) to install and launch the operator and the clusters.
