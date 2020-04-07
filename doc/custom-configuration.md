@@ -32,6 +32,30 @@ Example yaml fragment:
         failure-domain.beta.kubernetes.io/zone: europe-west1-a
 ```
 
+### Tolerations
+
+If you tained a node or nodes for Cassandra deployment, in order to schedule pods to them, you need tolerations. Tolerations 
+are exposed into `racks` above. For example, it would look like this:
+
+```yaml
+  racks:
+    - name: "west1-a"
+      tolerations:
+        - key: "key"
+          operator: "Equal"
+          value: "value"
+          effect: "NoSchedule"
+    - name: "west1-b"
+      tolerations:
+        - key: "key"
+          operator: "Equal"
+          value: "value"
+          effect: "NoSchedule"
+``` 
+
+If you do not use rack-aware deployment, you use it anyway, you just do not now about it. The default rack is called `rack1` 
+so you would have to specify tolerations under that rack name.
+
 See the full example yaml [here](../examples/example-datacenter.yaml)
 
 ### Cassandra.yaml and cassandra-env.sh

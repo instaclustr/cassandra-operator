@@ -14,6 +14,12 @@ rather risky situation, if exercised and tried out beforehand, it should be a ro
 
 Notable changes between the versions will be summarised here:
 
+### v6.2.0
+
+* Racks in the spec can contain Kubernetes' tolerations.
+* Minor fixes in Cassandra image when it comes to logging, `/etc/cassandra/logback.xml` is scanned periodically on changes.
+* logging of JVM's GC activity for Cassandra image was turned off.
+
 ### v6.1.0
 
 `userSecretVolumeSource` is still an array as it was in v6.0.1, but it is not mounted under 

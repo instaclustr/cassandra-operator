@@ -8,11 +8,11 @@ By default, the logging is only writing to stdout so you might inspect logs by `
 $ kubectl logs -f cassandra-test-cluster-dc1-west1-a-0 cassandra
 ``` 
 
-There are not any `system.log` nor `debug.log` files written because one size doest not fit all here and 
+There are not any `system.log` nor `debug.log` files written because one size does not fit all here and 
 it is important to realize that logs would be written to attached PV which might have various 
 performance characteristics. One can accidentally set logging to e.g `TRACE` for debugging and then he might forget 
 to set it back. Obviously, there will be _a lot_ of logs and performance might even suffer. Additionally, logs are as 
-well occupying disk space which might be look at as unnecessary nor desirable as we might fill up all disk space 
+well occupying disk space which might be looked at as unnecessary nor desirable as we might fill up all disk space 
 which was primarily dedicated to Cassandra data files.
 
 If one really wants to start to log into files, we have to change default `/etc/cassandra/logback.xml` file. This 
