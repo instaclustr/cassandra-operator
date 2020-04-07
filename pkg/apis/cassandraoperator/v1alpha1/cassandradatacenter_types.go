@@ -72,8 +72,9 @@ func init() {
 }
 
 type Rack struct {
-	Name   string            `json:"name"`
-	Labels map[string]string `json:"labels"`
+	Name        string            `json:"name"`
+	Labels      map[string]string `json:"labels"`
+	Tolerations []v1.Toleration   `json:"tolerations,omitempty"`
 }
 
 type OperatorAnnotations struct {

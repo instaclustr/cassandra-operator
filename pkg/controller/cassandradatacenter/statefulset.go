@@ -169,6 +169,7 @@ func newPodSpec(
 		ServiceAccountName: cdc.Spec.ServiceAccountName,
 		NodeSelector:       rack.NodeLabels,
 		SecurityContext:    securityContext,
+		Tolerations:        rack.Tolerations,
 	}
 
 	return podSpec

@@ -3,6 +3,8 @@ package cluster
 import (
 	"sort"
 
+	v1 "k8s.io/api/core/v1"
+
 	"github.com/instaclustr/cassandra-operator/pkg/apis/cassandraoperator/v1alpha1"
 )
 
@@ -25,15 +27,16 @@ func BuildRacksDistribution(spec v1alpha1.CassandraDataCenterSpec) (racksDistrib
 		if i < int(spec.Nodes%numRacks) {
 			replicas = replicas + 1
 		}
-		racksDistribution = append(racksDistribution, &Rack{Name: rack.Name, NodeLabels: rack.Labels, Replicas: replicas})
+		racksDistribution = append(racksDistribution, &Rack{Name: rack.Name, NodeLabels: rack.Labels, Replicas: replicas, Tolerations: rack.Tolerations})
 	}
 	return racksDistribution
 }
 
 type Rack struct {
-	Name       string
-	Replicas   int32
-	NodeLabels map[string]string
+	Name        string
+	Replicas    int32
+	NodeLabels  map[string]string
+	Tolerations []v1.Toleration
 }
 
 type Racks []*Rack
