@@ -12,6 +12,9 @@ import com.google.inject.Injector;
 import com.instaclustr.cassandra.CassandraModule;
 import com.instaclustr.cassandra.backup.guice.StorageModules;
 import com.instaclustr.cassandra.backup.impl.backup.BackupModules.BackupModule;
+import com.instaclustr.cassandra.backup.impl.backup.BackupModules.CommitlogBackupModule;
+import com.instaclustr.cassandra.backup.impl.restore.RestoreModules.RestoreCommitlogModule;
+import com.instaclustr.cassandra.backup.impl.restore.RestoreModules.RestoreModule;
 import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupsModule;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissioningModule;
 import com.instaclustr.cassandra.sidecar.operations.drain.DrainModule;
@@ -121,6 +124,9 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
         return new ArrayList<AbstractModule>() {{
             add(new StorageModules());
             add(new BackupModule());
+            add(new CommitlogBackupModule());
+            add(new RestoreModule());
+            add(new RestoreCommitlogModule());
         }};
     }
 

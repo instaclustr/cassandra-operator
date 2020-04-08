@@ -1,4 +1,4 @@
-IMAGE_TAG := 2.0.1
+IMAGE_TAG := 2.0.2
 IMAGE := $(DOCKER_REGISTRY)jdk8-gcloud-sdk:$(IMAGE_TAG)
 
 .PHONY: circle-build-env
