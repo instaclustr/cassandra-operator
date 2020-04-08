@@ -11,6 +11,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Set;
@@ -39,7 +40,11 @@ import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesOperation;
 import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesOperationRequest;
 import com.instaclustr.cassandra.sidecar.service.CassandraStatusService.Status;
+import com.instaclustr.operations.Operation.State;
+import org.awaitility.Awaitility;
+import org.awaitility.Duration;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.testng.Assert;
 
 public class SidecarClient implements Closeable {
 
@@ -47,6 +52,7 @@ public class SidecarClient implements Closeable {
     private final Client client;
     private final WebTarget statusWebTarget;
     private final WebTarget operationsWebTarget;
+    private final int port;
 
     private SidecarClient(final Builder builder, final ResourceConfig resourceConfig) {
         client = ClientBuilder.newBuilder().withConfig(resourceConfig).build();
@@ -55,6 +61,7 @@ public class SidecarClient implements Closeable {
 
         statusWebTarget = client.target(String.format("%s/status", rootUrl));
         operationsWebTarget = client.target(String.format("%s/operations", rootUrl));
+        port = builder.port;
     }
 
     public StatusResult getStatus() {
@@ -66,6 +73,10 @@ public class SidecarClient implements Closeable {
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    public int getPort() {
+        return port;
     }
 
     public Operation getOperation(final UUID operationId) {
@@ -106,6 +117,10 @@ public class SidecarClient implements Closeable {
 
     public OperationResult<DrainOperation> drain(final DrainOperationRequest operationRequest) {
         return performOperationSubmission(operationRequest, DrainOperation.class);
+    }
+
+    public OperationResult<DrainOperation> drain() {
+        return drain(new DrainOperationRequest());
     }
 
     public OperationResult<RestartOperation> restart(final RestartOperationRequest operationRequest) {
@@ -165,6 +180,12 @@ public class SidecarClient implements Closeable {
 
         private int port = 8080;
 
+        public Builder withInetSocketAddress(final InetSocketAddress inetSocketAddress) {
+            withHostname(inetSocketAddress.getHostName());
+            withPort(inetSocketAddress.getPort());
+            return this;
+        }
+
         public Builder withHostname(final String hostname) {
             this.hostname = hostname;
             return this;
@@ -200,5 +221,50 @@ public class SidecarClient implements Closeable {
             this.operation = operation;
             this.response = response;
         }
+    }
+
+    public void waitForCompleted(OperationResult<? extends Operation<?>> operationResult) {
+        waitForState(operationResult, State.COMPLETED);
+    }
+
+    public void waitForFailed(OperationResult<? extends Operation<?>> operationResult) {
+        waitForState(operationResult, State.FAILED);
+    }
+
+    public void waitForPending(OperationResult<? extends Operation<?>> operationResult) {
+        waitForState(operationResult, State.PENDING);
+    }
+
+    public void waitForRunning(OperationResult<? extends Operation<?>> operationResult) {
+        waitForState(operationResult, State.RUNNING);
+    }
+
+    public void waitForState(OperationResult<? extends Operation<?>> operationResult, State state) {
+
+        Awaitility.await().atMost(Duration.FIVE_MINUTES).until(() -> {
+
+            final State returnedState = getOperation(operationResult.operation.id).state;
+
+            if (state == State.FAILED && returnedState == state) {
+                return true;
+            }
+
+            if (state == State.PENDING && returnedState == state) {
+                return true;
+            }
+
+            if (state == State.RUNNING && returnedState == state) {
+                return true;
+            }
+
+            if (returnedState == State.FAILED) {
+                Assert.fail("Operation has failed.");
+                return false;
+            } else if (returnedState == State.PENDING || returnedState == State.RUNNING) {
+                return false;
+            } else {
+                return returnedState == state;
+            }
+        });
     }
 }

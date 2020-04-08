@@ -57,13 +57,13 @@ public class SidecarTest {
         };
 
         final Injector injector = Guice.createInjector(
-                new OperationsModule(3600),
-                new AbstractModule() {
-                    @Override
-                    protected void configure() {
-                        bind(classType).toInstance(typeMap);
-                    }
+            new OperationsModule(3600),
+            new AbstractModule() {
+                @Override
+                protected void configure() {
+                    bind(classType).toInstance(typeMap);
                 }
+            }
         );
 
         injector.injectMembers(this);
@@ -85,11 +85,9 @@ public class SidecarTest {
         final Collection<Operation> allOperations = operationsResource.getOperations(ImmutableSet.of(), ImmutableSet.of());
         assertFalse(allOperations.isEmpty());
 
-
         // check that this is operation we wanted and it is in running state
         assertTrue(allOperations.stream().anyMatch(op -> op.id.equals(operationID)));
         assertEquals(submittedOperation.state, Operation.State.RUNNING);
-
 
         // let operation finish
         operationCountDownLatch.countDown();

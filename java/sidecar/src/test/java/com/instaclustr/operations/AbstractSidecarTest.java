@@ -101,7 +101,7 @@ public abstract class AbstractSidecarTest {
         // Note we won't know the address till a socket actually binds on it, so we can't use this again, which is why
         // we call getServerInetAddress from the serverService rather than using the passed in InetSocketAddress
 
-        serverService = new JerseyHttpServerService(new InetSocketAddress("localhost", 0), resourceConfig);
+        serverService = new JerseyHttpServerService(new InetSocketAddress("localhost", 4567), resourceConfig);
 
         sidecarClient = new SidecarClient.Builder().withHostname(serverService.getServerInetAddress().getHostName()).withPort(serverService.getServerInetAddress().getPort()).build(resourceConfig);
 

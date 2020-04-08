@@ -58,7 +58,7 @@ import com.instaclustr.operations.OperationRequest;
  */
 public class UpgradeSSTablesOperationRequest extends OperationRequest {
 
-    public final boolean includeAllSSTables;
+    public final boolean includeAllSStables;
 
     @Min(0)
     public final int jobs;
@@ -71,12 +71,12 @@ public class UpgradeSSTablesOperationRequest extends OperationRequest {
     @JsonCreator
     public UpgradeSSTablesOperationRequest(@JsonProperty("keyspace") final String keyspace,
                                            @JsonProperty("tables") final Set<String> tables,
-                                           @JsonProperty("includeAllSStables") final boolean includeAllSSTables,
+                                           @JsonProperty("includeAllSStables") final boolean includeAllSStables,
                                            @JsonProperty("jobs") final int jobs) {
         this.jobs = jobs;
         this.keyspace = keyspace;
         this.tables = tables;
-        this.includeAllSSTables = includeAllSSTables;
+        this.includeAllSStables = includeAllSStables;
     }
 
     @Override
@@ -85,7 +85,7 @@ public class UpgradeSSTablesOperationRequest extends OperationRequest {
                 .add("keyspace", keyspace)
                 .add("tables", tables)
                 .add("jobs", jobs)
-                .add("includeAllSSTables", includeAllSSTables)
+                .add("includeAllSStables", includeAllSStables)
                 .toString();
     }
 }

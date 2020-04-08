@@ -41,10 +41,10 @@ public class UpgradeSSTablesOperation extends Operation<UpgradeSSTablesOperation
                                      @JsonProperty("startTime") final Instant startTime,
                                      @JsonProperty("keyspace") final String keyspace,
                                      @JsonProperty("tables") final Set<String> tables,
-                                     @JsonProperty("includeAllSStables") final boolean includeAllSSTables,
+                                     @JsonProperty("includeAllSStables") final boolean includeAllSStables,
                                      @JsonProperty("jobs") final int jobs) {
         super(id, creationTime, state, failureCause, progress, startTime,
-              new UpgradeSSTablesOperationRequest(keyspace, tables, includeAllSSTables, jobs));
+              new UpgradeSSTablesOperationRequest(keyspace, tables, includeAllSStables, jobs));
         cassandraJMXService = null;
     }
 
@@ -70,7 +70,7 @@ public class UpgradeSSTablesOperation extends Operation<UpgradeSSTablesOperation
             @Override
             public Integer apply(final StorageServiceMBean object) throws Exception {
                 return object.upgradeSSTables(request.keyspace,
-                                              !request.includeAllSSTables,
+                                              !request.includeAllSStables,
                                               request.jobs,
                                               request.tables == null ? new String[]{} : request.tables.toArray(new String[0]));
             }
@@ -79,10 +79,10 @@ public class UpgradeSSTablesOperation extends Operation<UpgradeSSTablesOperation
         switch (result) {
             case 1:
                 throw new OperationFailureException("Aborted upgrading sstables for at least one table in keyspace " + request.keyspace
-                                                            + ", check server logs for more information.");
+                                                        + ", check server logs for more information.");
             case 2:
                 throw new OperationFailureException("Failed marking some sstables compacting in keyspace " + request.keyspace +
-                                                            ", check server logs for more information\"");
+                                                        ", check server logs for more information\"");
         }
     }
 }

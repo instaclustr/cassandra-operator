@@ -84,7 +84,7 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
         logCommandVersionInformation(commandSpec);
 
         // production binds singletons as eager by default
-        final Injector injector = createInjector(PRODUCTION, getModules());
+        final Injector injector = createInjector(PRODUCTION, getModules(sidecarSpec, jmxSpec));
 
         return injector.getInstance(Application.class).call();
     }
@@ -94,14 +94,30 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
         return "cassandra-sidecar";
     }
 
-    public List<AbstractModule> getModules() throws Exception {
+    public List<AbstractModule> getModules(SidecarSpec sidecarSpec, CassandraJMXSpec jmxSpec) throws Exception {
         List<AbstractModule> modules = new ArrayList<>();
 
         modules.addAll(backupModules());
         modules.addAll(operationModules());
-        modules.addAll(sidecarModules());
+        modules.addAll(sidecarModules(sidecarSpec, jmxSpec));
 
         return modules;
+    }
+
+    public List<AbstractModule> sidecarModules(SidecarSpec sidecarSpec, CassandraJMXSpec jmxSpec) throws Exception {
+        return new ArrayList<AbstractModule>() {{
+            add(new VersionModule(getVersion()));
+            add(new ServiceManagerModule());
+            add(new CassandraModule(new CassandraJMXConnectionInfo(jmxSpec.jmxPassword,
+                                                                   jmxSpec.jmxUser,
+                                                                   jmxSpec.jmxServiceURL,
+                                                                   jmxSpec.trustStore,
+                                                                   jmxSpec.trustStorePassword)));
+            add(new JerseyHttpServerModule(sidecarSpec.httpServerAddress));
+            add(new OperationsModule(sidecarSpec.operationsExpirationPeriod));
+            add(new ExecutorsModule());
+            add(new ServicesModule());
+        }};
     }
 
     public List<AbstractModule> sidecarModules() throws Exception {
