@@ -107,10 +107,6 @@ public abstract class AbstractCassandraSidecarTest {
 
         injector.injectMembers(this);
 
-        // Port 0 will be a randomly assigned ephemeral port by the OS - each concrete class will get it's own port
-        // Note we won't know the address till a socket actually binds on it, so we can't use this again, which is why
-        // we call getServerInetAddress from the serverService rather than using the passed in InetSocketAddress
-
         serverService = new JerseyHttpServerService(new InetSocketAddress("localhost", 4567), resourceConfig);
 
         sidecarClient = new SidecarClient.Builder()
