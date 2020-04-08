@@ -15,7 +15,9 @@ import com.instaclustr.cassandra.backup.impl.backup.BackupModules.BackupModule;
 import com.instaclustr.cassandra.sidecar.operations.cleanup.CleanupsModule;
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissioningModule;
 import com.instaclustr.cassandra.sidecar.operations.drain.DrainModule;
+import com.instaclustr.cassandra.sidecar.operations.flush.FlushModule;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildModule;
+import com.instaclustr.cassandra.sidecar.operations.refresh.RefreshModule;
 import com.instaclustr.cassandra.sidecar.operations.restart.RestartModule;
 import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubModule;
 import com.instaclustr.cassandra.sidecar.operations.upgradesstables.UpgradeSSTablesModule;
@@ -46,10 +48,10 @@ import picocli.CommandLine.Spec;
 public final class Sidecar extends CLIApplication implements Callable<Void> {
 
     @Mixin
-    private SidecarSpec sidecarSpec;
+    public SidecarSpec sidecarSpec;
 
     @Mixin
-    private CassandraJMXSpec jmxSpec;
+    public CassandraJMXSpec jmxSpec;
 
     @Spec
     private CommandSpec commandSpec;
@@ -131,6 +133,8 @@ public final class Sidecar extends CLIApplication implements Callable<Void> {
             add(new ScrubModule());
             add(new DrainModule());
             add(new RestartModule());
+            add(new RefreshModule());
+            add(new FlushModule());
         }};
     }
 }

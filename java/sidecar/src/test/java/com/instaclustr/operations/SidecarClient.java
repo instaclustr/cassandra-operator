@@ -26,8 +26,12 @@ import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissionOpe
 import com.instaclustr.cassandra.sidecar.operations.decommission.DecommissionOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.drain.DrainOperation;
 import com.instaclustr.cassandra.sidecar.operations.drain.DrainOperationRequest;
+import com.instaclustr.cassandra.sidecar.operations.flush.FlushOperation;
+import com.instaclustr.cassandra.sidecar.operations.flush.FlushOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildOperation;
 import com.instaclustr.cassandra.sidecar.operations.rebuild.RebuildOperationRequest;
+import com.instaclustr.cassandra.sidecar.operations.refresh.RefreshOperation;
+import com.instaclustr.cassandra.sidecar.operations.refresh.RefreshOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.restart.RestartOperation;
 import com.instaclustr.cassandra.sidecar.operations.restart.RestartOperationRequest;
 import com.instaclustr.cassandra.sidecar.operations.scrub.ScrubOperation;
@@ -55,9 +59,13 @@ public class SidecarClient implements Closeable {
 
     public StatusResult getStatus() {
         final Response response = statusWebTarget.request(APPLICATION_JSON).get();
-        final Status status = response.readEntity(Status.class);
 
-        return new StatusResult(status, response);
+        try {
+            final Status status = response.readEntity(Status.class);
+            return new StatusResult(status, response);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     public Operation getOperation(final UUID operationId) {
@@ -102,6 +110,14 @@ public class SidecarClient implements Closeable {
 
     public OperationResult<RestartOperation> restart(final RestartOperationRequest operationRequest) {
         return performOperationSubmission(operationRequest, RestartOperation.class);
+    }
+
+    public OperationResult<RefreshOperation> refresh(final RefreshOperationRequest operationRequest) {
+        return performOperationSubmission(operationRequest, RefreshOperation.class);
+    }
+
+    public OperationResult<FlushOperation> flush(final FlushOperationRequest operationRequest) {
+        return performOperationSubmission(operationRequest, FlushOperation.class);
     }
 
     public Collection<Operation> getOperations() {
@@ -165,6 +181,7 @@ public class SidecarClient implements Closeable {
     }
 
     public static class StatusResult {
+
         public final Status status;
         public final Response response;
 
@@ -175,6 +192,7 @@ public class SidecarClient implements Closeable {
     }
 
     public static class OperationResult<O extends Operation> {
+
         public final O operation;
         public final Response response;
 
