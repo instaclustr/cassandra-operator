@@ -72,7 +72,6 @@ import com.instaclustr.operations.OperationRequest;
  */
 public class ScrubOperationRequest extends OperationRequest {
 
-    // these are in nodetool initialised to "false", hence null is fine for us
     public final boolean disableSnapshot;
     public final boolean skipCorrupted;
     public final boolean noValidate;
