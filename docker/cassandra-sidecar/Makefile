@@ -1,7 +1,7 @@
 include ../base-openjre/Makefile
 
-CASSANDRA_SIDECAR_VERSION := 1.5.1
-CASSANDRA_SIDECAR_JAR := cassandra-k8s-sidecar-$(CASSANDRA_SIDECAR_VERSION).jar
+CASSANDRA_SIDECAR_VERSION := 1.0.0
+CASSANDRA_SIDECAR_JAR := cassandra-sidecar-$(CASSANDRA_SIDECAR_VERSION).jar
 
 ifeq ($(CASSANDRA_SIDECAR_VERSION:%-SNAPSHOT=SNAPSHOT),SNAPSHOT)
 $(info SNAPSHOT version specified. Marking sidecar JAR target as .PHONY)
@@ -10,7 +10,7 @@ endif
 
 $(CASSANDRA_SIDECAR_JAR):
 	rm -rf $(CASSANDRA_SIDECAR_JAR)
-	mvn dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-sidecar:$(CASSANDRA_SIDECAR_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
+	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-sidecar:$(CASSANDRA_SIDECAR_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 
 .PHONY: cassandra-sidecar
 cassandra-sidecar: $(CASSANDRA_SIDECAR_JAR)

@@ -16,8 +16,8 @@ C_APACHE_MIRROR_URL := $(if $(C_APACHE_MIRROR_URL),$(C_APACHE_MIRROR_URL),"https
 .PHONY: cassandra-3
 cassandra-3:
 	rm -rf cassandra-3/jars
-	mvn dependency:copy -Dartifact=com.instaclustr:cassandra-3-k8s-addons:1.0.2 -DoutputDirectory=cassandra-3/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
-	mvn dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-addons:1.0.1 -DoutputDirectory=cassandra-3/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
+	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-3-k8s-addons:1.0.2 -DoutputDirectory=cassandra-3/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
+	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-addons:1.0.1 -DoutputDirectory=cassandra-3/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 	docker build \
         --build-arg cassandra_major_version=3 \
 		--build-arg cassandra_version=$(CASSANDRA_3_VERSION) \
@@ -32,8 +32,8 @@ cassandra-3:
 .PHONY: cassandra-4
 cassandra-4:
 	rm -rf cassandra-4/jars
-	mvn dependency:copy -Dartifact=com.instaclustr:cassandra-4-k8s-addons:1.0.1 -DoutputDirectory=cassandra-4/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
-	mvn dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-addons:1.0.1 -DoutputDirectory=cassandra-4/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
+	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-4-k8s-addons:1.0.1 -DoutputDirectory=cassandra-4/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
+	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-addons:1.0.1 -DoutputDirectory=cassandra-4/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 	docker build \
 	    --build-arg cassandra_major_version=4 \
 		--build-arg cassandra_version=${CASSANDRA_4_VERSION} \
