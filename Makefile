@@ -4,7 +4,7 @@ all: java docker
 
 .PHONY: java
 java:
-	cd java && mvn clean install
+	cd java && ./mvnw clean install
 
 # Obtain operator version from Git
 git_revision = $(shell git describe --tags --always --dirty)
