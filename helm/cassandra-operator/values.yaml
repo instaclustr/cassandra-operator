@@ -27,4 +27,9 @@ tolerations: []
 
 affinity: {}
 
-namespace: "default"
+# Which namespace to watch for Cassandra objects.
+# use:
+# - <namespace-name>
+# - empty string "" is all namespaces
+# - 'self' is the namespace that the operator is installed in.
+watch_namespace: "self"
