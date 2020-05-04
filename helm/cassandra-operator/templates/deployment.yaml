@@ -27,12 +27,14 @@ spec:
         - name: {{ template "cassandra-operator.name" . }}
           env:
             - name: WATCH_NAMESPACE
-# uncomment this "" to have cluster-scoped operator
-# and comment out the "valueFrom" section
-#              value: ""
+              {{- if eq .Values.watch_namespace "self" }}
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+              {{- else }}
+              value: {{ .Values.watch_namescape }}
+              {{- end }}
+
             - name: POD_NAME
               valueFrom:
                 fieldRef:
