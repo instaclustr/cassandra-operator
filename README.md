@@ -16,7 +16,7 @@ All relevant information related to the usage our Instaclustr Cassandra operator
 
 ## Requirements
 
-- Kubernetes 1.13+
+- Kubernetes 1.15+
 - Helm 3 (if you want to use the included helm charts)
 
 ## Limitations
