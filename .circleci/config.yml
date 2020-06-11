@@ -104,7 +104,7 @@ jobs:
 
       - run:
           name: Cleanup GCP resources
-          command: yes | gcloud container clusters delete test-cluster --zone us-central1-b --project cassandra-operator
+          command: gcloud container clusters delete test-cluster --zone us-central1-b --project cassandra-operator --quiet
           when: always
 
   release:
