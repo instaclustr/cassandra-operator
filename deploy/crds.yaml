@@ -455,6 +455,8 @@ spec:
                     type: string
                 type: object
               type: array
+            initImage:
+              type: string
             nodes:
               format: int32
               type: integer

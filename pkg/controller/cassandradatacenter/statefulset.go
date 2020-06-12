@@ -289,9 +289,16 @@ func newSidecarContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter,
 }
 
 func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter) *corev1.Container {
-	return &corev1.Container{
+
+	var image = "busybox:latest"
+
+	if len(cdc.Spec.InitImage) != 0 {
+		image = cdc.Spec.InitImage
+	}
+
+	container := &corev1.Container{
 		Name:            "sysctl-limits",
-		Image:           "busybox:latest",
+		Image:           image,
 		ImagePullPolicy: cdc.Spec.ImagePullPolicy,
 		SecurityContext: &corev1.SecurityContext{
 			Privileged: boolPointer(true),
@@ -301,6 +308,8 @@ func newSysctlLimitsContainer(cdc *cassandraoperatorv1alpha1.CassandraDataCenter
 			`sysctl -w vm.max_map_count=1048575`,
 		},
 	}
+
+	return container
 }
 
 func newRestoreContainer(

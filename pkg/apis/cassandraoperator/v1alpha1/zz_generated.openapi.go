@@ -376,6 +376,12 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraDataCenterSpec(ref comm
 							Format: "",
 						},
 					},
+					"initImage": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"racks": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
