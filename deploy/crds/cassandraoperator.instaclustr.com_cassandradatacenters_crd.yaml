@@ -431,11 +431,8 @@ spec:
               properties:
                 backupName:
                   type: string
-                secret:
-                  type: string
               required:
               - backupName
-              - secret
               type: object
             serviceAccountName:
               type: string

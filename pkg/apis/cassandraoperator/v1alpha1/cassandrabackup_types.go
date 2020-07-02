@@ -18,12 +18,10 @@ type CassandraBackupSpec struct {
 	StorageLocation string `json:"storageLocation"`
 	// The snapshot tag for the backup
 	SnapshotTag           string `json:"snapshotTag"`
-	Duration              string `json:"duration,omitempty"`
-	Bandwidth             string `json:"bandwidth,omitempty"`
 	ConcurrentConnections int    `json:"concurrentConnections,omitempty"`
-	Table                 string `json:"table,omitempty"`
-	// +listType
-	Keyspaces []string `json:"keyspaces,omitempty"`
+	Entities              string `json:"entities,omitempty"`
+	GlobalRequest         bool   `json:"globalRequest,omitempty"`
+	Secret                string `json:"secret,omitempty"`
 }
 
 // CassandraBackupStatus defines the observed state of CassandraBackup
@@ -50,7 +48,6 @@ type CassandraBackup struct {
 	Spec CassandraBackupSpec `json:"spec"`
 	// +listType
 	Status         []*CassandraBackupStatus  `json:"status,omitempty"`
-	Secret         string                    `json:"secret,omitempty"`
 	GlobalStatus   operations.OperationState `json:"globalStatus,omitempty"`
 	GlobalProgress string                    `json:"globalProgress,omitempty"`
 	JustCreate     bool                      `json:"justCreate,omitempty"`

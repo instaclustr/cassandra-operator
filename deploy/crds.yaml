@@ -43,13 +43,9 @@ spec:
           type: string
         metadata:
           type: object
-        secret:
-          type: string
         spec:
           description: CassandraBackupSpec defines the desired state of CassandraBackup
           properties:
-            bandwidth:
-              type: string
             cdc:
               type: string
             cluster:
@@ -60,20 +56,18 @@ spec:
               description: Cassandra DC name to back up. Used to find the pods in
                 the CDC
               type: string
-            duration:
+            entities:
               type: string
-            keyspaces:
-              items:
-                type: string
-              type: array
+            globalRequest:
+              type: boolean
+            secret:
+              type: string
             snapshotTag:
               description: The snapshot tag for the backup
               type: string
             storageLocation:
               description: The uri for the backup target location e.g. s3 bucket,
                 filepath
-              type: string
-            table:
               type: string
           required:
           - cdc
@@ -586,11 +580,8 @@ spec:
               properties:
                 backupName:
                   type: string
-                secret:
-                  type: string
               required:
               - backupName
-              - secret
               type: object
             serviceAccountName:
               type: string

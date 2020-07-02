@@ -335,15 +335,6 @@ func newRestoreContainer(
 		return nil, err
 	}
 
-	secret := &corev1.Secret{}
-	if err := client.Get(context.TODO(), types.NamespacedName{Name: cdc.Spec.Restore.Secret, Namespace: cdc.Namespace}, secret); err != nil {
-		if k8sErrors.IsNotFound(err) {
-			return nil, errors.New(fmt.Sprintf("could not fetch Secret instance %s used for restore because it does not exist", cdc.Spec.Restore.Secret))
-		}
-
-		return nil, err
-	}
-
 	if len(backup.Spec.Datacenter) == 0 {
 		return nil, errors.New(fmt.Sprintf("cdc field in backup CRD %s was not set!", cdc.Spec.Restore.BackupName))
 	}
@@ -353,7 +344,8 @@ func newRestoreContainer(
 		"--snapshot-tag=" + backup.Spec.SnapshotTag,
 		"--storage-location=" + backup.Spec.StorageLocation + "/" + backup.Spec.Cluster + "/" + backup.Spec.Datacenter,
 		"--k8s-namespace=" + cdc.Namespace,
-		"--k8s-backup-secret-name=" + backup.Secret,
+		"--k8s-secret-name=" + backup.Spec.Secret,
+		"--resolveHostIdFromTopology",
 	}
 
 	sidecarEnv := cdc.Spec.SidecarEnv

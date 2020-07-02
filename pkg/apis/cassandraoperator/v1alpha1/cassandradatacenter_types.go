@@ -96,7 +96,6 @@ type OperatorLabels struct {
 
 type Restore struct {
 	BackupName string `json:"backupName"`
-	Secret     string `json:"secret"`
 }
 
 type CassandraAuth struct {

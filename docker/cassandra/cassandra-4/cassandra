@@ -37,8 +37,8 @@ done
 # we move it there from persistent volume and if cluster is restarted, this file will not be in
 # persistent volume anymore so nothing will be copied over (but Cassandra will be already setup with tokens as
 # it is enough to set this in cassandra.yaml just once and Cassandra will cache it internally).
-if [[ -f "/var/lib/cassandra/restore_done" ]] && [[ -f "/var/lib/cassandra/tokens.yaml" ]]; then
-    mv /var/lib/cassandra/tokens.yaml /etc/cassandra/cassandra.yaml.d/002-tokens.yaml
+if [[ -f "/var/lib/cassandra/restore_done" ]] && [[ "$(ls /var/lib/cassandra/tokens/*-tokens.yaml | wc -l)" = "1" ]]; then
+    mv /var/lib/cassandra/tokens/*-tokens.yaml /etc/cassandra/cassandra.yaml.d/002-tokens.yaml
     echo "auto_bootstrap: false" > /etc/cassandra/cassandra.yaml.d/003-disable-autobootstrap.yaml
 fi
 

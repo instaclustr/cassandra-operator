@@ -146,12 +146,12 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	// fetch secret and make sure it exists
 
 	secret := &corev1.Secret{}
-	if err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Secret, Namespace: instance.Namespace}, secret); err != nil {
+	if err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.Secret, Namespace: instance.Namespace}, secret); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			// if the resource is not found, that means all of
 			// the finalizers have been removed, and the resource has been deleted,
 			// so there is nothing left to do.
-			reqLogger.Info(fmt.Sprintf("Secret used for backups %s was not found", instance.Secret))
+			reqLogger.Info(fmt.Sprintf("Secret used for backups %s was not found", instance.Spec.Secret))
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -187,7 +187,7 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	sidecarClients := sidecar.SidecarClients(pods, &sidecar.DefaultSidecarClientOptions)
 
 	wg := &sync.WaitGroup{}
-	wg.Add(len(sidecarClients))
+	wg.Add(1)
 
 	podIpHostnameMap := podIpHostnameMap(pods)
 
@@ -195,6 +195,8 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 
 	for _, sc := range sidecarClients {
 		go backup(wg, sc, syncedInstance, podIpHostnameMap[sc.Host], reqLogger, r.recorder)
+		// one sidecar is enough as it will be a global request
+		break
 	}
 
 	wg.Wait()
@@ -294,15 +296,12 @@ func backup(
 	defer wg.Done()
 
 	backupRequest := &sidecar.BackupRequest{
-		StorageLocation:       fmt.Sprintf("%s/%s/%s/%s", instance.backup.Spec.StorageLocation, instance.backup.Spec.Cluster, instance.backup.Spec.Datacenter, podHostname),
+		StorageLocation:       instance.backup.Spec.StorageLocation,
 		SnapshotTag:           instance.backup.Spec.SnapshotTag,
-		Duration:              instance.backup.Spec.Duration,
-		Bandwidth:             instance.backup.Spec.Bandwidth,
 		ConcurrentConnections: instance.backup.Spec.ConcurrentConnections,
-		Table:                 instance.backup.Spec.Table,
-		Keyspaces:             instance.backup.Spec.Keyspaces,
-		Secret:                instance.backup.Secret,
+		Secret:                instance.backup.Spec.Secret,
 		KubernetesNamespace:   instance.backup.Namespace,
+		GlobalRequest:         instance.backup.Spec.GlobalRequest,
 	}
 
 	if operationID, err := sidecarClient.StartOperation(backupRequest); err != nil {
