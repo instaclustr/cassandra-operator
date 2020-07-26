@@ -19,7 +19,7 @@ $(BUILD_IMAGES):
 
 .PHONY: base-openjre-11
 base-openjre-11:
-	DEBIAN_RELEASE=buster OPENJRE_BASE_IMAGE=debian:buster OPENJRE_VERSION=11.0.6+10-1~deb10u1 OPENJRE_IMAGE_TAG=buster-11.0.6-10-1-deb10u1 OPENJDK_PACKAGE=openjdk-11-jre-headless CASSANDRA_IMAGE_VERSION=${C_IMAGE_VERSION} $(MAKE) -C base-openjre
+	DEBIAN_RELEASE=buster OPENJRE_BASE_IMAGE=debian:buster OPENJRE_VERSION=11.0.8+10-1~deb10u1 OPENJRE_IMAGE_TAG=buster-11.0.8-10-1-deb10u1 OPENJDK_PACKAGE=openjdk-11-jre-headless CASSANDRA_IMAGE_VERSION=${C_IMAGE_VERSION} $(MAKE) -C base-openjre
 
 .PHONY: cassandra-3
 cassandra-3:

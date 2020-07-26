@@ -10,4 +10,6 @@ spec:
   datacenter: dc1
   storageLocation: "s3://cassandra-bucket"
   snapshotTag: "mySnapshotTag"
-secret: cloud-backup-secrets
+  secret: cloud-backup-secrets
+  globalRequest: true
+#justCreate: true

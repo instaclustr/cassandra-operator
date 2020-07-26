@@ -1,10 +1,10 @@
-CASSANDRA_3_OPENJRE_IMAGE := $(if $(OPENJRE_IMAGE),$(OPENJRE_IMAGE),"base-openjre:stretch-8u232-b09-1-deb9u1")
-CASSANDRA_3_VERSION := $(if $(CASSANDRA_VERSION),$(CASSANDRA_VERSION),"3.11.6")
-CASSANDRA_3_VERSION_IMAGE_TAG := $(if $(CASSANDRA_VERSION),$(subst ~,-,$(CASSANDRA_VERSION)),"3.11.6")
+CASSANDRA_3_OPENJRE_IMAGE := $(if $(OPENJRE_IMAGE),$(OPENJRE_IMAGE),"base-openjre:stretch-8u252-b09-1-deb9u1")
+CASSANDRA_3_VERSION := $(if $(CASSANDRA_VERSION),$(CASSANDRA_VERSION),"3.11.7")
+CASSANDRA_3_VERSION_IMAGE_TAG := $(if $(CASSANDRA_VERSION),$(subst ~,-,$(CASSANDRA_VERSION)),"3.11.7")
 
-CASSANDRA_4_OPENJRE_IMAGE := $(if $(CASSANDRA_4_OPENJRE_IMAGE),$(CASSANDRA_4_OPENJRE_IMAGE),"base-openjre:buster-11.0.6-10-1-deb10u1")
-CASSANDRA_4_VERSION=$(if $(CASSANDRA_VERSION),$(CASSANDRA_VERSION),"4.0~alpha4")
-CASSANDRA_4_VERSION_IMAGE_TAG := $(if $(CASSANDRA_4_VERSION),$(subst ~,-,$(CASSANDRA_4_VERSION)),"4.0~alpha4")
+CASSANDRA_4_OPENJRE_IMAGE := $(if $(CASSANDRA_4_OPENJRE_IMAGE),$(CASSANDRA_4_OPENJRE_IMAGE),"base-openjre:buster-11.0.8-10-1-deb10u1")
+CASSANDRA_4_VERSION=$(if $(CASSANDRA_VERSION),$(CASSANDRA_VERSION),"4.0~beta1")
+CASSANDRA_4_VERSION_IMAGE_TAG := $(if $(CASSANDRA_4_VERSION),$(subst ~,-,$(CASSANDRA_4_VERSION)),"4.0~beta1")
 
 CASSANDRA_EXPORTER_VERSION := $(if $(CASSANDRA_EXPORTER_VERSION),$(CASSANDRA_EXPORTER_VERSION),"0.9.10")
 CASSANDRA_K8S_ADDONS_VERSION := $(if $(CASSANDRA_K8S_ADDONS_VERSION),$(CASSANDRA_K8S_ADDONS_VERSION),"1.0.2")
@@ -16,7 +16,7 @@ C_APACHE_MIRROR_URL := $(if $(C_APACHE_MIRROR_URL),$(C_APACHE_MIRROR_URL),"https
 .PHONY: cassandra-3
 cassandra-3:
 	rm -rf cassandra-3/jars
-	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-3-k8s-addons:1.0.2 -DoutputDirectory=cassandra-3/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
+	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-3-k8s-addons:1.0.3 -DoutputDirectory=cassandra-3/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-addons:1.0.1 -DoutputDirectory=cassandra-3/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 	docker build \
         --build-arg cassandra_major_version=3 \
@@ -32,7 +32,7 @@ cassandra-3:
 .PHONY: cassandra-4
 cassandra-4:
 	rm -rf cassandra-4/jars
-	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-4-k8s-addons:1.0.1 -DoutputDirectory=cassandra-4/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
+	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-4-k8s-addons:1.0.2 -DoutputDirectory=cassandra-4/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-k8s-addons:1.0.1 -DoutputDirectory=cassandra-4/jars -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 	docker build \
 	    --build-arg cassandra_major_version=4 \

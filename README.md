@@ -8,7 +8,7 @@ Currently user facing Cassandra cluster objects are created as [Kubernetes Custo
 
 ### Cassandra version support
 
-We are currently building images for Cassandra 3.11.6 and 4.0-alpha4. 
+We are currently building images for Cassandra 3.11.7 and 4.0-beta1. 
 
 ## Documentation
 
