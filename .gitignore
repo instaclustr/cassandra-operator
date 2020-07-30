@@ -30,3 +30,6 @@ vendor/
 /docker/cassandra/cassandra-4/debs/*
 /docker/cassandra/cassandra-3/jars/*
 /docker/cassandra/cassandra-4/jars/*
+
+/operator-sdk
+/operator-sdk-*.asc

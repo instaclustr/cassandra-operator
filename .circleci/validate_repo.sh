@@ -50,8 +50,14 @@ function check-helm {
 
     git diff --quiet --exit-code deploy
     if [[ $? != 0 ]]; then
-        echo "Helm files in 'helm' directory where not updated, make sure you have run 'prepare-helm' script and committed all changes"
+        echo "Helm files in 'deploy' directory where not updated, make sure you have run 'prepare-helm' script and committed all changes"
         exit 1
+    fi
+
+    git diff --quiet --exit-code helm
+    if [[ $? != 0 ]]; then
+      echo "Helm files in 'helm' changed but they were not committed"
+      exit 1
     fi
 }
 

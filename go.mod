@@ -10,6 +10,7 @@ require (
 	github.com/operator-framework/operator-sdk v0.16.0
 	github.com/pkg/errors v0.8.1
 	github.com/spf13/pflag v1.0.5
+	golang.org/x/tools v0.0.0-20200729194436-6467de6f59a7 // indirect
 	gopkg.in/yaml.v2 v2.2.4
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.0.0
