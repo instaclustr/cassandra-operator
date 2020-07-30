@@ -76,7 +76,7 @@ type Rack struct {
 	Name        string            `json:"name"`
 	Labels      map[string]string `json:"labels"`
 	Tolerations []v1.Toleration   `json:"tolerations,omitempty"`
-	Affinity		*v1.Affinity			`json:"affinity,omitempty"`
+	Affinity    *v1.Affinity      `json:"affinity,omitempty"`
 }
 
 type OperatorAnnotations struct {

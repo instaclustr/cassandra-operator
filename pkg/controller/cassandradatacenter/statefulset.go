@@ -170,7 +170,7 @@ func newPodSpec(
 		NodeSelector:       rack.NodeLabels,
 		SecurityContext:    securityContext,
 		Tolerations:        rack.Tolerations,
-		Affinity:						rack.Affinity,
+		Affinity:           rack.Affinity,
 	}
 
 	return podSpec

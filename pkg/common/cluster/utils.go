@@ -37,7 +37,7 @@ type Rack struct {
 	Replicas    int32
 	NodeLabels  map[string]string
 	Tolerations []v1.Toleration
-	Affinity		*v1.Affinity
+	Affinity    *v1.Affinity
 }
 
 type Racks []*Rack
