@@ -74,7 +74,7 @@ spec:
 {{- if .Values.serviceAccountName }}
   serviceAccountName: {{ .Values.serviceAccountName }}
 {{- else}}
-{{- if (.Values.optimizeKernelParams) and eq .Values.optimizeKernelParams "true"}}
+{{- if .Values.optimizeKernelParams }}
   serviceAccountName: "cassandra-performance"
 {{- else}}
   serviceAccountName: "cassandra"
