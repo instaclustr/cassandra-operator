@@ -69,7 +69,9 @@ public class SeedsResolver<T> {
     private List<InetAddress> resolveSeeds(String service) throws Exception {
         String namespace = readNamespace();
 
-        String digQuery = constructDomainName(service, namespace);
+        String clusterDomain = getClusterDomain();
+
+        String digQuery = constructDomainName(service, namespace, clusterDomain);
 
         List<String> digResult = executeShellCommand("dig", "-t", "SRV", digQuery, "+short");
 
@@ -121,8 +123,34 @@ public class SeedsResolver<T> {
         return endpoints;
     }
 
-    private String constructDomainName(String serviceName, String namespace) {
-        return format("%s.%s.svc.cluster.local", serviceName, namespace);
+    /**
+     * We are going to parse the last element in "search" row in /etc/resolv.conf
+     *
+     * nameserver 10.96.0.10
+     * search default.svc.cluster.local svc.cluster.local cluster.local
+     * options ndots:5
+     */
+    private String getClusterDomain() {
+
+        final String defaultClusterDomain = "cluster.local";
+
+        try {
+            return Files.readAllLines(Paths.get("/etc/resolv.conf")).stream()
+                .filter(line -> line.startsWith("search"))
+                .map(searchLine -> {
+                    final String[] split = searchLine.split(" ");
+                    return split[split.length - 1];
+                })
+                .findFirst()
+                .orElse(defaultClusterDomain);
+        } catch (final Exception ex) {
+            logger.error("Unable to read /etc/resolv.conf, returning " + defaultClusterDomain);
+            return defaultClusterDomain;
+        }
+    }
+
+    private String constructDomainName(String serviceName, String namespace, String clusterDomain) {
+        return format("%s.%s.svc.%s", serviceName, namespace, clusterDomain);
     }
 
     private String readNamespace() throws Exception {
