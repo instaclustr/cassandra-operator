@@ -17,10 +17,10 @@ function release_prod() {
     docker push "${REGISTRY}/cassandra-operator:latest"
     docker push "${REGISTRY}/cassandra-sidecar:${TAG}"
     docker push "${REGISTRY}/cassandra-sidecar:latest"
-    docker push "${REGISTRY}/cassandra-3.11.7:latest"
-    docker push "${REGISTRY}/cassandra-3.11.7:${TAG}"
-    docker push "${REGISTRY}/cassandra-4.0-beta1:latest"
-    docker push "${REGISTRY}/cassandra-4.0-beta1:${TAG}"
+    docker push "${REGISTRY}/cassandra-3.11.8:latest"
+    docker push "${REGISTRY}/cassandra-3.11.8:${TAG}"
+    docker push "${REGISTRY}/cassandra-4.0-beta2:latest"
+    docker push "${REGISTRY}/cassandra-4.0-beta2:${TAG}"
   fi
 }
 
@@ -66,8 +66,8 @@ function release_helm() {
 function release_dev() {
   docker push "${REGISTRY}/cassandra-operator:latest-dev"
   docker push "${REGISTRY}/cassandra-sidecar:latest-dev"
-  docker push "${REGISTRY}/cassandra-3.11.7:latest-dev"
-  docker push "${REGISTRY}/cassandra-4.0-beta1:latest-dev"
+  docker push "${REGISTRY}/cassandra-3.11.8:latest-dev"
+  docker push "${REGISTRY}/cassandra-4.0-beta2:latest-dev"
 }
 
 trap defer EXIT
