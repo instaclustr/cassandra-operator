@@ -42,6 +42,8 @@ if [[ -f "/var/lib/cassandra/restore_done" ]] && [[ "$(ls /var/lib/cassandra/tok
     echo "auto_bootstrap: false" > /etc/cassandra/cassandra.yaml.d/003-disable-autobootstrap.yaml
 fi
 
+echo "broadcast_rpc_address: $(hostname)" > /etc/cassandra/cassandra.yaml.d/004-broadcast_rpc_address.yaml
+
 exec -a cassandra /usr/bin/java \
     -cp "${CASSANDRA_CLASSPATH}" \
     -ea \
