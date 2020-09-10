@@ -69,7 +69,7 @@ public class SeedsResolver<T> {
     private List<InetAddress> resolveSeeds(String service) throws Exception {
         final String namespace = readNamespace();
         final String digQuery = constructDomainName(service, namespace);
-        logger.info("Resolved dig query " + digQuery);
+        logger.debug("Resolved dig query " + digQuery);
         final List<String> digResult = executeShellCommand("dig", "-t", "SRV", digQuery, "+short");
         final List<String> endpoints = parseEndpoints(digResult);
         final List<String> seeds = filterSeeds(endpoints);
@@ -88,7 +88,7 @@ public class SeedsResolver<T> {
             try {
                 InetAddress inetAddress = InetAddress.getByName(endpoint);
 
-                logger.info(String.format("Resolved seed: %s", inetAddress.getCanonicalHostName()));
+                logger.debug(String.format("Resolved seed: %s", inetAddress.getCanonicalHostName()));
 
                 inetAddresses.add(inetAddress);
             } catch (Exception ex) {
@@ -133,7 +133,7 @@ public class SeedsResolver<T> {
         try {
             final List<String> resolvConf = Files.readAllLines(Paths.get("/etc/resolv.conf"));
 
-            logger.info("Content of /etc/resolv.conf {}", String.join("\n", resolvConf));
+            logger.debug("Content of /etc/resolv.conf \n{}", String.join("\n", resolvConf));
 
             final String resolvedClusterDomain = resolvConf.stream()
                 .filter(line -> line.startsWith("search"))

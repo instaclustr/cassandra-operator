@@ -144,7 +144,7 @@ func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCente
 	type CassandraConfig struct {
 		ClusterName    string         `yaml:"cluster_name"`
 		ListenAddress  *string        `yaml:"listen_address"`
-		RPCAddress     *string        `yaml:"rpc_address"`
+		RPCAddress     string         `yaml:"rpc_address"`
 		SeedProvider   []SeedProvider `yaml:"seed_provider"`
 		EndpointSnitch string         `yaml:"endpoint_snitch"`
 		DiskAccessMode string         `yaml:"disk_access_mode,omitempty"`
@@ -156,7 +156,7 @@ func addCassandraYamlOverrides(cdc *cassandraoperatorv1alpha1.CassandraDataCente
 	cc := &CassandraConfig{
 		ClusterName:   cdc.Cluster,
 		ListenAddress: nil, // let C* discover the listen address
-		RPCAddress:    nil, // let C* discover the rpc address
+		RPCAddress:    "0.0.0.0",
 		SeedProvider: []SeedProvider{
 			{
 				ClassName: "com.instaclustr.cassandra.k8s.SeedProvider",
