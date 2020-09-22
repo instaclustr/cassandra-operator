@@ -126,19 +126,6 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 		instance.Status = []*cassandraoperatorv1alpha1.CassandraBackupStatus{}
 	}
 
-	if exists, err := backupOfSameSnapshotExists(r.client, instance); err != nil {
-		return reconcile.Result{}, err
-	} else if exists {
-		// we can not backup with same snapshot, cdc and storageLocation
-		r.recorder.Event(
-			instance,
-			corev1.EventTypeWarning,
-			"BackupSkipped",
-			fmt.Sprintf("cdc %s in cluster %s was not backed up to %s under snapshot %s because such backup already exists",
-				instance.Spec.Datacenter, instance.Spec.Cluster, instance.Spec.StorageLocation, instance.Spec.SnapshotTag))
-		return reconcile.Result{}, nil
-	}
-
 	if instance.JustCreate {
 		return reconcile.Result{}, nil
 	}
@@ -210,31 +197,6 @@ func (r *ReconcileCassandraBackup) Reconcile(request reconcile.Request) (reconci
 	return reconcile.Result{}, nil
 }
 
-func backupOfSameSnapshotExists(c client.Client, instance *cassandraoperatorv1alpha1.CassandraBackup) (bool, error) {
-
-	backupsList := &cassandraoperatorv1alpha1.CassandraBackupList{}
-
-	if err := c.List(context.TODO(), backupsList); err != nil {
-		return false, err
-	}
-
-	for _, existingBackup := range backupsList.Items {
-		if existingBackup.Status != nil {
-			if existingBackup.Spec.SnapshotTag == instance.Spec.SnapshotTag {
-				if existingBackup.Spec.StorageLocation == instance.Spec.StorageLocation {
-					if existingBackup.Spec.Cluster == instance.Spec.Cluster {
-						if existingBackup.Spec.Datacenter == instance.Spec.Datacenter {
-							return true, nil
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return false, nil
-}
-
 func validateBackupSecret(secret *corev1.Secret, backup *cassandraoperatorv1alpha1.CassandraBackup, logger logr.Logger) error {
 	if backup.IsGcpBackup() {
 		if len(secret.Data["gcp"]) == 0 {
@@ -302,6 +264,7 @@ func backup(
 		Secret:                instance.backup.Spec.Secret,
 		KubernetesNamespace:   instance.backup.Namespace,
 		GlobalRequest:         instance.backup.Spec.GlobalRequest,
+		Entities:              instance.backup.Spec.Entities,
 	}
 
 	if operationID, err := sidecarClient.StartOperation(backupRequest); err != nil {

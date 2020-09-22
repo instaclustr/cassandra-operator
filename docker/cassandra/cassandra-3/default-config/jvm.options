@@ -25,5 +25,8 @@
 
 # TODO: should this be set by the operator?
 -XX:MaxDirectMemorySize=18G
+#-XX:+UseCGroupMemoryLimitForHeap
+#-XX:MaxRAMFraction=1
+#-XshowSettings:vm
 
 # GC settings are not defined here -- they are chosen by the operator at runtime

@@ -347,6 +347,8 @@ func newRestoreContainer(
 		"--k8s-namespace=" + cdc.Namespace,
 		"--k8s-secret-name=" + backup.Spec.Secret,
 		"--resolveHostIdFromTopology",
+		"--update-cassandra-yaml",
+		"--restore-into-new-cluster",
 	}
 
 	sidecarEnv := cdc.Spec.SidecarEnv
