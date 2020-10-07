@@ -17,11 +17,15 @@ type CassandraBackupSpec struct {
 	// The uri for the backup target location e.g. s3 bucket, filepath
 	StorageLocation string `json:"storageLocation"`
 	// The snapshot tag for the backup
-	SnapshotTag           string `json:"snapshotTag"`
-	ConcurrentConnections int    `json:"concurrentConnections,omitempty"`
-	Entities              string `json:"entities,omitempty"`
-	GlobalRequest         bool   `json:"globalRequest,omitempty"`
-	Secret                string `json:"secret,omitempty"`
+	SnapshotTag            string `json:"snapshotTag"`
+	ConcurrentConnections  int    `json:"concurrentConnections,omitempty"`
+	Entities               string `json:"entities,omitempty"`
+	GlobalRequest          bool   `json:"globalRequest,omitempty"`
+	Secret                 string `json:"secret,omitempty"`
+	CreateMissingBucket    bool   `json:"createMissingBucket,omitempty"`
+	SkipBucketVerification bool   `json:"skipBucketVerification,omitempty"`
+	Insecure               bool   `json:"insecure,omitempty"`
+	MetadataDirective      string `json:"metadataDirective,omitempty"`
 }
 
 // CassandraBackupStatus defines the observed state of CassandraBackup

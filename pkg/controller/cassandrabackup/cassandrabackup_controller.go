@@ -258,13 +258,17 @@ func backup(
 	defer wg.Done()
 
 	backupRequest := &sidecar.BackupRequest{
-		StorageLocation:       instance.backup.Spec.StorageLocation,
-		SnapshotTag:           instance.backup.Spec.SnapshotTag,
-		ConcurrentConnections: instance.backup.Spec.ConcurrentConnections,
-		Secret:                instance.backup.Spec.Secret,
-		KubernetesNamespace:   instance.backup.Namespace,
-		GlobalRequest:         instance.backup.Spec.GlobalRequest,
-		Entities:              instance.backup.Spec.Entities,
+		StorageLocation:        instance.backup.Spec.StorageLocation,
+		SnapshotTag:            instance.backup.Spec.SnapshotTag,
+		ConcurrentConnections:  instance.backup.Spec.ConcurrentConnections,
+		Secret:                 instance.backup.Spec.Secret,
+		KubernetesNamespace:    instance.backup.Namespace,
+		GlobalRequest:          instance.backup.Spec.GlobalRequest,
+		Entities:               instance.backup.Spec.Entities,
+		CreateMissingBucket:    instance.backup.Spec.CreateMissingBucket,
+		SkipBucketVerification: instance.backup.Spec.SkipBucketVerification,
+		Insecure:               instance.backup.Spec.Insecure,
+		MetadataDirective:      instance.backup.Spec.MetadataDirective,
 	}
 
 	if operationID, err := sidecarClient.StartOperation(backupRequest); err != nil {
