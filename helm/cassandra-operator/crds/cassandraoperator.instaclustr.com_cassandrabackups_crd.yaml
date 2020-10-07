@@ -51,6 +51,8 @@ spec:
               type: string
             concurrentConnections:
               type: integer
+            createMissingBucket:
+              type: boolean
             datacenter:
               description: Cassandra DC name to back up. Used to find the pods in
                 the CDC
@@ -59,8 +61,14 @@ spec:
               type: string
             globalRequest:
               type: boolean
+            insecure:
+              type: boolean
+            metadataDirective:
+              type: string
             secret:
               type: string
+            skipBucketVerification:
+              type: boolean
             snapshotTag:
               description: The snapshot tag for the backup
               type: string

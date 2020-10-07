@@ -162,6 +162,30 @@ func schema_pkg_apis_cassandraoperator_v1alpha1_CassandraBackupSpec(ref common.R
 							Format: "",
 						},
 					},
+					"createMissingBucket": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"skipBucketVerification": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"insecure": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"metadataDirective": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 				},
 				Required: []string{"cdc", "cluster", "datacenter", "storageLocation", "snapshotTag"},
 			},
