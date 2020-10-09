@@ -11,7 +11,7 @@ cluster: test-cluster
 
 image:
   cassandraRepository: gcr.io/cassandra-operator/cassandra-3.11.8
-  sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar
+  sidecarRepository: gcr.io/cassandra-operator/instaclustr-icarus
   cassandraTag: latest
   sidecarTag: latest
 

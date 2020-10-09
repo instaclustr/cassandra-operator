@@ -1,6 +1,6 @@
 #!/bin/bash
 
-exec -a "cassandra-sidecar" java \
+exec -a "icarus" java \
     -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -XshowSettings:vm  \
-    -jar /opt/lib/cassandra-sidecar/cassandra-sidecar.jar cassandra-sidecar \
+    -jar /opt/lib/icarus/icarus.jar icarus \
     "$@"

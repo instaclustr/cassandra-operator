@@ -37,7 +37,7 @@ done
 if [[ "${args[0]}" == "restore" ]]; then
     if [[ ! -f ${RESTORE_MARKING_FILE} ]]; then
         echo "Executing restore command with arguments:" ${args[*]}
-        java -jar /opt/lib/cassandra-sidecar/cassandra-sidecar.jar backup-restore ${args[*]}
+        java -jar /opt/lib/icarus/icarus.jar esop ${args[*]}
         if [[ ! "$?" == "0" ]]; then exit 1; fi
         echo "${args[*]}" > ${RESTORE_MARKING_FILE}
     else
@@ -46,7 +46,7 @@ if [[ "${args[0]}" == "restore" ]]; then
     fi
 elif [[ "${args[0]}" == "backup" ]]; then
         echo "Executing backup command with arguments:" ${args[*]}
-        java -jar /opt/lib/cassandra-sidecar/cassandra-sidecar.jar backup-restore ${args[*]}
+        java -jar /opt/lib/icarus/icarus.jar esop ${args[*]}
         if [[ ! "$?" == "0" ]]; then exit 1; fi
 else
     echo "The first argument of script ${0} has to be either 'backup' or 'restore'. It was ${args[0]}"

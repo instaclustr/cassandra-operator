@@ -1,28 +1,28 @@
 include ../base-openjre/Makefile
 
-CASSANDRA_SIDECAR_VERSION := 2.0.0-alpha8
-CASSANDRA_SIDECAR_JAR := cassandra-sidecar-$(CASSANDRA_SIDECAR_VERSION).jar
+INSTACLUSTR_ICARUS_VERSION := 1.0.0
+INSTACLUSTR_ICARUS_JAR := icarus-$(INSTACLUSTR_ICARUS_VERSION).jar
 
-ifeq ($(CASSANDRA_SIDECAR_VERSION:%-SNAPSHOT=SNAPSHOT),SNAPSHOT)
+ifeq ($(INSTACLUSTR_ICARUS_VERSION:%-SNAPSHOT=SNAPSHOT),SNAPSHOT)
 $(info SNAPSHOT version specified. Marking sidecar JAR target as .PHONY)
-.PHONY: $(CASSANDRA_SIDECAR_JAR)
+.PHONY: $(INSTACLUSTR_ICARUS_JAR)
 endif
 
-$(CASSANDRA_SIDECAR_JAR):
-	rm -rf $(CASSANDRA_SIDECAR_JAR)
-	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:cassandra-sidecar:$(CASSANDRA_SIDECAR_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
+$(INSTACLUSTR_ICARUS_JAR):
+	rm -rf $(INSTACLUSTR_ICARUS_JAR)
+	$(CURDIR)/../mvnw dependency:copy -Dartifact=com.instaclustr:icarus:$(INSTACLUSTR_ICARUS_VERSION) -DoutputDirectory=. -Dmdep.stripClassifier=true -Dmdep.overIfNewer=true
 
 .PHONY: cassandra-sidecar
-cassandra-sidecar: $(CASSANDRA_SIDECAR_JAR)
+cassandra-sidecar: $(INSTACLUSTR_ICARUS_JAR)
 	docker build \
-		--build-arg cassandra_sidecar_jar=$(CASSANDRA_SIDECAR_JAR) \
+		--build-arg instaclustr_icarus_jar=$(INSTACLUSTR_ICARUS_JAR) \
 		--build-arg openjre_image="$(OPENJRE_IMAGE)" \
-		-t $(DOCKER_REGISTRY)cassandra-sidecar \
-		-t $(DOCKER_REGISTRY)cassandra-sidecar:$(CASSANDRA_SIDECAR_VERSION) \
+		-t $(DOCKER_REGISTRY)icarus \
+		-t $(DOCKER_REGISTRY)icarus:$(INSTACLUSTR_ICARUS_VERSION) \
 		.
 
 .PHONY: clean
 clean:
-	rm $(CASSANDRA_SIDECAR_JAR)
+	rm $(INSTACLUSTR_ICARUS_JAR)
 
 .DEFAULT_GOAL := cassandra-sidecar

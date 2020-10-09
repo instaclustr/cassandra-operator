@@ -346,7 +346,7 @@ func newRestoreContainer(
 		"--storage-location=" + backup.Spec.StorageLocation + "/" + backup.Spec.Cluster + "/" + backup.Spec.Datacenter,
 		"--k8s-namespace=" + cdc.Namespace,
 		"--k8s-secret-name=" + backup.Spec.Secret,
-		"--resolveHostIdFromTopology",
+		"--resolve-host-id-from-topology",
 		"--update-cassandra-yaml",
 		"--restore-into-new-cluster",
 	}

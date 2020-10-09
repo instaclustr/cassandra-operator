@@ -2,18 +2,18 @@ ARG openjre_image
 
 FROM ${openjre_image}
 
-ARG cassandra_sidecar_jar
+ARG instaclustr_icarus_jar
 
 # Create 'cassandra' user and group
 RUN groupadd -g 999 cassandra && useradd -r -u 999 -g cassandra cassandra
 
-RUN mkdir -p /opt/bin && mkdir -p /opt/lib/cassandra-sidecar
+RUN mkdir -p /opt/bin && mkdir -p /opt/lib/icarus
 
-COPY ${cassandra_sidecar_jar} /opt/lib/cassandra-sidecar/
-RUN ln -s /opt/lib/cassandra-sidecar/${cassandra_sidecar_jar} /opt/lib/cassandra-sidecar/cassandra-sidecar.jar
+COPY ${instaclustr_icarus_jar} /opt/lib/icarus/
+RUN ln -s /opt/lib/icarus/${instaclustr_icarus_jar} /opt/lib/icarus/icarus.jar
 
-COPY cassandra-backup-restore.sh /opt/bin/cassandra-backup-restore
-COPY cassandra-sidecar.sh /opt/bin/cassandra-sidecar
+COPY esop.sh /opt/bin/esop
+COPY icarus.sh /opt/bin/icarus
 COPY entry-point /usr/bin/entry-point
 
 ENV PATH = $PATH:/opt/bin

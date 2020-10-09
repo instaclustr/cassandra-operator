@@ -15,8 +15,8 @@ function release_prod() {
   if [[ "${CIRCLE_BRANCH}" == master ]]; then
     docker push "${REGISTRY}/cassandra-operator:${TAG}"
     docker push "${REGISTRY}/cassandra-operator:latest"
-    docker push "${REGISTRY}/cassandra-sidecar:${TAG}"
-    docker push "${REGISTRY}/cassandra-sidecar:latest"
+    docker push "${REGISTRY}/instaclustr-icarus:${TAG}"
+    docker push "${REGISTRY}/instaclustr-icarus:latest"
     docker push "${REGISTRY}/cassandra-3.11.8:latest"
     docker push "${REGISTRY}/cassandra-3.11.8:${TAG}"
     docker push "${REGISTRY}/cassandra-4.0-beta2:latest"
@@ -65,7 +65,7 @@ function release_helm() {
 
 function release_dev() {
   docker push "${REGISTRY}/cassandra-operator:latest-dev"
-  docker push "${REGISTRY}/cassandra-sidecar:latest-dev"
+  docker push "${REGISTRY}/instaclustr-icarus:latest-dev"
   docker push "${REGISTRY}/cassandra-3.11.8:latest-dev"
   docker push "${REGISTRY}/cassandra-4.0-beta2:latest-dev"
 }
