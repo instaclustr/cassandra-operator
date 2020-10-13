@@ -17,8 +17,8 @@ cassandra-sidecar: $(INSTACLUSTR_ICARUS_JAR)
 	docker build \
 		--build-arg instaclustr_icarus_jar=$(INSTACLUSTR_ICARUS_JAR) \
 		--build-arg openjre_image="$(OPENJRE_IMAGE)" \
-		-t $(DOCKER_REGISTRY)icarus \
-		-t $(DOCKER_REGISTRY)icarus:$(INSTACLUSTR_ICARUS_VERSION) \
+		-t $(DOCKER_REGISTRY)instaclustr-icarus \
+		-t $(DOCKER_REGISTRY)instaclustr-icarus:$(INSTACLUSTR_ICARUS_VERSION) \
 		.
 
 .PHONY: clean
