@@ -7,7 +7,7 @@ docker images
 helm install \
   cassandra \
   $SCRIPT_DIR/../helm/cassandra \
-  --set image.cassandraRepository=gcr.io/cassandra-operator/cassandra-4.0-beta2 \
+  --set image.cassandraRepository=gcr.io/cassandra-operator/cassandra-4.0-beta3 \
   --set image.cassandraTag=latest-dev \
   --set image.sidecarRepository=gcr.io/cassandra-operator/instaclustr-icarus \
   --set image.sidecarTag=latest-dev \

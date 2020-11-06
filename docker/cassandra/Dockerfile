@@ -3,7 +3,7 @@ ARG openjre_image
 FROM ${openjre_image}
 
 ARG cassandra_major_version=3
-ARG cassandra_version=3.11.8
+ARG cassandra_version=3.11.9
 ARG cassandra_exporter_version=0.9.10
 ARG apache_mirror_url=https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra
 ARG install_cassandra_exporter=true
