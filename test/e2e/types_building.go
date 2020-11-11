@@ -55,7 +55,7 @@ func (info *DcMetaInfo) validate() error {
 	repository := parseEnvProperty("OPERATOR_TEST_DOCKER_REPOSITORY", "gcr.io/cassandra-operator/")
 
 	if len(info.CassandraImageName) == 0 {
-		info.CassandraImageName = parseEnvProperty("OPERATOR_TEST_CASSANDRA_IMAGE", repository+"cassandra-3.11.6:latest")
+		info.CassandraImageName = parseEnvProperty("OPERATOR_TEST_CASSANDRA_IMAGE", repository+"cassandra-3.11.9:latest")
 	}
 
 	if len(info.SidecarImageName) == 0 {
