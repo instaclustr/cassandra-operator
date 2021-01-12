@@ -12,6 +12,7 @@ import (
 )
 
 const pvcDeletionFinalizer = "finalizer.pvcs.cassandraoperator.instaclustr.com"
+const pvcDeletionFinalizerForPod = "finalizer.pvcs.cassandraoperator.instaclustr.com/v1"
 
 func (r *ReconcileCassandraDataCenter) deletePersistenceVolumeClaim(reqLogger logr.Logger, pvc corev1.PersistentVolumeClaim) error {
 	if err := r.client.Delete(context.TODO(), &pvc); err != nil {
@@ -90,14 +91,34 @@ func (r *ReconcileCassandraDataCenter) finalizePVCs(reqLogger logr.Logger, insta
 }
 
 func (r *ReconcileCassandraDataCenter) addFinalizer(reqLogger logr.Logger, instance *cassandraoperatorv1alpha1.CassandraDataCenter) error {
-	if !contains(instance.GetFinalizers(), pvcDeletionFinalizer) && instance.Spec.DeletePVCs {
-		reqLogger.Info("Adding Finalizer for the CassandraDataCenter")
-		instance.SetFinalizers(append(instance.GetFinalizers(), pvcDeletionFinalizer))
+	if instance.Spec.DeletePVCs {
+		if !contains(instance.GetFinalizers(), pvcDeletionFinalizer) {
+			reqLogger.Info("Adding Finalizer for the CassandraDataCenter")
+			instance.SetFinalizers(append(instance.GetFinalizers(), pvcDeletionFinalizer))
 
-		err := r.client.Update(context.TODO(), instance)
-		if err != nil {
-			reqLogger.Error(err, "Failed to update CassandraDataCenter with finalizer "+pvcDeletionFinalizer)
+			err := r.client.Update(context.TODO(), instance)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update CassandraDataCenter with finalizer "+pvcDeletionFinalizer)
+				return err
+			}
+		}
+
+		// adding finalizers for pods as well
+		if pods, err := AllPodsInCDC(r.client, instance); err != nil {
 			return err
+		} else {
+			for _, pod := range pods {
+				if !contains(pod.GetFinalizers(), pvcDeletionFinalizerForPod) {
+					reqLogger.Info(fmt.Sprintf("Adding Finalizer for the Cassandra pod %s", pod.GetName()))
+					pod.SetFinalizers(append(pod.GetFinalizers(), pvcDeletionFinalizerForPod))
+
+					err := r.client.Update(context.TODO(), &pod)
+					if err != nil {
+						reqLogger.Error(err, "Failed to update Cassandra pod with finalizer "+pvcDeletionFinalizerForPod)
+						return err
+					}
+				}
+			}
 		}
 	}
 	return nil
@@ -155,6 +176,9 @@ func (r *ReconcileCassandraDataCenter) finalizeDeletedPods(reqLogger logr.Logger
 			return err
 		} else {
 			for _, pod := range deletedPods {
+				if !contains(pod.GetFinalizers(), pvcDeletionFinalizerForPod) {
+					continue
+				}
 				for _, volume := range pod.Spec.Volumes {
 					podsPVC := volume.VolumeSource.PersistentVolumeClaim
 					if podsPVC != nil {
@@ -176,10 +200,15 @@ func (r *ReconcileCassandraDataCenter) finalizeDeletedPods(reqLogger logr.Logger
 									corev1.EventTypeNormal,
 									"SuccessEvent",
 									fmt.Sprintf("Deletion of PVC %s was successful.", c.Name))
+								reqLogger.Info(fmt.Sprintf("Deletion of PVC %s was successful.", c.Name))
 								break
 							}
 						}
 					}
+				}
+				pod.SetFinalizers(remove(pod.GetFinalizers(), pvcDeletionFinalizerForPod))
+				if err := r.client.Update(context.TODO(), &pod); err != nil {
+					return err
 				}
 			}
 		}
