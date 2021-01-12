@@ -2,7 +2,7 @@
 
 - Website: https://www.instaclustr.com/
 - Wiki: https://github.com/instaclustr/cassandra-operator/wiki
-- Documentation: [https://www.instaclustr.com/support/documentation/)
+- Documentation: https://www.instaclustr.com/support/documentation/
 
 Build [![CircleCI](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master.svg?style=svg)](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master)
 
