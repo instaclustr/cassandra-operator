@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -516,7 +518,7 @@ func scaleStatefulSet(
 			fmt.Sprintf("Scaling down %s from %d to %d nodes.", existingStatefulSet.Name, currentSpecReplicas, desiredSpecReplicas))
 
 		// Scale down
-		newestPod := podsInRack[len(podsInRack)-1]
+		newestPod := podWithMaxOrdinal(podsInRack)
 		if len(decommissionedNodes) == 0 {
 			log.Info("No Cassandra nodes have been decommissioned. Decommissioning the newest one " + newestPod.Name)
 
@@ -567,6 +569,27 @@ func scaleStatefulSet(
 	}
 
 	return nil
+}
+
+func podWithMaxOrdinal(pods []corev1.Pod) corev1.Pod {
+	var statefulPodRegex = regexp.MustCompile("(.*)-([0-9]+)$")
+	maxOrdinal := -1
+	maxIndex := len(pods) - 1
+	for k, pod := range pods {
+		ordinal := -1
+		subMatches := statefulPodRegex.FindStringSubmatch(pod.Name)
+		if len(subMatches) < 3 {
+			continue
+		}
+		if i, err := strconv.ParseInt(subMatches[2], 10, 32); err == nil {
+			ordinal = int(i)
+		}
+		if ordinal > maxOrdinal {
+			maxOrdinal = ordinal
+			maxIndex = k
+		}
+	}
+	return pods[maxIndex]
 }
 
 func cassandraStates(podClients map[*corev1.Pod]*sidecar.Client) map[*corev1.Pod]nodestate.NodeState {
