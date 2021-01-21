@@ -146,6 +146,17 @@ func (r *ReconcileCassandraDataCenter) finalizeIfNecessary(reqLogger logr.Logger
 			return false, err
 		}
 
+		pods, err := AllPodsInCDC(r.client, instance)
+		if err != nil {
+			return false, err
+		}
+		for _, pod := range pods {
+			pod.SetFinalizers(remove(pod.GetFinalizers(), pvcDeletionFinalizerForPod))
+			if err := r.client.Update(context.TODO(), &pod); err != nil {
+				return false, err
+			}
+		}
+
 		return true, nil
 	}
 
