@@ -1,7 +1,6 @@
-include ../base-openjre/Makefile
-
 INSTACLUSTR_ICARUS_VERSION := 1.0.6
 INSTACLUSTR_ICARUS_JAR := icarus-$(INSTACLUSTR_ICARUS_VERSION).jar
+OPENJRE_IMAGE := $(if $(OPENJRE_IMAGE),$(OPENJRE_IMAGE),"base-openjre:buster-11.0.9.1-1-1-deb10u2")
 
 ifeq ($(INSTACLUSTR_ICARUS_VERSION:%-SNAPSHOT=SNAPSHOT),SNAPSHOT)
 $(info SNAPSHOT version specified. Marking sidecar JAR target as .PHONY)

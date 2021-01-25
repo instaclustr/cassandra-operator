@@ -1,6 +1,6 @@
 #!/bin/bash
 
 exec -a "icarus" java \
-    -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -XshowSettings:vm  \
+    -XX:+UnlockExperimentalVMOptions -XX:MaxRAMFraction=1 -XshowSettings:vm  \
     -jar /opt/lib/icarus/icarus.jar icarus \
     "$@"
