@@ -36,8 +36,9 @@ func (r *ReconcileCassandraDataCenter) getPVCs(
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels{
-			"cassandra-operator.instaclustr.com/datacenter": instance.DataCenter,
-			"cassandra-operator.instaclustr.com/cluster":    instance.Cluster,
+			"cassandra-operator.instaclustr.com/datacenter":    instance.DataCenter,
+			"cassandra-operator.instaclustr.com/datacenterUID": string(instance.UID),
+			"cassandra-operator.instaclustr.com/cluster":       instance.Cluster,
 		},
 	}
 
@@ -68,8 +69,9 @@ func (r *ReconcileCassandraDataCenter) finalizePVCs(reqLogger logr.Logger, insta
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels{
-			"cassandra-operator.instaclustr.com/datacenter": instance.DataCenter,
-			"cassandra-operator.instaclustr.com/cluster":    instance.Cluster,
+			"cassandra-operator.instaclustr.com/datacenter":    instance.DataCenter,
+			"cassandra-operator.instaclustr.com/datacenterUID": string(instance.UID),
+			"cassandra-operator.instaclustr.com/cluster":       instance.Cluster,
 		},
 	}
 

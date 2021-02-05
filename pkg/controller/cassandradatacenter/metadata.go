@@ -14,6 +14,7 @@ const (
 	ManagedByValue = "com.instaclustr.cassandra-operator"
 	RackKey        = "cassandra-operator.instaclustr.com/rack"
 	DataCenterKey  = "cassandra-operator.instaclustr.com/datacenter"
+	DataCenterUID  = "cassandra-operator.instaclustr.com/datacenterUID"
 	ClusterKey     = "cassandra-operator.instaclustr.com/cluster"
 )
 
@@ -22,6 +23,7 @@ const (
 func DataCenterAnnotations(cdc *cop.CassandraDataCenter) map[string]string {
 	return map[string]string{
 		DataCenterKey: cdc.DataCenter,
+		DataCenterUID: string(cdc.UID),
 		ClusterKey:    cdc.Cluster,
 		ManagedByKey:  ManagedByValue,
 	}
@@ -85,6 +87,7 @@ func CustomStatefulSetAnnotations(cdc *cop.CassandraDataCenter) map[string]strin
 func DataCenterLabels(cdc *cop.CassandraDataCenter) map[string]string {
 	return map[string]string{
 		DataCenterKey: cdc.DataCenter,
+		DataCenterUID: string(cdc.UID),
 		ClusterKey:    cdc.Cluster,
 		ManagedByKey:  ManagedByValue,
 	}
