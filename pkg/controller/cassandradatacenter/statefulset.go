@@ -773,8 +773,9 @@ func getStatefulSets(rctx *reconciliationRequestContext) ([]v1.StatefulSet, erro
 	listOptions := []client.ListOption{
 		client.InNamespace(rctx.cdc.Namespace),
 		client.MatchingLabels{
-			"cassandra-operator.instaclustr.com/datacenter": rctx.cdc.DataCenter,
-			"cassandra-operator.instaclustr.com/cluster":    rctx.cdc.Cluster,
+			"cassandra-operator.instaclustr.com/datacenter":    rctx.cdc.DataCenter,
+			"cassandra-operator.instaclustr.com/datacenterUID": string(rctx.cdc.UID),
+			"cassandra-operator.instaclustr.com/cluster":       rctx.cdc.Cluster,
 		},
 	}
 
