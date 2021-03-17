@@ -7,7 +7,7 @@
 Build [![CircleCI](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master.svg?style=svg)](https://circleci.com/gh/instaclustr/cassandra-operator/tree/master)
 
 #### Project Status: Sunset
-The Cassandra-operator is currently being sunsetted and will be archived once a community (Apache) Cassandra operator is released. If you are looking for an Apache Cassandra operator for Kubernetes, please check out the operator from Orange call [casskop](https://github.com/Orange-OpenSource/casskop). 
+The Cassandra-operator is currently being sunsetted and will be archived once a community (Apache) Cassandra operator is released. If you are looking for an Apache Cassandra operator for Kubernetes, please check out the operator from Orange called [casskop](https://github.com/Orange-OpenSource/casskop) or from Datastax called [cass-operator](https://github.com/datastax/cass-operator). 
 
 The Cassandra Operator manages Cassandra clusters deployed to [Kubernetes](http://kubernetes.io) and automates tasks related to operating a Cassandra cluster.
 
