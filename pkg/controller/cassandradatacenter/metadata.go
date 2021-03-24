@@ -10,12 +10,13 @@ import (
 )
 
 const (
-	ManagedByKey   = "app.kubernetes.io/managed-by"
-	ManagedByValue = "com.instaclustr.cassandra-operator"
-	RackKey        = "cassandra-operator.instaclustr.com/rack"
-	DataCenterKey  = "cassandra-operator.instaclustr.com/datacenter"
-	DataCenterUID  = "cassandra-operator.instaclustr.com/datacenterUID"
-	ClusterKey     = "cassandra-operator.instaclustr.com/cluster"
+	ManagedByKey    = "app.kubernetes.io/managed-by"
+	ManagedByValue  = "com.instaclustr.cassandra-operator"
+	RackKey         = "cassandra-operator.instaclustr.com/rack"
+	DataCenterKey   = "cassandra-operator.instaclustr.com/datacenter"
+	DataCenterUID   = "cassandra-operator.instaclustr.com/datacenterUID"
+	CassandraPodUID = "cassandra-operator.instaclustr.com/cassandraPodUID"
+	ClusterKey      = "cassandra-operator.instaclustr.com/cluster"
 )
 
 // ANNOTATIONS

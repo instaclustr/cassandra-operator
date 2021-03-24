@@ -122,6 +122,10 @@ func (r *ReconcileCassandraDataCenter) Reconcile(request reconcile.Request) (rec
 		return reconcile.Result{}, fmt.Errorf("could not fetch CassandraDataCenter instance: %s", err)
 	}
 
+	if err := r.updatePVCsWithPodUid(reqLogger, instance); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if finalized, err := r.finalizeIfNecessary(reqLogger, instance); err != nil {
 		return reconcile.Result{}, err
 	} else if finalized {

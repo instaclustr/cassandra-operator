@@ -62,6 +62,45 @@ func (r *ReconcileCassandraDataCenter) getPVCs(
 	}
 }
 
+func (r *ReconcileCassandraDataCenter) updatePVCsWithPodUid(reqLogger logr.Logger, instance *cassandraoperatorv1alpha1.CassandraDataCenter) error {
+	if pods, err := AllPodsInCDC(r.client, instance); err != nil {
+		return err
+	} else {
+		if len(pods) == 0 {
+			return nil
+		}
+		if existingPVCs, err := r.getPVCs(instance, nil); err != nil {
+			return err
+		} else {
+			if len(pods) != len(existingPVCs) {
+				return nil
+			}
+			for _, pod := range pods {
+				for _, volume := range pod.Spec.Volumes {
+					podsPVC := volume.VolumeSource.PersistentVolumeClaim
+					if podsPVC != nil {
+						for _, c := range existingPVCs {
+							if c.Name == podsPVC.ClaimName {
+								if _, ok := c.Labels[CassandraPodUID]; ok {
+									break
+								}
+								c.Labels[CassandraPodUID] = string(pod.UID)
+								if err := r.client.Update(context.TODO(), &c); err != nil {
+									reqLogger.Info(fmt.Sprintf("Fail to label PVC %s with pod %s's uid.", c.Name, pod.Name))
+									return err
+								}
+								reqLogger.Info(fmt.Sprintf("Successfully label PVC %s with pod %s's uid.", c.Name, pod.Name))
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (r *ReconcileCassandraDataCenter) finalizePVCs(reqLogger logr.Logger, instance *cassandraoperatorv1alpha1.CassandraDataCenter) error {
 
 	pvcList := corev1.PersistentVolumeClaimList{}
@@ -197,6 +236,13 @@ func (r *ReconcileCassandraDataCenter) finalizeDeletedPods(reqLogger logr.Logger
 					if podsPVC != nil {
 						for _, c := range existingPVCs {
 							if c.Name == podsPVC.ClaimName {
+								if _, ok := c.Labels[CassandraPodUID]; !ok {
+									reqLogger.Info(fmt.Sprintf("Cannot delete PVC %s: PVC is not labled with the pod UID yet.", c.Name))
+									return nil
+								} else if c.Labels[CassandraPodUID] != string(pod.UID) {
+									reqLogger.Info(fmt.Sprintf("Cannot delete PVC %s: PVC's label does not match pod UID'.", c.Name))
+									return nil
+								}
 								if err := r.deletePersistenceVolumeClaim(reqLogger, c); err != nil {
 
 									r.recorder.Event(
