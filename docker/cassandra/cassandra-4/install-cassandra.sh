@@ -11,7 +11,7 @@ pkg_dir=$(mktemp -d) && chmod 755 "${pkg_dir}"
 arch="all"
 arch_pkg_dir="${pkg_dir}/${arch}" && mkdir "${arch_pkg_dir}"
 
-C_APACHE_MIRROR_URL="${C_APACHE_MIRROR_URL:-https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra}"
+C_APACHE_MIRROR_URL="${C_APACHE_MIRROR_URL:-https://apache.jfrog.io/artifactory/cassandra-deb/pool/main/c/cassandra/cassandra_3.11.9_all.deb}"
 INSTALL_CASSANDRA_EXPORTER="${INSTALL_CASSANDRA_EXPORTER:-true}"
 
 if [ "$(find /tmp -type f -name '*.deb' | wc -l)" != "0" ]; then

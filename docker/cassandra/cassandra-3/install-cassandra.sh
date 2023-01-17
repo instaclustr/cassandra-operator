@@ -11,7 +11,7 @@ pkg_dir=$(mktemp -d) && chmod 755 "${pkg_dir}"
 arch="all"
 arch_pkg_dir="${pkg_dir}/${arch}" && mkdir "${arch_pkg_dir}"
 
-C_APACHE_MIRROR_URL="${C_APACHE_MIRROR_URL:-https://dl.bintray.com/apache/cassandra/pool/main/c/cassandra}"
+C_APACHE_MIRROR_URL="${C_APACHE_MIRROR_URL:-https://apache.jfrog.io/artifactory/cassandra-deb/pool/main/c/cassandra}"
 INSTALL_CASSANDRA_EXPORTER="${INSTALL_CASSANDRA_EXPORTER:-true}"
 
 if [ "$(find /tmp -type f -name '*.deb' | wc -l)" != "0" ]; then
@@ -23,11 +23,17 @@ else
       curl -SLO "${C_APACHE_MIRROR_URL}/cassandra-tools_${cassandra_version}_all.deb")
 fi
 
+echo "HERE 1"
+
 dagi dpkg-dev cpio libcap2-bin dnsutils
+
+echo "HERE 2"
 
 APT_GET_OPTS="--allow-unauthenticated" dagi file ${arch_pkg_dir}/cassandra_${cassandra_version}_all.deb
 APT_GET_OPTS="--allow-unauthenticated" dagi file ${arch_pkg_dir}/cassandra-tools_${cassandra_version}_all.deb
 APT_GET_OPTS="--allow-unauthenticated" dagi vim
+
+echo "HERE 3"
 
 # package "cleanup"
 mkdir /usr/share/cassandra/agents
@@ -49,7 +55,7 @@ if [ "$INSTALL_CASSANDRA_EXPORTER" == "true" ]
 then
     # install cassandra-exporter (Prometheus monitoring support)
     (cd "/usr/share/cassandra/agents" &&
-        curl -SLO "https://github.com/instaclustr/cassandra-exporter/releases/download/v${cassandra_exporter_version}/cassandra-exporter-agent-${cassandra_exporter_version}.jar" &&
+        wget "https://github.com/instaclustr/cassandra-exporter/releases/download/v${cassandra_exporter_version}/cassandra-exporter-agent-${cassandra_exporter_version}.jar" &&
         ln -s cassandra-exporter-agent-${cassandra_exporter_version}.jar cassandra-exporter-agent.jar)
 fi
 

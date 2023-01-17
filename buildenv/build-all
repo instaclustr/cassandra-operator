@@ -14,7 +14,7 @@ function release_dev() {
   docker tag cassandra-operator:latest "${REGISTRY}/cassandra-operator:latest-dev"
   docker tag instaclustr-icarus:latest "${REGISTRY}/instaclustr-icarus:latest-dev"
   docker tag cassandra-3.11.9:latest "${REGISTRY}/cassandra-3.11.9:latest-dev"
-  docker tag cassandra-4.0-beta4:latest "${REGISTRY}/cassandra-4.0-beta4:latest-dev"
+  docker tag cassandra-4.0.0:latest "${REGISTRY}/cassandra-4.0.0:latest-dev"
 }
 
 function release_prod() {
@@ -24,8 +24,8 @@ function release_prod() {
   docker tag instaclustr-icarus:latest "${REGISTRY}/instaclustr-icarus:latest"
   docker tag cassandra-3.11.9:latest "${REGISTRY}/cassandra-3.11.9:${TAG}"
   docker tag cassandra-3.11.9:latest "${REGISTRY}/cassandra-3.11.9:latest"
-  docker tag cassandra-4.0-beta4:latest "${REGISTRY}/cassandra-4.0-beta4:${TAG}"
-  docker tag cassandra-4.0-beta4:latest "${REGISTRY}/cassandra-4.0-beta4:latest"
+  docker tag cassandra-4.0.0:latest "${REGISTRY}/cassandra-4.0.0:${TAG}"
+  docker tag cassandra-4.0.0:latest "${REGISTRY}/cassandra-4.0.0:latest"
 }
 
 if [ "${1}" = "dev" ]; then

@@ -19,8 +19,8 @@ function release_prod() {
     docker push "${REGISTRY}/instaclustr-icarus:latest"
     docker push "${REGISTRY}/cassandra-3.11.9:latest"
     docker push "${REGISTRY}/cassandra-3.11.9:${TAG}"
-    docker push "${REGISTRY}/cassandra-4.0-beta4:latest"
-    docker push "${REGISTRY}/cassandra-4.0-beta4:${TAG}"
+    docker push "${REGISTRY}/cassandra-4.0.0:latest"
+    docker push "${REGISTRY}/cassandra-4.0.0:${TAG}"
   fi
 }
 
@@ -67,7 +67,7 @@ function release_dev() {
   docker push "${REGISTRY}/cassandra-operator:latest-dev"
   docker push "${REGISTRY}/instaclustr-icarus:latest-dev"
   docker push "${REGISTRY}/cassandra-3.11.9:latest-dev"
-  docker push "${REGISTRY}/cassandra-4.0-beta4:latest-dev"
+  docker push "${REGISTRY}/cassandra-4.0.0:latest-dev"
 }
 
 trap defer EXIT
